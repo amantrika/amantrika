@@ -1,0 +1,324 @@
+@import "tailwindcss";
+
+/* ============================================================
+   AMANTRIKA DESIGN TOKENS
+   Source of truth for all color/space/type/radius/shadow values.
+   Components must never hardcode hex values — use these vars or
+   the Tailwind utilities mapped from them in @theme below.
+   ============================================================ */
+
+:root {
+  /* ---- Brand palette (product chrome: landing/admin/onboarding) ---- */
+  --am-maroon: #6b1f2a;
+  --am-gold: #c9a227;
+  --am-ivory: #fbf6ec;
+  --am-henna: #8c4a2f;
+  --am-rani: #d63a6a;
+  --am-peacock: #14595b;
+  --am-ink: #2b1b12;
+
+  /* ---- Semantic tokens (default theme: royal-maroon) ----
+     Themes override ONLY these, via [data-theme] blocks below. */
+  --color-bg: #fbf6ec;
+  --color-surface: #fffdf6;
+  --color-surface-raised: #ffffff;
+  --color-text: #2b1b12;
+  --color-text-muted: #7d6a58;
+  --color-primary: #6b1f2a;
+  --color-accent: #c9a227;
+  --color-border-ornate: #c9a227;
+  --color-success: #2f7d4f;
+  --color-error: #a93226;
+  --color-overlay: rgba(43, 27, 18, 0.55);
+
+  /* ---- Type scale (fluid) ---- */
+  --text-display-xl: clamp(3.5rem, 5vw + 1.75rem, 6rem);
+  --text-display-lg: clamp(2.5rem, 3.5vw + 1.25rem, 4rem);
+  --text-h1: clamp(2rem, 2vw + 1.1rem, 2.75rem);
+  --text-h2: clamp(1.5rem, 1.2vw + 1rem, 2rem);
+  --text-h3: clamp(1.25rem, 0.6vw + 1rem, 1.5rem);
+  --text-body-lg: 1.125rem;
+  --text-body: 1rem;
+  --text-caption: 0.875rem;
+  --text-overline: 0.75rem;
+
+  /* ---- Spacing (4px base) ---- */
+  --space-card-padding: 1.5rem;
+  --space-section-gap: clamp(4rem, 8vw, 7rem);
+  --space-envelope-inset: 1.25rem;
+
+  /* ---- Radii ---- */
+  --radius-sharp: 0px;
+  --radius-soft: 8px;
+  --radius-card: 16px;
+  --radius-arch: 50% 50% 0 0 / 38% 38% 0 0;
+  --radius-pill: 999px;
+
+  /* ---- Shadows ---- */
+  --shadow-card-resting: 0 1px 2px rgba(43, 27, 18, 0.06), 0 4px 14px rgba(43, 27, 18, 0.08);
+  --shadow-card-lifted: 0 4px 8px rgba(43, 27, 18, 0.1), 0 16px 40px rgba(43, 27, 18, 0.16);
+  --shadow-gold-glow: 0 0 0 1px rgba(201, 162, 39, 0.35), 0 0 24px rgba(201, 162, 39, 0.35);
+  --shadow-envelope-depth: inset 0 2px 10px rgba(43, 27, 18, 0.18), inset 0 -1px 4px rgba(43, 27, 18, 0.1);
+
+  /* ---- Motion ---- */
+  --duration-instant: 100ms;
+  --duration-quick: 200ms;
+  --duration-ceremonial: 600ms;
+  --duration-grand: 1200ms;
+  --ease-silk: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-bounce-soft: cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+
+/* ============ THEME OVERRIDES (semantic tokens only) ============ */
+
+[data-theme="haldi-sunshine"] {
+  --color-bg: #fff6df;
+  --color-surface: #fffbef;
+  --color-surface-raised: #ffffff;
+  --color-text: #4a2e0c;
+  --color-text-muted: #97742f;
+  --color-primary: #d99000;
+  --color-accent: #e4611c;
+  --color-border-ornate: #e0a100;
+  --color-overlay: rgba(74, 46, 12, 0.5);
+}
+
+[data-theme="peacock-raas"] {
+  --color-bg: #edf8f6;
+  --color-surface: #f8fffd;
+  --color-surface-raised: #ffffff;
+  --color-text: #0f393b;
+  --color-text-muted: #4f7a7b;
+  --color-primary: #14595b;
+  --color-accent: #d63a6a;
+  --color-border-ornate: #d63a6a;
+  --color-overlay: rgba(15, 57, 59, 0.55);
+}
+
+[data-theme="temple-south"] {
+  --color-bg: #fbf6ec;
+  --color-surface: #fffdf3;
+  --color-surface-raised: #ffffff;
+  --color-text: #22301f;
+  --color-text-muted: #6d7a60;
+  --color-primary: #1e5631;
+  --color-accent: #c9a227;
+  --color-border-ornate: #c9a227;
+  --color-overlay: rgba(34, 48, 31, 0.55);
+}
+
+[data-theme="nikah-emerald"] {
+  --color-bg: #f2f8f2;
+  --color-surface: #fbfffb;
+  --color-surface-raised: #ffffff;
+  --color-text: #11332a;
+  --color-text-muted: #567a6d;
+  --color-primary: #146b4a;
+  --color-accent: #c9a227;
+  --color-border-ornate: #c9a227;
+  --color-overlay: rgba(17, 51, 42, 0.55);
+}
+
+[data-theme="mehndi-nights"] {
+  --color-bg: #2a1533;
+  --color-surface: #382044;
+  --color-surface-raised: #452a54;
+  --color-text: #f5ecf8;
+  --color-text-muted: #c3a8ce;
+  --color-primary: #b565d8;
+  --color-accent: #cfcfdc;
+  --color-border-ornate: #cfcfdc;
+  --color-success: #6fce97;
+  --color-error: #f08a7d;
+  --color-overlay: rgba(15, 6, 20, 0.65);
+}
+
+[data-theme="anand-karaj"] {
+  --color-bg: #fff7e9;
+  --color-surface: #fffcf3;
+  --color-surface-raised: #ffffff;
+  --color-text: #1c2a4a;
+  --color-text-muted: #5f6b88;
+  --color-primary: #d97700;
+  --color-accent: #c9a227;
+  --color-border-ornate: #1c2a4a;
+  --color-overlay: rgba(28, 42, 74, 0.55);
+}
+
+[data-theme="cathedral-white"] {
+  --color-bg: #fdfdfb;
+  --color-surface: #ffffff;
+  --color-surface-raised: #ffffff;
+  --color-text: #3a4038;
+  --color-text-muted: #8a9086;
+  --color-primary: #6e7f6b;
+  --color-accent: #c2ab72;
+  --color-border-ornate: #d8c69a;
+  --color-overlay: rgba(58, 64, 56, 0.5);
+}
+
+/* ============ TAILWIND THEME MAPPING ============ */
+
+@theme inline {
+  /* semantic — flip with the active theme */
+  --color-bg: var(--color-bg);
+  --color-surface: var(--color-surface);
+  --color-raised: var(--color-surface-raised);
+  --color-foreground: var(--color-text);
+  --color-muted: var(--color-text-muted);
+  --color-primary: var(--color-primary);
+  --color-accent: var(--color-accent);
+  --color-ornate: var(--color-border-ornate);
+  --color-success: var(--color-success);
+  --color-error: var(--color-error);
+  --color-overlay: var(--color-overlay);
+
+  /* brand — fixed Amantrika chrome */
+  --color-maroon: var(--am-maroon);
+  --color-gold: var(--am-gold);
+  --color-ivory: var(--am-ivory);
+  --color-henna: var(--am-henna);
+  --color-rani: var(--am-rani);
+  --color-peacock: var(--am-peacock);
+  --color-ink: var(--am-ink);
+
+  --font-display: var(--font-display), "Cormorant Garamond", Georgia, serif;
+  --font-body: var(--font-body), "Mulish", system-ui, sans-serif;
+  --font-deva: var(--font-deva), "Tiro Devanagari Hindi", serif;
+  --font-arabic: var(--font-arabic), "Amiri", serif;
+
+  --radius-soft: 8px;
+  --radius-card: 16px;
+
+  --shadow-resting: var(--shadow-card-resting);
+  --shadow-lifted: var(--shadow-card-lifted);
+  --shadow-gold-glow: var(--shadow-gold-glow);
+  --shadow-envelope: var(--shadow-envelope-depth);
+}
+
+/* ============ BASE ============ */
+
+body {
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-body), "Mulish", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: var(--color-accent);
+  color: var(--color-bg);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* ============ TYPE UTILITIES ============ */
+
+.type-display-xl { font-family: var(--font-display), serif; font-size: var(--text-display-xl); line-height: 1.05; font-weight: 600; }
+.type-display-lg { font-family: var(--font-display), serif; font-size: var(--text-display-lg); line-height: 1.1; font-weight: 600; }
+.type-h1 { font-family: var(--font-display), serif; font-size: var(--text-h1); line-height: 1.15; font-weight: 600; }
+.type-h2 { font-family: var(--font-display), serif; font-size: var(--text-h2); line-height: 1.2; font-weight: 600; }
+.type-h3 { font-family: var(--font-display), serif; font-size: var(--text-h3); line-height: 1.3; font-weight: 600; }
+.type-body-lg { font-size: var(--text-body-lg); line-height: 1.65; }
+.type-body { font-size: var(--text-body); line-height: 1.6; }
+.type-caption { font-size: var(--text-caption); line-height: 1.5; color: var(--color-text-muted); }
+.type-overline {
+  font-size: var(--text-overline);
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: var(--color-accent);
+}
+.type-verse { font-family: var(--font-display), serif; font-style: italic; font-size: var(--text-body-lg); line-height: 1.7; }
+
+/* ============ ORNAMENT UTILITIES ============ */
+
+/* Double-line gold gradient border — the signature "ornate-border" token */
+.ornate-border {
+  position: relative;
+  border: 1px solid var(--color-border-ornate);
+}
+.ornate-border::after {
+  content: "";
+  position: absolute;
+  inset: 4px;
+  border: 1px solid color-mix(in srgb, var(--color-border-ornate) 55%, transparent);
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+.radius-arch { border-radius: var(--radius-arch); }
+
+.gold-rule {
+  height: 1px;
+  border: 0;
+  background: linear-gradient(90deg, transparent, var(--color-border-ornate), transparent);
+}
+
+/* Gold shimmer sweep for titles/buttons */
+@keyframes shimmer-gold {
+  from { background-position: -200% 0; }
+  to { background-position: 200% 0; }
+}
+.shimmer-gold {
+  background-image: linear-gradient(
+    100deg,
+    var(--color-text) 40%,
+    var(--color-accent) 50%,
+    var(--color-text) 60%
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: shimmer-gold 2.4s var(--ease-silk) 1;
+}
+
+@keyframes diya-flicker {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  25% { opacity: 0.82; transform: scale(0.97); }
+  55% { opacity: 0.95; transform: scale(1.02); }
+  75% { opacity: 0.85; transform: scale(0.98); }
+}
+.diya-flicker { animation: diya-flicker 2.2s ease-in-out infinite; transform-origin: 50% 90%; }
+
+@keyframes gentle-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+.gentle-pulse { animation: gentle-pulse 2s ease-in-out infinite; }
+
+/* Loading skeleton with a gold-tinted shimmer */
+@keyframes skeleton-sweep {
+  from { background-position: -200% 0; }
+  to { background-position: 200% 0; }
+}
+.skeleton {
+  border-radius: var(--radius-soft);
+  background: linear-gradient(
+    100deg,
+    color-mix(in srgb, var(--color-text) 7%, var(--color-surface)) 40%,
+    color-mix(in srgb, var(--color-accent) 25%, var(--color-surface)) 50%,
+    color-mix(in srgb, var(--color-text) 7%, var(--color-surface)) 60%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-sweep 1.6s linear infinite;
+}
+
+/* Respect reduced motion for all CSS animation utilities */
+@media (prefers-reduced-motion: reduce) {
+  .shimmer-gold, .diya-flicker, .gentle-pulse, .skeleton {
+    animation: none;
+  }
+  .shimmer-gold { color: var(--color-text); background: none; }
+  html { scroll-behavior: auto; }
+}
+
+/* Zebra rows for guest tables */
+.table-zebra tbody tr:nth-child(even) {
+  background: color-mix(in srgb, var(--color-accent) 6%, var(--color-surface));
+}
