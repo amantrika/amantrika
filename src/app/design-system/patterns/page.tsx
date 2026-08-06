@@ -1,56 +1,54 @@
 "use client";
 
-import { Card, CoupleMonogram, CountdownTimer, Divider, EventTimelineItem, RSVPForm, Stat } from "@/design-system/components";
-import { getCouple } from "@/data/couples";
-import { getTheme } from "@/themes";
+import { PatternBackground, patternNames } from "@/design-system/patterns";
+import { themes } from "@/themes";
+import { useToast } from "@/design-system/components";
 import { DsSection } from "../shell";
 
 export default function PatternsPage() {
-  const couple = getCouple("swarnil-weds-prachi");
-  const theme = getTheme(couple.themeId);
+  const { toast } = useToast();
 
   return (
     <>
-      <p className="type-overline">Composed patterns</p>
-      <h1 className="mb-10 mt-1 type-display-lg text-primary">Patterns</h1>
+      <p className="type-overline">Background patterns</p>
+      <h1 className="mb-4 mt-1 type-display-lg text-primary">Patterns</h1>
+      <p className="mb-10 max-w-2xl type-body-lg text-muted">
+        Repeating SVG textures — one visual language per theme: paisley damask for royal maroon,
+        star jaali for nikah, phulkari for Anand Karaj, kolam steps for temple south. All render in
+        `currentColor` at low opacity over the paper.
+      </p>
 
-      <DsSection title="Invite hero" lead="CoupleMonogram + display-xl names + greeting line + ornate divider.">
-        <Card variant="ornate" className="p-10 text-center">
-          <CoupleMonogram initials={["S", "P"]} ring={theme.monogramRing} className="mx-auto size-24 text-accent" />
-          <p className="mt-4 font-deva text-xl text-accent">{theme.greetingCopy}</p>
-          <h3 className="mt-2 type-display-lg text-primary">
-            {couple.partner1.name} <span className="type-verse text-accent">weds</span> {couple.partner2.name}
-          </h3>
-          <p className="mt-2 type-body-lg text-muted">24 November 2026 · {couple.city}</p>
-          <Divider variant="motif" motif={theme.motifSet.divider} className="mx-auto mt-6 max-w-sm" />
-        </Card>
-      </DsSection>
-
-      <DsSection title="Countdown block" lead="CountdownTimer under an overline label.">
-        <Card className="p-10 text-center">
-          <p className="type-overline mb-6">The celebration begins in</p>
-          <CountdownTimer target={couple.mainDate} />
-        </Card>
-      </DsSection>
-
-      <DsSection title="Events timeline" lead="Stacked EventTimelineItems with theme vocabulary.">
-        <div className="flex flex-col gap-4">
-          {couple.events.slice(0, 2).map((ev) => (
-            <EventTimelineItem key={ev.id} event={ev} />
-          ))}
+      <DsSection title="Gallery" lead="Click a tile to copy its usage snippet.">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {patternNames.map((name) => {
+            const usedBy = themes.filter((t) => t.pattern === name).map((t) => t.name);
+            return (
+              <button
+                key={name}
+                onClick={() => {
+                  navigator.clipboard?.writeText(`<PatternBackground name="${name}" className="text-accent opacity-[0.07]" />`);
+                  toast(`Copied ${name} snippet`, "success");
+                }}
+                className="group overflow-hidden rounded-card border border-ornate/40 bg-surface text-left transition-shadow hover:shadow-gold-glow cursor-pointer"
+              >
+                <div className="relative h-36 paper-texture">
+                  <PatternBackground name={name} className="text-primary opacity-20 transition-opacity group-hover:opacity-35" />
+                </div>
+                <div className="border-t border-ornate/30 p-4">
+                  <p className="font-mono text-sm font-bold">{name}</p>
+                  <p className="type-caption">{usedBy.length ? `Theme: ${usedBy.join(", ")}` : "Universal"}</p>
+                </div>
+              </button>
+            );
+          })}
         </div>
       </DsSection>
 
-      <DsSection title="RSVP section" lead="RSVPForm with theme meal options.">
-        <RSVPForm events={couple.events} mealOptions={theme.mealOptions} />
-      </DsSection>
-
-      <DsSection title="Admin stat row" lead="Stat cards with sparklines — the one place that may feel slightly dashboard.">
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <Stat label="Invite views" value="2,431" delta={18} spark={[42, 58, 51, 96, 132, 118, 154, 171]} />
-          <Stat label="Unique guests" value={178} delta={9} />
-          <Stat label="RSVP yes" value={112} delta={6} />
-          <Stat label="Headcount" value={286} delta={-2} />
+      <DsSection title="In context" lead="A pattern wash sits behind content at 6–8% opacity — felt, not read.">
+        <div className="relative overflow-hidden rounded-card ornate-border paper-texture p-12 text-center">
+          <PatternBackground name="paisley-damask" className="text-accent opacity-[0.08]" />
+          <p className="relative type-display-lg text-primary">Swarnil <span className="type-script text-accent" style={{ fontSize: "0.55em" }}>weds</span> Prachi</p>
+          <p className="relative mt-2 type-overline">24 November 2026 · Jaipur</p>
         </div>
       </DsSection>
     </>

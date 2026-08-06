@@ -1,4 +1,5 @@
 import type { MotifName } from "@/design-system/motifs";
+import type { PatternName } from "@/design-system/patterns";
 
 export type ReligionTag = "hindu" | "muslim" | "sikh" | "christian" | "interfaith";
 export type MoodTag = "royal" | "playful" | "minimal" | "festive";
@@ -16,6 +17,8 @@ export interface Theme {
    * in globals.css, which are the styling source of truth. */
   palette: string[];
   motifSet: { corner: MotifName; divider: MotifName; accent: MotifName };
+  /** repeating background texture for hero/section panels */
+  pattern: PatternName;
   petalType: PetalType;
   monogramRing: MonogramRing;
   frameStyle: FrameStyle;
@@ -35,6 +38,7 @@ export const themes: Theme[] = [
     moodTag: "royal",
     palette: ["#6B1F2A", "#C9A227", "#FBF6EC", "#8C4A2F"],
     motifSet: { corner: "mehndi-corner", divider: "paisley", accent: "kalash" },
+    pattern: "paisley-damask",
     petalType: "marigold",
     monogramRing: "paisley",
     frameStyle: "arch",
@@ -52,6 +56,7 @@ export const themes: Theme[] = [
     moodTag: "playful",
     palette: ["#D99000", "#E4611C", "#FFF6DF", "#4A2E0C"],
     motifSet: { corner: "marigold", divider: "marigold", accent: "mango-leaf" },
+    pattern: "marigold-scatter",
     petalType: "marigold",
     monogramRing: "floral",
     frameStyle: "circle",
@@ -69,6 +74,7 @@ export const themes: Theme[] = [
     moodTag: "festive",
     palette: ["#14595B", "#D63A6A", "#EDF8F6", "#C9A227"],
     motifSet: { corner: "peacock-feather", divider: "peacock-feather", accent: "diya" },
+    pattern: "feather-eyes",
     petalType: "rose",
     monogramRing: "floral",
     frameStyle: "scallop",
@@ -86,6 +92,7 @@ export const themes: Theme[] = [
     moodTag: "minimal",
     palette: ["#1E5631", "#C9A227", "#FBF6EC", "#22301F"],
     motifSet: { corner: "mango-leaf", divider: "diya", accent: "kalash" },
+    pattern: "kolam-steps",
     petalType: "jasmine",
     monogramRing: "paisley",
     frameStyle: "arch",
@@ -103,6 +110,7 @@ export const themes: Theme[] = [
     moodTag: "royal",
     palette: ["#146B4A", "#C9A227", "#F2F8F2", "#11332A"],
     motifSet: { corner: "jaali-pattern", divider: "crescent-star", accent: "jaali-pattern" },
+    pattern: "star-jaali",
     petalType: "rose",
     monogramRing: "jaali",
     frameStyle: "arch",
@@ -120,6 +128,7 @@ export const themes: Theme[] = [
     moodTag: "festive",
     palette: ["#B565D8", "#CFCFDC", "#2A1533", "#F5ECF8"],
     motifSet: { corner: "jaali-pattern", divider: "crescent-star", accent: "paisley" },
+    pattern: "night-sky",
     petalType: "rose",
     monogramRing: "jaali",
     frameStyle: "scallop",
@@ -137,6 +146,7 @@ export const themes: Theme[] = [
     moodTag: "royal",
     palette: ["#D97700", "#1C2A4A", "#FFF7E9", "#C9A227"],
     motifSet: { corner: "jaali-pattern", divider: "paisley", accent: "kalash" },
+    pattern: "phulkari",
     petalType: "marigold",
     monogramRing: "floral",
     frameStyle: "arch",
@@ -154,6 +164,7 @@ export const themes: Theme[] = [
     moodTag: "minimal",
     palette: ["#6E7F6B", "#C2AB72", "#FDFDFB", "#3A4038"],
     motifSet: { corner: "olive-branch", divider: "olive-branch", accent: "church-arch" },
+    pattern: "laurel-sprig",
     petalType: "confetti",
     monogramRing: "laurel",
     frameStyle: "polaroid",

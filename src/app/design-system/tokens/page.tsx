@@ -144,12 +144,28 @@ export default function TokensPage() {
             <p className="type-display-lg italic text-primary">Two souls, one story</p>
           </div>
           <div>
-            <p className="type-overline mb-1">Devanagari — Tiro Devanagari Hindi</p>
-            <p className="font-deva text-3xl">।। शुभ विवाह ।।</p>
+            <p className="type-overline mb-1">Calligraphy — Great Vibes</p>
+            <p className="type-script text-5xl text-primary">Swarnil &amp; Prachi</p>
           </div>
           <div>
-            <p className="type-overline mb-1">Arabic/Urdu — Amiri</p>
+            <p className="type-overline mb-1">Devanagari display — Rozha One</p>
+            <p className="type-deva-display text-4xl text-primary">शुभ विवाह</p>
+          </div>
+          <div>
+            <p className="type-overline mb-1">Devanagari body — Tiro Devanagari Hindi</p>
+            <p className="font-deva text-2xl">।। दोनों परिवारों के आशीर्वाद से ।।</p>
+          </div>
+          <div>
+            <p className="type-overline mb-1">Devanagari playful — Yatra One</p>
+            <p className="type-deva-fun text-3xl text-accent">बधाई हो!</p>
+          </div>
+          <div>
+            <p className="type-overline mb-1">Arabic — Amiri</p>
             <p dir="rtl" className="font-arabic text-3xl">بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</p>
+          </div>
+          <div>
+            <p className="type-overline mb-1">Urdu nastaliq — Noto Nastaliq Urdu</p>
+            <p className="type-nastaliq text-2xl text-primary">دعوتِ نکاح</p>
           </div>
           {(Object.entries(typeScale) as [string, { css: string; note: string }][])
             .filter(([k]) => !k.startsWith("display"))

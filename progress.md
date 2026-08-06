@@ -38,6 +38,28 @@ Tracks the phase plan in `instruction.md`. Updated: 6 Aug 2026.
       how-it-works, testimonials), dev-only 🎨 theme switcher, hex audit (tokens/themes only),
       ESLint + tsc clean, production build passes, screenshots reviewed.
 
+- [x] **DS deep-dive (round 2)** — requested 6 Aug 2026:
+      - Fonts: Great Vibes (calligraphy), Rozha One (Devanagari display), Yatra One (playful
+        Devanagari), Noto Nastaliq Urdu — plus the original Cormorant/Mulish/Tiro/Amiri; new
+        type utilities (`.type-script`, `.type-deva-display`, `.type-deva-fun`, `.type-nastaliq`).
+      - `src/design-system/icons/` — 32 custom wedding icons (shehnai, doli, varmala, mandap,
+        kaleera, sehra, mangalsutra, mosque-dome, gurudwara, khanda, lotus…) + `/design-system/icons` gallery.
+      - `src/design-system/patterns/` — 10 theme background patterns (paisley-damask, star-jaali,
+        phulkari, kolam-steps, night-sky, feather-eyes…), wired into every Theme via `pattern` field,
+        with a `/design-system/patterns` gallery.
+      - Physical-card ornaments: ThreadBorder (dhage-ki-patti with corner knots + running dash),
+        StitchedEdge, ZariBraid, Toran, Bunting, LaceEdge, CornerFlourish, OrnateFrame, Embossed/
+        Debossed/Glass panels, GoldFoilText, ShimmerDivider, Sparkles, WaxDrip, paper-texture utility.
+      - 55+ new components across Ornaments / Wedding décor / Typography / Timeline / Interactive
+        (ConnectedTimeline with custom icons + dashed dhaga, HorizontalItinerary, DayScheduleCard,
+        FlipCard, FoldCard, ConfettiButton, ProgressGarland, RatingDiyas, ScrollCard, TicketCard…).
+      - Motion: 12 new animation presets (bounce-in, zoom-bloom, thread-draw, heartbeat, sparkle-pop,
+        swing-hang…) + new `transitions.ts` with 12 view transitions (iris-reveal, arch-reveal,
+        curtain wipes, petal-wipe, blur-through…), all demoed live (looping = the "video" demos)
+        on `/design-system/motion`.
+      - Docs restructure: `/design-system/components` is now a category index; every component has
+        its own page at `/design-system/components/[slug]` with named variations (60+ documented).
+
 ## 🔜 Left / nice-to-haves
 
 - [ ] Per-component `__demos__/*.demo.tsx` files (demos currently live inline in the

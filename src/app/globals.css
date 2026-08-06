@@ -183,9 +183,13 @@
   --color-ink: var(--am-ink);
 
   --font-display: var(--font-display), "Cormorant Garamond", Georgia, serif;
+  --font-script: var(--font-script), "Great Vibes", cursive;
   --font-body: var(--font-body), "Mulish", system-ui, sans-serif;
   --font-deva: var(--font-deva), "Tiro Devanagari Hindi", serif;
+  --font-deva-display: var(--font-deva-display), "Rozha One", serif;
+  --font-deva-fun: var(--font-deva-fun), "Yatra One", cursive;
   --font-arabic: var(--font-arabic), "Amiri", serif;
+  --font-nastaliq: var(--font-nastaliq), "Noto Nastaliq Urdu", serif;
 
   --radius-soft: 8px;
   --radius-card: 16px;
@@ -234,6 +238,10 @@ body {
   color: var(--color-accent);
 }
 .type-verse { font-family: var(--font-display), serif; font-style: italic; font-size: var(--text-body-lg); line-height: 1.7; }
+.type-script { font-family: var(--font-script), cursive; line-height: 1.4; }
+.type-deva-display { font-family: var(--font-deva-display), serif; line-height: 1.4; }
+.type-deva-fun { font-family: var(--font-deva-fun), cursive; line-height: 1.4; }
+.type-nastaliq { font-family: var(--font-nastaliq), serif; line-height: 2; direction: rtl; }
 
 /* ============ ORNAMENT UTILITIES ============ */
 
@@ -321,4 +329,131 @@ body {
 /* Zebra rows for guest tables */
 .table-zebra tbody tr:nth-child(even) {
   background: color-mix(in srgb, var(--color-accent) 6%, var(--color-surface));
+}
+
+/* ============ PHYSICAL-CARD MATERIAL UTILITIES ============ */
+
+/* Card-stock paper: subtle fibre noise + soft vignette */
+.paper-texture {
+  background-color: var(--color-surface);
+  background-image:
+    radial-gradient(ellipse at center, transparent 55%, color-mix(in srgb, var(--color-text) 5%, transparent) 100%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 0.55 0 0 0 0 0.45 0 0 0 0 0.3 0 0 0 0.045 0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* Gold-foil lettering: metallic gradient + moving sheen */
+@keyframes foil-shine {
+  from { background-position: -150% 0; }
+  to { background-position: 250% 0; }
+}
+.gold-foil {
+  background-image: linear-gradient(
+    100deg,
+    color-mix(in srgb, var(--color-accent) 70%, var(--color-text)) 20%,
+    var(--color-accent) 38%,
+    color-mix(in srgb, var(--color-accent) 35%, white) 50%,
+    var(--color-accent) 62%,
+    color-mix(in srgb, var(--color-accent) 70%, var(--color-text)) 80%
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: foil-shine 3.5s linear infinite;
+}
+
+/* Letterpress / embossed panel */
+.embossed {
+  box-shadow:
+    inset 0 1px 2px color-mix(in srgb, white 65%, transparent),
+    inset 0 -1px 2px color-mix(in srgb, var(--color-text) 18%, transparent),
+    0 1px 2px color-mix(in srgb, var(--color-text) 10%, transparent);
+}
+.debossed {
+  box-shadow:
+    inset 0 2px 4px color-mix(in srgb, var(--color-text) 18%, transparent),
+    inset 0 -1px 1px color-mix(in srgb, white 55%, transparent);
+}
+
+/* Running-stitch edge (tailor's dashed thread) */
+.stitched {
+  outline: 2px dashed color-mix(in srgb, var(--color-border-ornate) 80%, transparent);
+  outline-offset: -8px;
+}
+
+/* Animated thread dash — pairs with SVG stroke-dasharray */
+@keyframes thread-run {
+  to { stroke-dashoffset: -24; }
+}
+.thread-run { animation: thread-run 1.6s linear infinite; }
+
+@keyframes draw-stroke {
+  from { stroke-dashoffset: var(--draw-length, 300); }
+  to { stroke-dashoffset: 0; }
+}
+.draw-stroke {
+  stroke-dasharray: var(--draw-length, 300);
+  animation: draw-stroke 2.4s var(--ease-silk) forwards;
+}
+
+/* ============ AMBIENT MOTION UTILITIES ============ */
+
+@keyframes sway {
+  0%, 100% { transform: rotate(-3deg); }
+  50% { transform: rotate(3deg); }
+}
+.sway { animation: sway 3.4s ease-in-out infinite; transform-origin: top center; }
+
+@keyframes float-loop {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+.float-loop { animation: float-loop 3.2s ease-in-out infinite; }
+
+@keyframes heartbeat {
+  0%, 100% { transform: scale(1); }
+  12% { transform: scale(1.12); }
+  24% { transform: scale(1); }
+  36% { transform: scale(1.08); }
+  48% { transform: scale(1); }
+}
+.heartbeat { animation: heartbeat 1.8s ease-in-out infinite; }
+
+@keyframes sparkle-pop {
+  0%, 100% { transform: scale(0.4); opacity: 0; }
+  50% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes marquee-x {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+.marquee-x { animation: marquee-x var(--marquee-duration, 18s) linear infinite; }
+
+@keyframes swing-hang {
+  0%, 100% { transform: rotate(-4deg); }
+  50% { transform: rotate(4deg); }
+}
+.swing-hang { animation: swing-hang 3s ease-in-out infinite; transform-origin: top center; }
+
+@keyframes kinetic-underline {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+.kinetic-underline::after {
+  content: "";
+  display: block;
+  height: 2px;
+  margin-top: 2px;
+  background: linear-gradient(90deg, transparent, var(--color-accent), transparent);
+  transform-origin: left center;
+  animation: kinetic-underline 0.8s var(--ease-silk) forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gold-foil, .thread-run, .draw-stroke, .sway, .float-loop, .heartbeat,
+  .marquee-x, .swing-hang, .kinetic-underline::after {
+    animation: none;
+  }
+  .draw-stroke { stroke-dasharray: none; }
 }

@@ -1,3 +1,4 @@
+/* Core UI */
 export { Button } from "./Button";
 export { Input, Select, Textarea, DatePicker, TimePicker } from "./fields";
 export { Card } from "./Card";
@@ -8,6 +9,8 @@ export { ToggleGroup, Switch } from "./toggles";
 export { Stepper } from "./Stepper";
 export { Table } from "./Table";
 export { Stat, Sparkline } from "./Stat";
+
+/* Wedding signature set */
 export { Envelope } from "./Envelope";
 export { WaxSeal } from "./WaxSeal";
 export { CoupleMonogram } from "./CoupleMonogram";
@@ -17,3 +20,32 @@ export { RSVPForm } from "./RSVPForm";
 export { BlessingsWall, MusicToggle, GiftBlock, MapEmbedPlaceholder } from "./wedding-extras";
 export { PhotoFrame } from "./PhotoFrame";
 export { PetalRain } from "./PetalRain";
+
+/* Physical-card ornaments */
+export {
+  ThreadBorder, StitchedEdge, ZariBraid, Toran, Bunting, LaceEdge, CornerFlourish,
+  OrnateFrame, EmbossedPanel, DebossedPanel, GlassCard, GoldFoilText, ShimmerDivider,
+  Sparkles, WaxDrip,
+} from "./ornaments";
+
+/* Wedding décor */
+export {
+  DiyaRow, GarlandDivider, BandBaajaMarquee, HaldiSplash, KaleeraTassel, SehraFringe,
+  MandapCanopy, RangoliMedallion, ScrollCard, TicketCard, FoldCard, PolaroidStack,
+} from "./wedding-decor";
+
+/* Typography */
+export {
+  ScriptText, BilingualHeading, UrduVerse, VerseBlock, DropCap, WaveText,
+  TypewriterText, AnimatedCounter, KineticUnderline,
+} from "./typography";
+
+/* Timeline family */
+export { ConnectedTimeline, HorizontalItinerary, DayScheduleCard, MilestoneRibbon } from "./timeline";
+export type { TimelineEntry } from "./timeline";
+
+/* Interactive & data display */
+export {
+  FlipCard, HoverTiltCard, ConfettiButton, Chip, ProgressGarland, RatingDiyas,
+  SeatCard, RelationCard, QRCard, ShareRow, WeatherCard, GlowBadge, PulseDot, Marquee,
+} from "./interactive";

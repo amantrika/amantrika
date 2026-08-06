@@ -94,6 +94,102 @@ export const staggerContainer: Variants = {
   visible: { transition: { staggerChildren: 0.12 } },
 };
 
+/* ---------- second wave: celebratory entrance & ambient presets ---------- */
+
+export const bounceIn: Variants = {
+  hidden: { scale: 0.4, opacity: 0 },
+  visible: {
+    scale: 1,
+    opacity: 1,
+    transition: { duration: durations.ceremonial, ease: easings.bounceSoft },
+  },
+};
+
+export const rotateIn: Variants = {
+  hidden: { rotate: -12, scale: 0.9, opacity: 0 },
+  visible: {
+    rotate: 0,
+    scale: 1,
+    opacity: 1,
+    transition: { duration: durations.ceremonial, ease: easings.silk },
+  },
+};
+
+export const flipReveal: Variants = {
+  hidden: { rotateX: -85, opacity: 0, transformPerspective: 900 },
+  visible: {
+    rotateX: 0,
+    opacity: 1,
+    transition: { duration: durations.ceremonial, ease: easings.silk },
+  },
+};
+
+export const zoomBloom: Variants = {
+  hidden: { scale: 0, rotate: -30, opacity: 0 },
+  visible: {
+    scale: 1,
+    rotate: 0,
+    opacity: 1,
+    transition: { duration: durations.grand, ease: easings.bounceSoft },
+  },
+};
+
+export const swingHang: Variants = {
+  hanging: {
+    rotate: [-4, 4, -4],
+    transition: { duration: 3, repeat: Infinity, ease: "easeInOut" },
+  },
+};
+
+export const floatLoop: Variants = {
+  floating: {
+    y: [0, -8, 0],
+    transition: { duration: 3.2, repeat: Infinity, ease: "easeInOut" },
+  },
+};
+
+export const heartbeat: Variants = {
+  beating: {
+    scale: [1, 1.12, 1, 1.08, 1],
+    transition: { duration: 1.8, repeat: Infinity, ease: "easeInOut" },
+  },
+};
+
+export const sparklePop: Variants = {
+  twinkling: (i: number = 0) => ({
+    scale: [0.4, 1, 0.4],
+    opacity: [0, 1, 0],
+    transition: { duration: 2 + (i % 3) * 0.6, delay: (i % 5) * 0.4, repeat: Infinity },
+  }),
+};
+
+/** SVG stroke draw — set pathLength on the path and use these variants. */
+export const threadDraw: Variants = {
+  hidden: { pathLength: 0, opacity: 0 },
+  visible: {
+    pathLength: 1,
+    opacity: 1,
+    transition: { duration: durations.grand * 1.5, ease: easings.silk },
+  },
+};
+
+export const garlandSway: Variants = {
+  swaying: {
+    skewX: [-2, 2, -2],
+    transition: { duration: 4, repeat: Infinity, ease: "easeInOut" },
+  },
+};
+
+export const slideInLeft: Variants = {
+  hidden: { x: -60, opacity: 0 },
+  visible: { x: 0, opacity: 1, transition: { duration: durations.ceremonial, ease: easings.silk } },
+};
+
+export const slideInRight: Variants = {
+  hidden: { x: 60, opacity: 0 },
+  visible: { x: 0, opacity: 1, transition: { duration: durations.ceremonial, ease: easings.silk } },
+};
+
 export const presets = {
   "envelope-open": envelopeOpen,
   "card-slide-out": cardSlideOut,
@@ -103,4 +199,16 @@ export const presets = {
   "diya-flicker": diyaFlicker,
   "shimmer-gold": shimmerGold,
   "fade-up-stagger": fadeUpStagger,
+  "bounce-in": bounceIn,
+  "rotate-in": rotateIn,
+  "flip-reveal": flipReveal,
+  "zoom-bloom": zoomBloom,
+  "swing-hang": swingHang,
+  "float-loop": floatLoop,
+  heartbeat: heartbeat,
+  "sparkle-pop": sparklePop,
+  "thread-draw": threadDraw,
+  "garland-sway": garlandSway,
+  "slide-in-left": slideInLeft,
+  "slide-in-right": slideInRight,
 } as const;

@@ -12,8 +12,10 @@ const nav = [
   { href: "/design-system", label: "Introduction" },
   { href: "/design-system/tokens", label: "Foundations" },
   { href: "/design-system/components", label: "Components" },
-  { href: "/design-system/themes", label: "Themes" },
+  { href: "/design-system/icons", label: "Icons" },
   { href: "/design-system/patterns", label: "Patterns" },
+  { href: "/design-system/motion", label: "Motion" },
+  { href: "/design-system/themes", label: "Themes" },
 ];
 
 export function ThemeSwitcher({ compact = false }: { compact?: boolean }) {
@@ -69,7 +71,9 @@ export function DsShell({ children }: { children: ReactNode }) {
         >
           <ul className="sticky top-24 flex flex-col gap-1">
             {nav.map((item) => {
-              const active = pathname === item.href;
+              const active =
+                pathname === item.href ||
+                (item.href !== "/design-system" && pathname.startsWith(item.href + "/"));
               return (
                 <li key={item.href}>
                   <Link
