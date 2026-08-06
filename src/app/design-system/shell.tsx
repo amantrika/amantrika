@@ -12,6 +12,7 @@ const nav = [
   { href: "/design-system", label: "Introduction" },
   { href: "/design-system/tokens", label: "Foundations" },
   { href: "/design-system/components", label: "Components" },
+  { href: "/design-system/openings", label: "Openings" },
   { href: "/design-system/icons", label: "Icons" },
   { href: "/design-system/textures", label: "Textures" },
   { href: "/design-system/borders", label: "Borders" },

@@ -21,6 +21,18 @@ export { BlessingsWall, MusicToggle, GiftBlock, MapEmbedPlaceholder } from "./we
 export { PhotoFrame } from "./PhotoFrame";
 export { PetalRain } from "./PetalRain";
 
+/* Themed openings — a different grand reveal per theme */
+export { ThemedOpening, openStyleLabels } from "./ThemedOpening";
+
+/* Big feature components */
+export { FamilyTree } from "./FamilyTree";
+export type { FamilyMember, FamilySide } from "./FamilyTree";
+export { EventCalendar } from "./EventCalendar";
+export { VideoFrame, VideoHero } from "./VideoFrame";
+
+/* Reusable section shells (theme-aware) */
+export { SectionHeader, ThemedSection, ThemedCard, ThemedHero, OurStorySection } from "./sections";
+
 /* Border designs */
 export { DecorativeBorder, borderStyles } from "./borders";
 export type { BorderStyleName } from "./borders";

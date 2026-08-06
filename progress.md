@@ -71,6 +71,27 @@ Tracks the phase plan in `instruction.md`. Updated: 6 Aug 2026.
         moti beads, scallop, temple zigzag, chevron, jaali key, floral vine, rope twist, postage
         stamp) via theme-colored SVG mask strips; `/design-system/borders` gallery + texture combos.
 
+- [x] **Per-theme tokens + feature components (round 4)** — requested 6 Aug 2026:
+      - Themes now own their **whole look**, not just colors: `borderStyle`, `texture`, `openStyle`
+        on the `Theme` object, plus per-theme CSS tokens for heading font, accent face, greeting
+        script, letter-spacing, radius and `--rhythm-scale` (section spacing). Temple South sets
+        Rozha One + wide tracking + sharp radius + airy rhythm; Cathedral White is 0-radius with
+        very wide tracking; Nikah pairs Amiri/Nastaliq. New utilities: `.type-accent-face`,
+        `.type-greeting`.
+      - **Derived tokens fixed**: ramps/gradients are declared on `:root, [data-theme]` so a nested
+        theme scope (docs previews) recomputes its own palette instead of inheriting the parent's.
+      - **ThemedOpening** — 8 unique invitation openings, one per theme: wax seal, marigold burst,
+        peacock feather fan, carved temple doors, jaali gates, night-curtain lift, phulkari curtain,
+        cathedral doors. Gallery at `/design-system/openings` (each preview scoped to its theme).
+      - New feature components: **FamilyTree** (two households + gathbandhan knot),
+        **EventCalendar** (month grid with per-event custom icons), **VideoFrame / VideoHero**
+        (ornate film players), **OurStorySection**, and theme-aware section shells
+        (`ThemedSection`, `ThemedHero`, `ThemedCard`, `SectionHeader`).
+      - Docs: new **Features** and **Sections** categories; every component still gets its own page
+        with variants. 77 documented components.
+      - The live invite now composes the shells — so a theme's opening, border, material, pattern,
+        fonts and rhythm all apply without the page branching on theme.
+
 ## 🔜 Left / nice-to-haves
 
 - [ ] Per-component `__demos__/*.demo.tsx` files (demos currently live inline in the

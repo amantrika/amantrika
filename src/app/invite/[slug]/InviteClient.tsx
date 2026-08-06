@@ -11,9 +11,11 @@ import { store } from "@/lib/store";
 import Link from "next/link";
 import { useTheme } from "@/design-system/ThemeProvider";
 import {
-  BlessingsWall, Card, CoupleMonogram, CountdownTimer, Divider, Envelope, EventTimelineItem,
-  GiftBlock, MapEmbedPlaceholder, MusicToggle, PetalRain, PhotoFrame, RSVPForm,
+  BlessingsWall, CountdownTimer, Divider, EventCalendar, EventTimelineItem, FamilyTree,
+  GiftBlock, MapEmbedPlaceholder, MusicToggle, OurStorySection, PetalRain, PhotoFrame,
+  RSVPForm, ThemedCard, ThemedHero, ThemedOpening, VideoHero, CoupleMonogram,
 } from "@/design-system/components";
+import { brideFamily, groomFamily } from "@/data/families";
 import { fadeUpStagger, staggerContainer } from "@/design-system/motion/presets";
 
 /** Scroll-revealed section with ornate motif divider above it. */
@@ -87,9 +89,10 @@ export function InviteClient({ slug }: { slug: string }) {
           <p className="mb-8 text-center type-overline">
             {couple.partner1.name} &amp; {couple.partner2.name} invite you
           </p>
-          <Envelope
-            guestName={guestName ? `Dear ${guestName}` : "With love, to you & yours"}
-            sealMonogram={`${initials[0]}·${initials[1]}`}
+          <ThemedOpening
+            theme={theme}
+            initials={initials}
+            guestName={guestName ?? undefined}
             onOpened={() => setOpened(true)}
           />
         </div>
@@ -113,22 +116,18 @@ export function InviteClient({ slug }: { slug: string }) {
       <PetalRain type={theme.petalType} density={12} />
       <MusicToggle />
 
-      {/* 1 · HERO */}
-      <section className="mx-auto flex min-h-[92vh] w-full max-w-4xl flex-col items-center justify-center px-4 pt-16 text-center">
+      {/* 1 · HERO — wears the theme's material, pattern, greeting script & fonts */}
+      <ThemedHero
+        theme={theme}
+        names={[couple.partner1.name, couple.partner2.name]}
+        initials={initials}
+        dateLabel={mainDateLabel}
+        city={couple.city}
+        hashtag={couple.hashtag}
+        guestName={guestName}
+      >
         <CoupleMonogram initials={initials} ring={theme.monogramRing} className="size-28 text-accent sm:size-36" title="Couple monogram" />
-        <p className={`mt-6 text-2xl text-accent ${theme.greetingScript === "arabic" ? "font-arabic" : theme.greetingScript === "devanagari" ? "font-deva" : "type-verse"}`}
-           dir={theme.greetingScript === "arabic" ? "rtl" : undefined}>
-          {theme.greetingCopy}
-        </p>
-        <h1 className="mt-4 type-display-xl text-primary">
-          {couple.partner1.name}
-          <span className="mx-3 type-verse text-accent sm:mx-5" style={{ fontSize: "0.5em" }}>weds</span>
-          {couple.partner2.name}
-        </h1>
-        {guestName && <p className="mt-4 type-verse text-muted">Dear {guestName}, we would be honoured by your presence.</p>}
-        <p className="mt-6 type-overline">{mainDateLabel} · {couple.city}</p>
-        <p className="mt-2 type-body-lg text-muted">{couple.hashtag}</p>
-      </section>
+      </ThemedHero>
 
       {/* 2 · COUNTDOWN */}
       <Section id="countdown" divider={theme.motifSet.divider} overline="The celebration begins in">
@@ -139,25 +138,26 @@ export function InviteClient({ slug }: { slug: string }) {
 
       {/* 3 · OUR STORY */}
       <Section id="story" divider={theme.motifSet.accent} overline="Two families, one story" title="Our Story">
-        <motion.p variants={fadeUpStagger} className="mx-auto max-w-2xl text-center type-verse">
-          {couple.story}
-        </motion.p>
-        <motion.div variants={fadeUpStagger} className="mt-10 flex flex-wrap items-end justify-center gap-8">
-          <PhotoFrame seed={couple.photos[0]} variant={theme.frameStyle} width={260} height={330} caption="How it started" />
-          <PhotoFrame seed={couple.photos[1]} variant={theme.frameStyle} width={260} height={330} caption="How it's going" />
+        <OurStorySection
+          theme={theme}
+          story={couple.story}
+          moments={couple.storyMoments}
+          photos={[couple.photos[0], couple.photos[1]]}
+        />
+      </Section>
+
+      {/* 3b · THE FILM */}
+      <Section id="film" divider={theme.motifSet.divider} overline="Press play" title="Our Film">
+        <motion.div variants={fadeUpStagger}>
+          <VideoHero posterSeed={`${couple.slug}-film`} title="Watch our story" subtitle="three minutes, one monsoon" />
         </motion.div>
-        <div className="mx-auto mt-10 flex max-w-md flex-col gap-5">
-          {couple.storyMoments.map((m, i) => (
-            <motion.div key={m.title} variants={fadeUpStagger} custom={i} className="border-l-2 border-ornate pl-4">
-              <h3 className="type-h3 text-primary">{m.title}</h3>
-              <p className="type-body text-muted">{m.text}</p>
-            </motion.div>
-          ))}
-        </div>
       </Section>
 
       {/* 4 · EVENTS */}
       <Section id="events" divider={theme.motifSet.divider} overline="Join us for" title="The Celebrations">
+        <motion.div variants={fadeUpStagger} className="mx-auto mb-8 max-w-md">
+          <EventCalendar events={couple.events} />
+        </motion.div>
         <div className="flex flex-col gap-5">
           {couple.events.map((ev, i) => (
             <motion.div key={ev.id} variants={fadeUpStagger} custom={i}>
@@ -169,20 +169,13 @@ export function InviteClient({ slug }: { slug: string }) {
 
       {/* 5 · FAMILY */}
       <Section id="family" divider={theme.motifSet.accent} overline="With the blessings of" title="Our Families">
-        <div className="grid gap-5 sm:grid-cols-2">
-          {(couple.side === "bride"
-            ? [couple.partner2, couple.partner1]
-            : [couple.partner1, couple.partner2]
-          ).map((p, i) => (
-            <motion.div key={p.name} variants={fadeUpStagger} custom={i}>
-              <Card variant="ornate" className="p-8 text-center">
-                <p className="type-overline">{i === 0 ? "Together with" : "And"}</p>
-                <h3 className="mt-2 type-h1 text-primary">{p.family}</h3>
-                <p className="mt-1 type-verse text-muted">parents &amp; family of {p.name}</p>
-              </Card>
-            </motion.div>
-          ))}
-        </div>
+        <motion.div variants={fadeUpStagger}>
+          <FamilyTree
+            groomSide={{ ...groomFamily, household: couple.partner1.family, partner: { ...groomFamily.partner, name: couple.partner1.name } }}
+            brideSide={{ ...brideFamily, household: couple.partner2.family, partner: { ...brideFamily.partner, name: couple.partner2.name } }}
+            order={couple.side === "bride" ? "bride-first" : "groom-first"}
+          />
+        </motion.div>
       </Section>
 
       {/* 6 · GALLERY */}
@@ -242,11 +235,11 @@ export function InviteClient({ slug }: { slug: string }) {
           <h3 className="mb-4 text-center type-h2 text-primary">Where to stay</h3>
           <div className="grid gap-4 sm:grid-cols-3">
             {couple.hotels.map((h) => (
-              <Card key={h.name} className="p-5 text-center">
+              <ThemedCard key={h.name} theme={theme} className="!p-5 text-center">
                 <p className="font-semibold text-primary">{h.name}</p>
                 <p className="type-caption">{h.distance}</p>
                 <p className="type-caption">{h.phone}</p>
-              </Card>
+              </ThemedCard>
             ))}
           </div>
         </motion.div>

@@ -14,8 +14,12 @@ import {
   Table, Textarea, ThreadBorder, TicketCard, Toran, TypewriterText,
   UrduVerse, VerseBlock, WaveText, WaxDrip, WaxSeal, WeatherCard, ZariBraid,
   AnimatedCounter, StatelessDemos,
+  FamilyTree, EventCalendar, VideoFrame, VideoHero, DecorativeBorder,
+  SectionHeader, ThemedCard, ThemedHero, OurStorySection, ThemedOpening,
 } from "./registry-helpers";
 import { getCouple } from "@/data/couples";
+import { brideFamily, groomFamily } from "@/data/families";
+import { getTheme } from "@/themes";
 import { icons } from "@/design-system/icons";
 
 export interface DemoEntry {
@@ -27,12 +31,13 @@ export interface DemoEntry {
 export interface ComponentDoc {
   slug: string;
   title: string;
-  category: "Core UI" | "Ornaments" | "Wedding décor" | "Typography" | "Timeline" | "Interactive" | "Signature";
+  category: "Core UI" | "Ornaments" | "Wedding décor" | "Typography" | "Timeline" | "Interactive" | "Signature" | "Features" | "Sections";
   description: string;
   demos: DemoEntry[];
 }
 
 const couple = getCouple("swarnil-weds-prachi");
+const theme = getTheme("royal-maroon");
 const Shehnai = icons.shehnai;
 const Dhol = icons.dhol;
 
@@ -659,9 +664,105 @@ export const componentDocs: ComponentDoc[] = [
       { title: "Icon parade", node: <Marquee duration={14}><Shehnai className="size-8 text-primary" /><Dhol className="size-8 text-accent" /><span className="font-display text-xl font-semibold text-primary">#SwarnilWedsPrachi</span><Shehnai className="size-8 text-accent" /><Dhol className="size-8 text-primary" /></Marquee> },
     ],
   },
+
+  /* ================= FEATURES ================= */
+  {
+    slug: "themed-opening",
+    title: "ThemedOpening",
+    category: "Features",
+    description: "The invitation's grand reveal — a different animation per theme (wax seal, marigold burst, jaali gates, cathedral doors…). See all eight on the Openings page.",
+    demos: [
+      { title: "Royal Maroon — envelope & seal", node: <ThemedOpening theme={getTheme("royal-maroon")} style="envelope-seal" guestName="Rahul & Family" /> },
+      { title: "Haldi Sunshine — marigold burst", node: <div data-theme="haldi-sunshine" className="bg-bg p-4"><ThemedOpening theme={getTheme("haldi-sunshine")} style="marigold-burst" guestName="Rahul & Family" /></div> },
+      { title: "Nikah Emerald — jaali gates", node: <div data-theme="nikah-emerald" className="bg-bg p-4"><ThemedOpening theme={getTheme("nikah-emerald")} style="jaali-gates" guestName="Ahmed's cousins" /></div> },
+      { title: "Cathedral White — church doors", node: <div data-theme="cathedral-white" className="bg-bg p-4"><ThemedOpening theme={getTheme("cathedral-white")} style="cathedral-doors" guestName="The Harts" /></div> },
+    ],
+  },
+  {
+    slug: "family-tree",
+    title: "FamilyTree",
+    category: "Features",
+    description: "Two households joined by a gathbandhan knot — elders above, the couple in the middle, siblings below, connectors in the theme's ornate color.",
+    demos: [
+      { title: "Groom's side first", node: <FamilyTree groomSide={groomFamily} brideSide={brideFamily} /> },
+      { title: "Bride's side first", note: "Respects the side chosen during onboarding.", node: <FamilyTree groomSide={groomFamily} brideSide={brideFamily} order="bride-first" /> },
+    ],
+  },
+  {
+    slug: "event-calendar",
+    title: "EventCalendar",
+    category: "Features",
+    description: "A month grid marking every function with its own custom icon. Click a day to see what's happening; navigate months with the arrows.",
+    demos: [
+      { title: "Hindu wedding week", node: <EventCalendar events={couple.events} className="max-w-md" /> },
+      { title: "Nikah schedule", node: <div data-theme="nikah-emerald" className="bg-bg p-4"><EventCalendar events={getCouple("ahmed-weds-fatima").events} className="max-w-md" /></div> },
+    ],
+  },
+  {
+    slug: "video-frame",
+    title: "VideoFrame · VideoHero",
+    category: "Features",
+    description: "Ornate film players for save-the-date reels: gold controls, theme frame shapes, corner flourishes. Poster-only mode when no src is given.",
+    demos: [
+      { title: "Frame shapes", node: <div className="flex flex-wrap items-end gap-8"><VideoFrame posterSeed="film-arch" variant="arch" width={300} height={200} caption="Our save-the-date" /><VideoFrame posterSeed="film-pol" variant="polaroid" width={300} height={200} caption="Pre-wedding reel" /></div> },
+      { title: "Cinematic hero band", node: <VideoHero posterSeed="film-hero" title="Watch our story" subtitle="three minutes, one monsoon" /> },
+    ],
+  },
+
+  /* ================= SECTIONS ================= */
+  {
+    slug: "section-header",
+    title: "SectionHeader",
+    category: "Sections",
+    description: "Overline + display title + optional accent-face subtitle and motif divider — the header every invite section shares.",
+    demos: [
+      { title: "Centered", node: <SectionHeader overline="Join us for" title="The Celebrations" subtitle="five days, one very happy family" motif="paisley" /> },
+      { title: "Left aligned", node: <SectionHeader overline="Moments" title="Gallery" align="left" motif="diya" /> },
+    ],
+  },
+  {
+    slug: "themed-card",
+    title: "ThemedCard",
+    category: "Sections",
+    description: "A card that automatically wears the active theme's border style, material and pattern wash — no per-theme branching.",
+    demos: [
+      { title: "Royal Maroon", node: <ThemedCard theme={getTheme("royal-maroon")} patterned><p className="text-center type-h2 text-primary">Double border · card stock</p></ThemedCard> },
+      { title: "Peacock Raas", node: <div data-theme="peacock-raas" className="bg-bg p-4"><ThemedCard theme={getTheme("peacock-raas")} patterned><p className="text-center type-h2 text-primary">Scallop border · silk</p></ThemedCard></div> },
+      { title: "Anand Karaj", node: <div data-theme="anand-karaj" className="bg-bg p-4"><ThemedCard theme={getTheme("anand-karaj")} patterned><p className="text-center type-h2 text-primary">Chevron border · canvas</p></ThemedCard></div> },
+    ],
+  },
+  {
+    slug: "themed-hero",
+    title: "ThemedHero",
+    category: "Sections",
+    description: "The invite's opening spread: theme greeting in its own script, names in display-xl, the theme's material and pattern behind.",
+    demos: [
+      { title: "Royal Maroon", node: <ThemedHero theme={theme} names={["Swarnil", "Prachi"]} dateLabel="24 November 2026" city="Jaipur" hashtag="#SwarnilWedsPrachi" guestName="Rahul & Family" className="min-h-0 rounded-card py-16" /> },
+      { title: "Mehndi Nights", node: <div data-theme="mehndi-nights" className="bg-bg"><ThemedHero theme={getTheme("mehndi-nights")} names={["Ahmed", "Fatima"]} dateLabel="18 December 2026" city="Lahore" className="min-h-0 rounded-card py-16" /></div> },
+    ],
+  },
+  {
+    slug: "our-story-section",
+    title: "OurStorySection",
+    category: "Sections",
+    description: "The full 'how we met' spread: drop-capped story, two themed photo frames, and a connected timeline of moments.",
+    demos: [
+      { title: "Default", node: <OurStorySection theme={theme} story={couple.story} moments={couple.storyMoments} photos={[couple.photos[0], couple.photos[1]]} /> },
+    ],
+  },
+  {
+    slug: "decorative-border",
+    title: "DecorativeBorder",
+    category: "Sections",
+    description: "Twelve card-border designs masked from the theme's ornate color. Full gallery on the Borders page.",
+    demos: [
+      { title: "Beads · zigzag · vine", node: <div className="grid gap-5 sm:grid-cols-3">{(["beads", "zigzag", "vine"] as const).map((v) => (<DecorativeBorder key={v} variant={v}><p className="text-center type-caption">{v}</p></DecorativeBorder>))}</div> },
+      { title: "Rope · jaali key · stamp", node: <div className="grid gap-5 sm:grid-cols-3">{(["rope", "meander", "stamp"] as const).map((v) => (<DecorativeBorder key={v} variant={v}><p className="text-center type-caption">{v}</p></DecorativeBorder>))}</div> },
+    ],
+  },
 ];
 
-export const categories = ["Signature", "Core UI", "Ornaments", "Wedding décor", "Typography", "Timeline", "Interactive"] as const;
+export const categories = ["Signature", "Features", "Sections", "Core UI", "Ornaments", "Wedding décor", "Typography", "Timeline", "Interactive"] as const;
 
 export function getComponentDoc(slug: string): ComponentDoc | undefined {
   return componentDocs.find((c) => c.slug === slug);

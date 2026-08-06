@@ -1,11 +1,15 @@
 import type { MotifName } from "@/design-system/motifs";
 import type { PatternName } from "@/design-system/patterns";
+import type { BorderStyleName } from "@/design-system/components/borders";
 
 export type ReligionTag = "hindu" | "muslim" | "sikh" | "christian" | "interfaith";
 export type MoodTag = "royal" | "playful" | "minimal" | "festive";
 export type PetalType = "marigold" | "rose" | "jasmine" | "confetti" | "none";
 export type MonogramRing = "paisley" | "jaali" | "floral" | "laurel";
 export type FrameStyle = "arch" | "scallop" | "circle" | "polaroid";
+export type OpenStyle =
+  | "envelope-seal" | "marigold-burst" | "feather-fan" | "temple-doors"
+  | "jaali-gates" | "night-curtain" | "phulkari-curtain" | "cathedral-doors";
 
 export interface Theme {
   id: string;
@@ -19,6 +23,12 @@ export interface Theme {
   motifSet: { corner: MotifName; divider: MotifName; accent: MotifName };
   /** repeating background texture for hero/section panels */
   pattern: PatternName;
+  /** signature card-border style (DecorativeBorder variant) */
+  borderStyle: BorderStyleName;
+  /** physical material class for card faces (see /design-system/textures) */
+  texture: string;
+  /** the invitation-opening animation (ThemedOpening) */
+  openStyle: OpenStyle;
   petalType: PetalType;
   monogramRing: MonogramRing;
   frameStyle: FrameStyle;
@@ -39,6 +49,9 @@ export const themes: Theme[] = [
     palette: ["#6B1F2A", "#C9A227", "#FBF6EC", "#8C4A2F"],
     motifSet: { corner: "mehndi-corner", divider: "paisley", accent: "kalash" },
     pattern: "paisley-damask",
+    borderStyle: "double",
+    texture: "paper-texture",
+    openStyle: "envelope-seal",
     petalType: "marigold",
     monogramRing: "paisley",
     frameStyle: "arch",
@@ -57,6 +70,9 @@ export const themes: Theme[] = [
     palette: ["#D99000", "#E4611C", "#FFF6DF", "#4A2E0C"],
     motifSet: { corner: "marigold", divider: "marigold", accent: "mango-leaf" },
     pattern: "marigold-scatter",
+    borderStyle: "beads",
+    texture: "texture-watercolor",
+    openStyle: "marigold-burst",
     petalType: "marigold",
     monogramRing: "floral",
     frameStyle: "circle",
@@ -75,6 +91,9 @@ export const themes: Theme[] = [
     palette: ["#14595B", "#D63A6A", "#EDF8F6", "#C9A227"],
     motifSet: { corner: "peacock-feather", divider: "peacock-feather", accent: "diya" },
     pattern: "feather-eyes",
+    borderStyle: "scallop",
+    texture: "texture-silk",
+    openStyle: "feather-fan",
     petalType: "rose",
     monogramRing: "floral",
     frameStyle: "scallop",
@@ -93,6 +112,9 @@ export const themes: Theme[] = [
     palette: ["#1E5631", "#C9A227", "#FBF6EC", "#22301F"],
     motifSet: { corner: "mango-leaf", divider: "diya", accent: "kalash" },
     pattern: "kolam-steps",
+    borderStyle: "zigzag",
+    texture: "texture-linen",
+    openStyle: "temple-doors",
     petalType: "jasmine",
     monogramRing: "paisley",
     frameStyle: "arch",
@@ -111,6 +133,9 @@ export const themes: Theme[] = [
     palette: ["#146B4A", "#C9A227", "#F2F8F2", "#11332A"],
     motifSet: { corner: "jaali-pattern", divider: "crescent-star", accent: "jaali-pattern" },
     pattern: "star-jaali",
+    borderStyle: "meander",
+    texture: "texture-linen",
+    openStyle: "jaali-gates",
     petalType: "rose",
     monogramRing: "jaali",
     frameStyle: "arch",
@@ -129,6 +154,9 @@ export const themes: Theme[] = [
     palette: ["#B565D8", "#CFCFDC", "#2A1533", "#F5ECF8"],
     motifSet: { corner: "jaali-pattern", divider: "crescent-star", accent: "paisley" },
     pattern: "night-sky",
+    borderStyle: "vine",
+    texture: "texture-silk",
+    openStyle: "night-curtain",
     petalType: "rose",
     monogramRing: "jaali",
     frameStyle: "scallop",
@@ -147,6 +175,9 @@ export const themes: Theme[] = [
     palette: ["#D97700", "#1C2A4A", "#FFF7E9", "#C9A227"],
     motifSet: { corner: "jaali-pattern", divider: "paisley", accent: "kalash" },
     pattern: "phulkari",
+    borderStyle: "chevron",
+    texture: "texture-canvas",
+    openStyle: "phulkari-curtain",
     petalType: "marigold",
     monogramRing: "floral",
     frameStyle: "arch",
@@ -165,6 +196,9 @@ export const themes: Theme[] = [
     palette: ["#6E7F6B", "#C2AB72", "#FDFDFB", "#3A4038"],
     motifSet: { corner: "olive-branch", divider: "olive-branch", accent: "church-arch" },
     pattern: "laurel-sprig",
+    borderStyle: "triple",
+    texture: "texture-linen",
+    openStyle: "cathedral-doors",
     petalType: "confetti",
     monogramRing: "laurel",
     frameStyle: "polaroid",
