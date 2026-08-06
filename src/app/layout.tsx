@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Cormorant_Garamond, Mulish, Tiro_Devanagari_Hindi, Amiri } from "next/font/google";
 import { ThemeProvider } from "@/design-system/ThemeProvider";
+import { DevThemeSwitcher } from "@/design-system/DevThemeSwitcher";
 import "./globals.css";
 
 const display = Cormorant_Garamond({
@@ -41,7 +42,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       className={`${display.variable} ${body.variable} ${devanagari.variable} ${arabic.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        <ThemeProvider>{children}</ThemeProvider>
+        <ThemeProvider>
+          {children}
+          <DevThemeSwitcher />
+        </ThemeProvider>
       </body>
     </html>
   );
