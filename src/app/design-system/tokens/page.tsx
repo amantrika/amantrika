@@ -133,6 +133,44 @@ export default function TokensPage() {
         </div>
       </DsSection>
 
+      <DsSection
+        title="Tonal ramps & gradients"
+        lead="Derived automatically from the semantic tokens with color-mix — every theme gets a full tonal palette and three gradients without defining a single extra value."
+      >
+        <div className="mb-8 flex flex-col gap-4">
+          {[
+            ["primary", ["--color-primary-soft", "--color-primary-tint", "--color-primary", "--color-primary-strong"]],
+            ["accent", ["--color-accent-soft", "--color-accent-tint", "--color-accent", "--color-accent-strong"]],
+          ].map(([name, ramp]) => (
+            <div key={name as string}>
+              <p className="type-overline mb-2">{name} ramp</p>
+              <div className="flex h-16 overflow-hidden rounded-card border border-ornate/40">
+                {(ramp as string[]).map((v) => (
+                  <div key={v} className="flex flex-1 items-end p-2" style={{ background: `var(${v})` }}>
+                    <span className="rounded-sm bg-surface/80 px-1 py-0.5 font-mono text-[10px]">{v.replace("--color-", "")}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="grid gap-4 sm:grid-cols-3">
+          {[
+            ["--gradient-gold", "gold foil"],
+            ["--gradient-royal", "royal depth"],
+            ["--gradient-blush", "soft blush wash"],
+          ].map(([v, label]) => (
+            <Card key={v} className="overflow-hidden">
+              <div className="h-24" style={{ background: `var(${v})` }} />
+              <div className="p-3">
+                <p className="text-sm font-bold">{label}</p>
+                <p className="type-caption font-mono">{v}</p>
+              </div>
+            </Card>
+          ))}
+        </div>
+      </DsSection>
+
       <DsSection title="Typography" lead="Cormorant Garamond for ceremony, Mulish for clarity, Tiro Devanagari and Amiri for scripts.">
         <div className="flex flex-col gap-6 rounded-card border border-ornate/40 bg-surface p-6 sm:p-8">
           <div>

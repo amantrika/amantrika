@@ -21,6 +21,10 @@ export { BlessingsWall, MusicToggle, GiftBlock, MapEmbedPlaceholder } from "./we
 export { PhotoFrame } from "./PhotoFrame";
 export { PetalRain } from "./PetalRain";
 
+/* Border designs */
+export { DecorativeBorder, borderStyles } from "./borders";
+export type { BorderStyleName } from "./borders";
+
 /* Physical-card ornaments */
 export {
   ThreadBorder, StitchedEdge, ZariBraid, Toran, Bunting, LaceEdge, CornerFlourish,

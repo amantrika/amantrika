@@ -60,6 +60,17 @@ Tracks the phase plan in `instruction.md`. Updated: 6 Aug 2026.
       - Docs restructure: `/design-system/components` is now a category index; every component has
         its own page at `/design-system/components/[slug]` with named variations (60+ documented).
 
+- [x] **Colors, Textures & Borders (round 3)** — requested 6 Aug 2026:
+      - Colors: tonal ramps (`--color-primary-soft/tint/strong`, accent equivalents) and three
+        gradient tokens (`--gradient-gold/royal/blush`), all derived via color-mix so every theme
+        gets them free; documented with ramp strips + gradient swatches on Foundations.
+      - Textures: 10 physical card materials as CSS utilities (card stock, linen, canvas, silk,
+        velvet, kraft, handmade speckle, watercolor wash, gold leaf, deckle edge) — theme-adaptive,
+        with a `/design-system/textures` gallery + layering demo.
+      - Borders: `DecorativeBorder` with 12 styles (double, triple, gold gradient, thread patti,
+        moti beads, scallop, temple zigzag, chevron, jaali key, floral vine, rope twist, postage
+        stamp) via theme-colored SVG mask strips; `/design-system/borders` gallery + texture combos.
+
 ## 🔜 Left / nice-to-haves
 
 - [ ] Per-component `__demos__/*.demo.tsx` files (demos currently live inline in the
