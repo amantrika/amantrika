@@ -1,22 +1,42 @@
 # Amantrika 💌
 
-Digital wedding invitations that open like a real card — wax seal, envelope, petals and all.
-**UI-only demo**: no auth, no backend; all data lives in mock files and your browser's localStorage.
+Digital invitations that open like a real card — wax seal, envelope, petals and all.
+Weddings first, but the data model is generic: engagements, birthdays, housewarmings
+and corporate events all use the same tables with a different `event_type`.
+
+**Stack:** Next.js 15 (App Router) · Supabase (Postgres, Auth, Storage) · Tailwind 4 ·
+Framer Motion · TypeScript. Deployment and Supabase setup: see [`DEPLOY.md`](./DEPLOY.md).
 
 ## Quick start
 
 ```bash
-npm install       # first time only
-npm run dev       # start at http://localhost:3000
+npm install
+cp .env.example .env.local     # fill in your Supabase keys — see DEPLOY.md
+npm run dev                    # http://localhost:3000
 ```
 
 | Where to go | What you'll see |
 | --- | --- |
-| `http://localhost:3000/` | Marketing landing page |
-| `http://localhost:3000/design-system` | **The living design system** (start here) |
-| `http://localhost:3000/onboarding` | Create-your-invite flow (use "Continue as demo couple") |
-| `http://localhost:3000/admin` | Couple's dashboard (analytics, guests, invite settings) |
-| `http://localhost:3000/invite/swarnil-weds-prachi` | Live invitation — tap the wax seal! |
+| `/` | Marketing landing page |
+| `/design-system` | **The living design system** (start here) |
+| `/signup` · `/login` | Accounts — host or partner agent |
+| `/onboarding` | Create-your-invitation flow (7 steps, writes to Supabase) |
+| `/dashboard` | Your celebrations; `/dashboard/[id]` for analytics, guests, photos, settings |
+| `/agent` | Partner dashboard: clients, referral code, commission ledger |
+| `/admin` | Platform-wide view (requires `role = 'admin'`) |
+| `/invite/swarnil-weds-prachi` | Live invitation — tap the wax seal! |
+
+## Roles
+
+| Role | Can do |
+| --- | --- |
+| `host` | Create and manage their own celebrations |
+| `agent` | Build invitations for clients, earn commission, see a referral ledger |
+| `admin` | See every account, invitation and order |
+
+Roles are set at signup (`admin` is not self-assignable — promote via SQL, see `DEPLOY.md`).
+Every boundary is enforced by Postgres row-level security in `supabase/migrations/`,
+not by the UI.
 
 Try a personalized, themed invite:
 `/invite/swarnil-weds-prachi?g=Rahul%20%26%20Family&theme=nikah-emerald`
@@ -64,16 +84,28 @@ Typical workflows:
 - **Docs** → everything under `src/app/design-system/` is the public docs site; it is built
   from the same tokens and components it documents.
 
-## Demo data model (future API shape)
+## Data model
 
-Everything persists to localStorage under keys that map 1:1 to future API resources —
-keep these shapes when adding a real backend:
+```
+src/lib/supabase/       ← browser / server / admin clients + Database types
+src/lib/queries.ts      ← server-side reads (RLS does the authorization)
+src/lib/invite.ts       ← InviteView: the view model the invite page renders
+src/lib/demo.ts         ← the three bundled showcase invites (no database rows)
+supabase/migrations/    ← schema, RLS policies, storage bucket, analytics RPCs
+```
 
-- `amantrika:draft` — onboarding draft
-- `amantrika:live-invite` — the published invite (read by /admin and /invite)
-- `amantrika:rsvps` — RSVPs submitted on the invite (read by admin analytics)
-- `amantrika:blessings` — guest blessings
+`events` is the tenant object. A wedding's two partners live in `events.hosts`
+(jsonb) rather than dedicated columns, so a birthday with one celebrant or a
+corporate event with three hosts uses the same table. Ceremonies are rows in
+`sub_events`.
 
-Reset everything from **Admin → Settings → Danger zone**.
+Analytics are real: `/api/track` records a view per invite open, keyed by a
+salted daily hash of IP + user-agent, so daily uniques are countable without
+storing anything identifying.
 
-See `progress.md` for what's done vs. what's left, and `instruction.md` for the full phase spec.
+**Payments are stubbed.** Orders are created with `provider = 'dummy'` and always
+succeed; every plan is unlocked on purpose. The `orders` → `commissions` trigger
+already models what a real gateway needs.
+
+See `progress.md` for what's done vs. what's left, and `instruction.md` for the
+original phase spec.

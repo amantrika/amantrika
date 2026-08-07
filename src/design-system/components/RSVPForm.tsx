@@ -20,15 +20,27 @@ const attendOptions = [
  * RSVP form: ornate radio cards, guest-count stepper, per-event checkboxes,
  * theme-driven meal options. Persists to localStorage (amantrika:rsvps).
  */
+export interface RsvpSubmission {
+  guestName: string;
+  attending: "yes" | "no" | "maybe";
+  headcount: number;
+  events: string[];
+  meal: string;
+  message: string;
+}
+
 export function RSVPForm({
   events,
   mealOptions,
   guestName = "",
+  onSubmit,
   className = "",
 }: {
   events: WeddingEvent[];
   mealOptions: string[];
   guestName?: string;
+  /** Persist the response. Omit to fall back to the localStorage demo store. */
+  onSubmit?: (submission: RsvpSubmission) => Promise<{ ok: boolean; error?: string }>;
   className?: string;
 }) {
   const [name, setName] = useState(guestName);
@@ -38,19 +50,31 @@ export function RSVPForm({
   const [meal, setMeal] = useState(mealOptions[0] ?? "Veg");
   const [message, setMessage] = useState("");
   const [done, setDone] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const submit = () => {
-    store.addRsvp({
-      id: `r${Date.now()}`,
+  const submit = async () => {
+    const submission: RsvpSubmission = {
       guestName: name || "A well-wisher",
       attending,
       headcount,
       events: selEvents,
       meal,
       message,
-      at: new Date().toISOString(),
-    });
-    setDone(true);
+    };
+
+    if (!onSubmit) {
+      store.addRsvp({ id: `r${Date.now()}`, ...submission, at: new Date().toISOString() });
+      setDone(true);
+      return;
+    }
+
+    setBusy(true);
+    setError(null);
+    const result = await onSubmit(submission);
+    setBusy(false);
+    if (result.ok) setDone(true);
+    else setError(result.error ?? "Something went wrong. Please try again.");
   };
 
   if (done) {
@@ -189,7 +213,19 @@ export function RSVPForm({
           onChange={(e) => setMessage(e.target.value)}
         />
 
-        <Button variant="celebration" size="lg" onClick={submit} className="self-center">
+        {error && (
+          <p role="alert" className="text-center type-caption text-red-600 dark:text-red-400">
+            {error}
+          </p>
+        )}
+
+        <Button
+          variant="celebration"
+          size="lg"
+          onClick={submit}
+          loading={busy}
+          className="self-center"
+        >
           Send RSVP
         </Button>
       </div>

@@ -747,7 +747,7 @@ export const componentDocs: ComponentDoc[] = [
     category: "Sections",
     description: "The full 'how we met' spread: drop-capped story, two themed photo frames, and a connected timeline of moments.",
     demos: [
-      { title: "Default", node: <OurStorySection theme={theme} story={couple.story} moments={couple.storyMoments} photos={[couple.photos[0], couple.photos[1]]} /> },
+      { title: "Default", node: <OurStorySection theme={theme} story={couple.story} moments={couple.storyMoments} photos={couple.photos.slice(0, 2).map((seed) => `https://picsum.photos/seed/${seed}/260/330`)} /> },
     ],
   },
   {

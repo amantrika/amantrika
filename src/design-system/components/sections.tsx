@@ -121,16 +121,20 @@ export function ThemedHero({
   city,
   hashtag,
   guestName,
+  joiner = "weds",
   children,
   className = "",
 }: {
   theme: Theme;
-  names: [string, string];
+  /** One name for a solo celebration, two for a wedding, more for a joint event. */
+  names: string[];
   initials?: [string, string];
   dateLabel: string;
   city: string;
   hashtag?: string;
   guestName?: string;
+  /** Word set between the first two names. "weds" for a wedding, "&" elsewhere. */
+  joiner?: string;
   /** monogram or other ornament slot */
   children?: ReactNode;
   className?: string;
@@ -149,8 +153,17 @@ export function ThemedHero({
         </p>
         <h1 className="mt-4 type-display-xl text-primary">
           {names[0]}
-          <span className="mx-3 type-accent-face text-accent sm:mx-5" style={{ fontSize: "0.5em" }}>weds</span>
-          {names[1]}
+          {names.slice(1).map((name, i) => (
+            <span key={name}>
+              <span
+                className="mx-3 type-accent-face text-accent sm:mx-5"
+                style={{ fontSize: "0.5em" }}
+              >
+                {i === 0 ? joiner : "&"}
+              </span>
+              {name}
+            </span>
+          ))}
         </h1>
         {guestName && <p className="mt-4 type-accent-face text-xl text-muted">Dear {guestName}, we would be honoured by your presence.</p>}
         <p className="mt-6 type-overline">{dateLabel} · {city}</p>
@@ -172,8 +185,8 @@ export function OurStorySection({
   theme: Theme;
   story: string;
   moments: { title: string; text: string }[];
-  /** two picsum seeds */
-  photos: [string, string];
+  /** Up to two photo URLs. Fewer simply renders fewer frames. */
+  photos: string[];
   className?: string;
 }) {
   return (
@@ -183,8 +196,16 @@ export function OurStorySection({
       </motion.div>
 
       <motion.div variants={fadeUpStagger} custom={1} className="mt-10 flex flex-wrap items-end justify-center gap-8">
-        <PhotoFrame seed={photos[0]} variant={theme.frameStyle} width={260} height={330} caption="How it started" />
-        <PhotoFrame seed={photos[1]} variant={theme.frameStyle} width={260} height={330} caption="How it's going" />
+        {photos.slice(0, 2).map((url, i) => (
+          <PhotoFrame
+            key={url}
+            src={url}
+            variant={theme.frameStyle}
+            width={260}
+            height={330}
+            caption={i === 0 ? "How it started" : "How it's going"}
+          />
+        ))}
       </motion.div>
 
       <motion.div variants={fadeUpStagger} custom={2} className="mx-auto mt-12 max-w-xl">

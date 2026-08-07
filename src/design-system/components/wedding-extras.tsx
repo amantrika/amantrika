@@ -11,23 +11,69 @@ import { Marigold } from "../motifs";
 
 /** BlessingsWall, MusicToggle, GiftBlock, MapEmbedPlaceholder. */
 
-export function BlessingsWall({ seed, className = "" }: { seed: Blessing[]; className?: string }) {
+export function BlessingsWall({
+  seed,
+  onSubmit,
+  className = "",
+}: {
+  /** Blessings already posted — from the database, or the bundled demo set. */
+  seed: Blessing[];
+  /** Persist a new blessing. Omit to fall back to the localStorage demo store. */
+  onSubmit?: (blessing: { name: string; message: string }) => Promise<{
+    ok: boolean;
+    error?: string;
+    notice?: string;
+  }>;
+  className?: string;
+}) {
   const [local, setLocal] = useState<Blessing[]>([]);
   const [name, setName] = useState("");
   const [message, setMessage] = useState("");
   const [adding, setAdding] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [feedback, setFeedback] = useState<{ text: string; isError: boolean } | null>(null);
 
-  useEffect(() => setLocal(store.getBlessings()), []);
+  // Only the demo store is read client-side; real blessings arrive via `seed`.
+  useEffect(() => {
+    if (!onSubmit) setLocal(store.getBlessings());
+  }, [onSubmit]);
 
-  const add = () => {
-    if (!message.trim()) return;
-    const b: Blessing = { id: `lb${Date.now()}`, name: name.trim() || "A well-wisher", message: message.trim() };
-    store.addBlessing(b);
-    setLocal((cur) => [b, ...cur]);
+  const add = async () => {
+    const trimmed = message.trim();
+    if (!trimmed) return;
+    const author = name.trim() || "A well-wisher";
+
+    if (!onSubmit) {
+      const b: Blessing = { id: `lb${Date.now()}`, name: author, message: trimmed };
+      store.addBlessing(b);
+      setLocal((cur) => [b, ...cur]);
+      reset();
+      return;
+    }
+
+    setBusy(true);
+    setFeedback(null);
+    const result = await onSubmit({ name: author, message: trimmed });
+    setBusy(false);
+
+    if (!result.ok) {
+      setFeedback({ text: result.error ?? "Couldn't post that. Try again.", isError: true });
+      return;
+    }
+    // Optimistic: a moderated blessing won't come back from the server yet.
+    if (!result.notice) {
+      setLocal((cur) => [{ id: `lb${Date.now()}`, name: author, message: trimmed }, ...cur]);
+    } else {
+      setFeedback({ text: result.notice, isError: false });
+    }
+    reset();
+  };
+
+  function reset() {
     setName("");
     setMessage("");
     setAdding(false);
-  };
+  }
 
   const all = [...local, ...seed];
 
@@ -52,7 +98,9 @@ export function BlessingsWall({ seed, className = "" }: { seed: Blessing[]; clas
                 <Button variant="ghost" onClick={() => setAdding(false)}>
                   Cancel
                 </Button>
-                <Button onClick={add}>Add blessing</Button>
+                <Button onClick={add} loading={busy}>
+                  Add blessing
+                </Button>
               </div>
             </div>
           </Card>
@@ -60,6 +108,14 @@ export function BlessingsWall({ seed, className = "" }: { seed: Blessing[]; clas
           <Button variant="secondary" onClick={() => setAdding(true)}>
             Add your blessing
           </Button>
+        )}
+        {feedback && (
+          <p
+            role={feedback.isError ? "alert" : "status"}
+            className={`mt-3 type-caption ${feedback.isError ? "text-red-600 dark:text-red-400" : "text-muted"}`}
+          >
+            {feedback.text}
+          </p>
         )}
       </div>
     </div>

@@ -11,6 +11,7 @@ import {
 } from "next/font/google";
 import { ThemeProvider } from "@/design-system/ThemeProvider";
 import { DevThemeSwitcher } from "@/design-system/DevThemeSwitcher";
+import { siteUrl } from "@/lib/env";
 import "./globals.css";
 
 /* ---- The Amantrika type wardrobe ----
@@ -73,9 +74,13 @@ const nastaliq = Noto_Nastaliq_Urdu({
 });
 
 export const metadata: Metadata = {
-  title: "Amantrika — Digital Wedding Invitations",
+  metadataBase: new URL(siteUrl),
+  title: {
+    default: "Amantrika — Digital invitations for every celebration",
+    template: "%s",
+  },
   description:
-    "Beautiful animated wedding invitation websites that open like a real card. One link, every blessing.",
+    "Beautiful animated invitation websites that open like a real card. One link, every blessing.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

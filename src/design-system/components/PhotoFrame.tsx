@@ -3,27 +3,33 @@
 import type { FrameStyle } from "@/themes";
 
 /**
- * Themed photo frame around a picsum placeholder.
+ * Themed photo frame. Pass `src` for a real uploaded photo, or `seed` to fall
+ * back to a picsum placeholder (used by the design-system docs and demo invites).
  * Variants: arch (Mughal arch mask), scallop, circle, polaroid.
  * Gentle 3° tilt on hover (disabled under reduced motion via CSS).
- * @example <PhotoFrame seed="swpr1" variant="arch" caption="Jaipur, 2024" />
+ * @example <PhotoFrame src={photo.url} variant="arch" caption="Jaipur, 2024" />
  */
 export function PhotoFrame({
   seed,
+  src: srcProp,
+  alt,
   variant = "arch",
   caption,
   width = 320,
   height = 400,
   className = "",
 }: {
-  seed: string;
+  seed?: string;
+  /** Fully-qualified image URL. Takes precedence over `seed`. */
+  src?: string;
+  alt?: string;
   variant?: FrameStyle;
   caption?: string;
   width?: number;
   height?: number;
   className?: string;
 }) {
-  const src = `https://picsum.photos/seed/${seed}/${width}/${height}`;
+  const src = srcProp ?? `https://picsum.photos/seed/${seed ?? "amantrika"}/${width}/${height}`;
   const shapeCls =
     variant === "arch"
       ? "radius-arch"
@@ -50,7 +56,7 @@ export function PhotoFrame({
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={src}
-          alt={caption ?? "Couple photograph"}
+          alt={alt ?? caption ?? "Celebration photograph"}
           width={width}
           height={height}
           loading="lazy"

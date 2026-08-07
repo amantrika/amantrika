@@ -19,6 +19,8 @@ export { EventTimelineItem } from "./EventTimelineItem";
 export { RSVPForm } from "./RSVPForm";
 export { BlessingsWall, MusicToggle, GiftBlock, MapEmbedPlaceholder } from "./wedding-extras";
 export { PhotoFrame } from "./PhotoFrame";
+export { PhotoUploader } from "./PhotoUploader";
+export type { UploadedAsset } from "./PhotoUploader";
 export { PetalRain } from "./PetalRain";
 
 /* Themed openings — a different grand reveal per theme */
