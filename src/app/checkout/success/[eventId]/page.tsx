@@ -5,6 +5,7 @@ import { ArrowRight, Eye } from "lucide-react";
 import { Button, Card, Divider, PetalRain, WaxSeal } from "@/design-system/components";
 import { requireProfile } from "@/lib/auth";
 import { getManagedEvent } from "@/lib/invites/queries";
+import { createClient } from "@/lib/supabase/server";
 import { monogramInitials } from "@/lib/invites/invite";
 import { siteUrl } from "@/lib/env";
 import { CopyLinkButton } from "./CopyLinkButton";
@@ -36,6 +37,19 @@ export default async function CheckoutSuccessPage({
   // returns nothing rather than someone else's invitation.
   const event = await getManagedEvent(eventId);
   if (!event) notFound();
+
+  // The most recent paid order for this invitation, so the receipt is one tap
+  // away at the moment someone most wants it.
+  const supabase = await createClient();
+  const { data: latestOrder } = await supabase
+    .from("orders")
+    .select("id")
+    .eq("event_id", event.id)
+    .eq("status", "paid")
+    .order("paid_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const latestOrderId = latestOrder?.id ?? null;
 
   const inviteUrl = `${siteUrl}/invite/${event.slug}`;
   const initials = monogramInitials(event.hosts).join("·");
@@ -85,6 +99,12 @@ export default async function CheckoutSuccessPage({
       </div>
 
       <Divider variant="motif" motif="marigold" className="mx-auto mt-12 w-full max-w-sm" />
+
+      {latestOrderId && (
+        <Link href={`/receipts/${latestOrderId}`} className="mt-6 inline-block">
+          <Button variant="ghost" size="sm">View your receipt</Button>
+        </Link>
+      )}
 
       <p className="mx-auto mt-6 max-w-md type-caption">
         A receipt is on its way to your email. Guest replies, view counts and meal
