@@ -7,6 +7,7 @@ import { Menu, X } from "lucide-react";
 import { useTheme } from "@/design-system/ThemeProvider";
 import { themes } from "@/themes";
 import { Divider } from "@/design-system/components";
+import { AmantrikaMark, AmantrikaWordmark } from "@/design-system/brand";
 
 const nav = [
   { href: "/design-system", label: "Introduction" },
@@ -55,11 +56,9 @@ export function DsShell({ children }: { children: ReactNode }) {
             <button className="rounded-soft p-2 hover:bg-accent/10 lg:hidden cursor-pointer" aria-label="Toggle navigation" onClick={() => setOpen(!open)}>
               {open ? <X className="size-5" /> : <Menu className="size-5" />}
             </button>
-            <Link href="/" className="group inline-flex flex-col leading-none">
-              <span className="font-display text-2xl font-semibold text-primary">Amantrika</span>
-              <svg aria-hidden viewBox="0 0 120 8" className="h-2 w-28 text-accent">
-                <path d="M2 5c20-4 40 3 60-1s40-3 56 0" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-              </svg>
+            <Link href="/" aria-label="Amantrika — home" className="inline-flex items-center gap-2.5 text-primary">
+              <AmantrikaMark className="size-8 shrink-0" />
+              <AmantrikaWordmark className="hidden sm:inline-flex" />
             </Link>
             <span className="type-overline ml-1 hidden sm:inline">Design System</span>
           </div>

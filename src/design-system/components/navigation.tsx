@@ -44,6 +44,14 @@ export function Navbar({
   sticky = true,
   /** Overrides route detection — the design-system demos rely on this. */
   activeHref,
+  /**
+   * Sit on the page content until the reader scrolls, then take on a surface.
+   * For a landing hero that wants the header to feel part of the artwork.
+   * Ignored when not sticky — a bar that scrolls away has nothing to react to.
+   */
+  transparentAtTop = false,
+  /** Target of the skip link. Omit to leave the header out of that flow. */
+  skipToId,
   className = "",
 }: {
   brand: ReactNode;
@@ -53,11 +61,14 @@ export function Navbar({
   variant?: NavbarVariant;
   sticky?: boolean;
   activeHref?: string;
+  transparentAtTop?: boolean;
+  skipToId?: string;
   className?: string;
 }) {
   const pathname = usePathname();
   const current = activeHref ?? pathname ?? "";
   const [open, setOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
   const panelId = useId();
 
   // A route change with the drawer still open would leave it covering the page
@@ -73,23 +84,65 @@ export function Navbar({
     return () => window.removeEventListener("keydown", onKey);
   }, [open]);
 
+  // The drawer covers the viewport; letting the page scroll underneath it means
+  // closing the menu drops you somewhere you never chose to be.
+  useEffect(() => {
+    if (!open) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previous;
+    };
+  }, [open]);
+
+  // Only a sticky bar needs to know: it is the one that ends up floating over
+  // content and needs an edge to separate it. Passive, and it reads no layout,
+  // so it cannot become a scroll-jank source.
+  const reactive = sticky && (transparentAtTop || variant !== "bare");
+  useEffect(() => {
+    if (!reactive) return;
+    const onScroll = () => setScrolled(window.scrollY > 8);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, [reactive]);
+
+  // Transparent-at-top headers earn their background by scrolling; everything
+  // else has one from the start and only gains the shadow.
+  const grounded = !transparentAtTop || scrolled || open;
   const surface =
-    variant === "solid"
-      ? "bg-surface border-b border-ornate/30"
-      : variant === "translucent"
-        ? "bg-bg/90 backdrop-blur border-b border-ornate/30"
-        : "";
+    variant === "bare"
+      ? ""
+      : !grounded
+        ? "bg-transparent"
+        : variant === "solid"
+          ? "bg-surface border-b border-ornate/30"
+          : "bg-bg/85 backdrop-blur-md border-b border-ornate/30";
 
   return (
     <header
-      className={`${sticky ? "sticky top-0" : ""} ${surface} ${className}`}
+      className={`${sticky ? "sticky top-0" : ""} transition-[background-color,box-shadow,border-color] duration-300 ${surface} ${
+        scrolled && variant !== "bare" ? "shadow-[0_1px_16px_-6px_var(--color-overlay)]" : ""
+      } ${className}`}
       style={{ zIndex: "var(--z-navbar)" }}
     >
-      <div className="mx-auto flex max-w-6xl items-center gap-6 px-4 py-4">
+      {skipToId && (
+        <a
+          href={`#${skipToId}`}
+          className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-3 focus:z-10 focus:rounded-soft focus:bg-primary focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-white"
+        >
+          Skip to content
+        </a>
+      )}
+
+      {/* `relative z-10` on the bar and the panel, so the drawer's scrim —
+          later in the DOM, same stacking context — cannot swallow the button
+          that closes it. */}
+      <div className="relative z-10 mx-auto flex max-w-6xl items-center gap-6 px-4 py-3">
         {brand}
 
         {items.length > 0 && (
-          <nav aria-label="Main" className="ml-auto hidden items-center gap-6 md:flex">
+          <nav aria-label="Main" className="ml-auto hidden items-center gap-7 md:flex">
             {items.map((item) => (
               <NavLink key={item.href} item={item} active={isActive(current, item.href)} />
             ))}
@@ -109,33 +162,42 @@ export function Navbar({
             aria-expanded={open}
             aria-controls={panelId}
             aria-label={open ? "Close menu" : "Open menu"}
-            className="ml-2 inline-flex size-10 cursor-pointer items-center justify-center rounded-soft border border-ornate/40 text-primary md:hidden"
+            className="ml-1 inline-flex size-10 cursor-pointer items-center justify-center rounded-soft border border-ornate/40 text-primary transition-colors hover:bg-accent/10 md:hidden"
           >
             {open ? <X className="size-5" /> : <Menu className="size-5" />}
           </button>
         )}
       </div>
 
-      {/* Rendered rather than toggled with CSS so its links are not in the tab
-          order while it is closed. */}
+      {/* Both the scrim and the panel are rendered only while open, rather than
+          hidden with CSS, so the drawer's links are never in the tab order of a
+          page that appears to have no menu. */}
       {open && items.length > 0 && (
-        <nav
-          id={panelId}
-          aria-label="Main"
-          className="border-t border-ornate/20 bg-surface px-4 py-3 md:hidden"
-        >
-          <ul className="flex flex-col">
-            {items.map((item) => (
-              <li key={item.href}>
-                <NavLink
-                  item={item}
-                  active={isActive(current, item.href)}
-                  className="block py-3"
-                />
-              </li>
-            ))}
-          </ul>
-        </nav>
+        <>
+          <div
+            aria-hidden
+            onClick={() => setOpen(false)}
+            className="fixed inset-0 bg-[var(--color-overlay)] md:hidden"
+          />
+          <nav
+            id={panelId}
+            aria-label="Main"
+            className="nav-drawer relative z-10 border-t border-ornate/20 bg-surface px-4 py-2 shadow-lg md:hidden"
+          >
+            <ul className="flex flex-col divide-y divide-ornate/15">
+              {items.map((item) => (
+                <li key={item.href}>
+                  <NavLink
+                    item={item}
+                    active={isActive(current, item.href)}
+                    className="flex items-center justify-between py-3.5"
+                    withChevron
+                  />
+                </li>
+              ))}
+            </ul>
+          </nav>
+        </>
       )}
     </header>
   );
@@ -145,21 +207,39 @@ function NavLink({
   item,
   active,
   className = "",
+  withChevron = false,
 }: {
   item: NavItem;
   active: boolean;
   className?: string;
+  /** Drawer rows read as rows, not as a stack of inline links. */
+  withChevron?: boolean;
 }) {
   return (
     <Link
       href={item.href}
       aria-current={active ? "page" : undefined}
-      className={`type-body font-medium transition-colors ${
+      className={`group relative type-body font-medium transition-colors ${
         active ? "text-primary" : "text-foreground/80 hover:text-primary"
       } ${className}`}
     >
-      {item.label}
-      {item.trailing}
+      <span className="inline-flex items-center gap-1.5">
+        {item.label}
+        {item.trailing}
+      </span>
+      {withChevron ? (
+        <ChevronRight aria-hidden className="size-4 opacity-40" />
+      ) : (
+        /* The active marker is a drawn rule rather than `underline`, so it can
+           be gold against maroon text and can grow on hover without shifting
+           the label. `scale-x` keeps it off the layout path entirely. */
+        <span
+          aria-hidden
+          className={`absolute -bottom-1.5 left-0 h-0.5 w-full origin-left rounded-full bg-accent transition-transform duration-300 ${
+            active ? "scale-x-100" : "scale-x-0 group-hover:scale-x-100"
+          }`}
+        />
+      )}
     </Link>
   );
 }

@@ -87,8 +87,17 @@ a safety rule, not an optimisation.
 | Location | Contains |
 | --- | --- |
 | `src/design-system/` | Reusable primitives, theme-aware, no product knowledge |
+| `src/design-system/brand/` | The Amantrika logo — the one place brand identity is drawn |
 | `src/components/site/` | Site chrome — header, footer |
 | `src/components/invite/`, `roadmap/` | Feature-specific pieces |
+
+`brand/` is the exception that proves the design-system rule: it *is* product
+knowledge, but it sits here because everything else in the app consumes it and
+nothing consumes it back. The mark takes `currentColor` and `--logo-accent`, so
+it recolours with the theme like any other primitive rather than carrying its
+own hexes. The copies in `public/brand/` and the favicon at `src/app/icon.svg`
+are the same geometry for contexts that get no CSS cascade — a favicon slot, an
+`<img>`, a partner's press kit — and have to be edited alongside it.
 
 The rule: if it knows what an *invitation* is, it does not belong in
 `design-system/`. If it could appear in any product, it does not belong in

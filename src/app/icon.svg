@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <!--
+    Favicon. Next serves this from the app directory as the site icon.
+
+    Deliberately heavier than public/brand/amantrika-mark.svg: at 16px the
+    display weight of the real mark thins out to nothing, so the strokes are
+    fattened and the optical margin cut. Keep the two files in step in shape,
+    not in numbers.
+
+    Colours are declared inline because a favicon has no page cascade to
+    inherit from — change them here when the brand colours change.
+  -->
+  <style>
+    svg { --logo-ink: #6b1f2a; --logo-accent: #c9a227; }
+    /* Maroon on a dark tab strip is a smudge; ivory reads. */
+    @media (prefers-color-scheme: dark) { svg { --logo-ink: #f7e7c6; } }
+  </style>
+  <path d="M4.5 28 L11.8 10.6 A4.4 4.4 0 0 1 20.2 10.6 L27.5 28"
+        fill="none" stroke="var(--logo-ink)" stroke-width="3.2"
+        stroke-linecap="round" stroke-linejoin="round" />
+  <path d="M9 21.5 H23" fill="none" stroke="var(--logo-accent)" stroke-width="3" stroke-linecap="round" />
+  <circle cx="16" cy="4.8" r="2.8" fill="var(--logo-accent)" />
+</svg>

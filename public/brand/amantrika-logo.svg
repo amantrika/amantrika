@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 190 44" width="190" height="44" role="img" aria-label="Amantrika">
+  <title>Amantrika</title>
+  <!--
+    Horizontal lockup — mark, wordmark, swash. Same two colour variables as
+    amantrika-mark.svg; edit them and the whole lockup follows.
+
+    The wordmark is live text, not outlines, so it stays crisp and selectable
+    and this file stays a few hundred bytes. It asks for Cormorant Garamond and
+    falls back through Georgia to the platform serif. `textLength` pins it to a
+    fixed 133px whatever font actually resolves — without that, a renderer with
+    no webfont substitutes something wider and the last letters fall off the
+    right edge of the viewBox. Where exact letterforms matter (print, a
+    partner's press kit), export outlines from this file rather than editing it.
+  -->
+  <style>
+    svg { --logo-ink: #6b1f2a; --logo-accent: #c9a227; }
+    .ink { stroke: var(--logo-ink); }
+    .ink-fill { fill: var(--logo-ink); }
+    .accent-stroke { stroke: var(--logo-accent); }
+    .accent-fill { fill: var(--logo-accent); }
+    .word {
+      font-family: "Cormorant Garamond", Cormorant, Georgia, "Times New Roman", serif;
+      font-size: 30px; font-weight: 600; letter-spacing: -0.01em;
+    }
+    @media (prefers-color-scheme: dark) { svg { --logo-ink: #f7e7c6; } }
+  </style>
+
+  <g transform="translate(2 5) scale(1.06)">
+    <path class="ink" d="M5.4 27 L12.4 11.2 A4 4 0 0 1 19.6 11.2 L26.6 27"
+          fill="none" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" />
+    <path class="accent-stroke" d="M9.8 20.6 H22.2" fill="none" stroke-width="2.4" stroke-linecap="round" />
+    <circle class="accent-fill" cx="16" cy="5.4" r="2.4" />
+  </g>
+
+  <text class="word ink-fill" x="45" y="29" textLength="133" lengthAdjust="spacingAndGlyphs">Amantrika</text>
+  <path class="accent-stroke" d="M46 37c22-4 45 3 67-1s44-3 67 0"
+        fill="none" stroke-width="1.8" stroke-linecap="round" />
+</svg>

@@ -22,7 +22,7 @@ export default async function MarketingLayout({ children }: { children: ReactNod
         signedIn={Boolean(profile)}
         dashboardHref={profile ? homeFor(profile.role) : "/login"}
       />
-      <main className="flex-1">{children}</main>
+      <main id="main" className="flex-1">{children}</main>
       <SiteFooter />
     </div>
   );

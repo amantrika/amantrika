@@ -19,6 +19,7 @@ import {
   Navbar, Breadcrumbs, SideNav, Pager, LayoutSection, SectionTitle, ThemedHeroVariant,
 } from "./registry-helpers";
 import type { NavItem } from "@/design-system/components";
+import { AmantrikaBadge, AmantrikaLogo, AmantrikaMark, AmantrikaWordmark } from "@/design-system/brand";
 import { getCouple } from "@/data/couples";
 import { brideFamily, groomFamily } from "@/data/families";
 import { defaultSectionStyle, getTheme, heroVariants } from "@/themes";
@@ -799,6 +800,67 @@ export const componentDocs: ComponentDoc[] = [
     ],
   },
 
+  /* ================= BRAND ================= */
+  {
+    slug: "logo",
+    title: "Logo",
+    category: "Signature",
+    description:
+      "The Amantrika mark — a torana arch that reads as an A, marigold at the keystone. Two colour slots only: the arch takes currentColor, the tie-beam and marigold take --logo-accent (default: the theme's accent). Switch themes above and the logo follows. Standalone files for anything outside React live in public/brand/.",
+    demos: [
+      {
+        title: "Lockup, mark, badge",
+        note: "The lockup is the default signature. The mark alone is for square slots and headers narrower than ~400px; the badge is the avatar form.",
+        node: (
+          <div className="flex flex-wrap items-center gap-10">
+            <AmantrikaLogo />
+            <AmantrikaMark className="size-10 text-primary" title="Amantrika" />
+            <AmantrikaBadge title="Amantrika" />
+          </div>
+        ),
+      },
+      {
+        title: "It takes the colour it is given",
+        note: "No brand hexes are baked in, so the mark survives being dropped onto an accent panel or an inverted footer.",
+        node: (
+          <div className="flex flex-wrap items-center gap-8">
+            <span className="text-primary"><AmantrikaMark className="size-10" /></span>
+            <span className="text-accent"><AmantrikaMark className="size-10" /></span>
+            <span
+              className="rounded-card p-4 text-white"
+              style={{ background: "var(--color-primary)", ["--logo-accent" as string]: "var(--color-bg)" }}
+            >
+              <AmantrikaMark className="size-10" />
+            </span>
+          </div>
+        ),
+      },
+      {
+        title: "Down to favicon size",
+        note: "16px is the real test. The tie-beam is accent-coloured precisely so the A still reads once the marigold is a single pixel.",
+        node: (
+          <div className="flex items-end gap-6 text-primary">
+            {[16, 24, 32, 48].map((px) => (
+              <span key={px} className="flex flex-col items-center gap-2">
+                <AmantrikaMark width={px} height={px} />
+                <span className="type-caption">{px}px</span>
+              </span>
+            ))}
+          </div>
+        ),
+      },
+      {
+        title: "Wordmark on its own",
+        node: (
+          <div className="flex flex-wrap items-center gap-10 text-primary">
+            <AmantrikaWordmark />
+            <AmantrikaWordmark swash={false} />
+          </div>
+        ),
+      },
+    ],
+  },
+
   /* ================= NAVIGATION ================= */
   {
     slug: "navbar",
@@ -814,7 +876,7 @@ export const componentDocs: ComponentDoc[] = [
           <Navbar
             sticky={false}
             activeHref="/showcase"
-            brand={<span className="font-display text-2xl font-semibold text-primary">Amantrika</span>}
+            brand={<AmantrikaLogo />}
             items={navSample}
             actions={<Button size="sm">Create yours</Button>}
           />
@@ -828,7 +890,7 @@ export const componentDocs: ComponentDoc[] = [
             sticky={false}
             variant="solid"
             activeHref="/blog"
-            brand={<span className="font-display text-2xl font-semibold text-primary">Amantrika</span>}
+            brand={<AmantrikaLogo />}
             items={navSample}
             actions={<Button size="sm" variant="ghost">Sign in</Button>}
           />
@@ -841,7 +903,7 @@ export const componentDocs: ComponentDoc[] = [
           <Navbar
             sticky={false}
             variant="bare"
-            brand={<span className="font-display text-2xl font-semibold text-primary">Amantrika</span>}
+            brand={<AmantrikaLogo />}
             actions={<Badge tone="accent">Step 3 of 7</Badge>}
           />
         ),

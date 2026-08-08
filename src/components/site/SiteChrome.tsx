@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Button, Navbar } from "@/design-system/components";
+import { AmantrikaMark, AmantrikaWordmark } from "@/design-system/brand";
 
 /**
  * One header and one footer for every public page — landing, blog, content
@@ -70,18 +71,17 @@ export function SiteHeader({
   return (
     <Navbar
       items={siteNav}
+      skipToId="main"
       brand={
-        <Link href="/" className="inline-flex flex-col leading-none">
-          <span className="font-display text-2xl font-semibold text-primary">Amantrika</span>
-          <svg aria-hidden viewBox="0 0 120 8" className="h-1.5 w-24 text-accent">
-            <path
-              d="M2 5c20-4 40 3 60-1s40-3 56 0"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.6"
-              strokeLinecap="round"
-            />
-          </svg>
+        <Link
+          href="/"
+          aria-label="Amantrika — home"
+          className="group inline-flex items-center gap-2.5 text-primary"
+        >
+          <AmantrikaMark className="size-8 shrink-0 transition-transform duration-300 group-hover:-translate-y-0.5" />
+          {/* Below 400px the wordmark and two buttons cannot both fit; the mark
+              alone is the logo in that case, which is what it was drawn for. */}
+          <AmantrikaWordmark className="hidden min-[400px]:inline-flex" />
         </Link>
       }
       actions={
@@ -112,8 +112,11 @@ export function SiteFooter() {
       <div className="mx-auto max-w-6xl px-4 py-14">
         <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-5">
           <div className="lg:col-span-1">
-            <p className="font-display text-2xl font-semibold text-primary">Amantrika</p>
-            <p className="mt-2 max-w-xs type-caption">
+            <Link href="/" aria-label="Amantrika — home" className="inline-flex items-center gap-2.5 text-primary">
+              <AmantrikaMark className="size-7 shrink-0" />
+              <AmantrikaWordmark swash={false} />
+            </Link>
+            <p className="mt-3 max-w-xs type-caption">
               Digital invitations for every celebration. One link, every blessing.
             </p>
           </div>

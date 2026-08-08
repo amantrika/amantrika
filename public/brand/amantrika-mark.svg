@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32" role="img" aria-label="Amantrika">
+  <title>Amantrika</title>
+  <!--
+    The Amantrika mark: a torana arch that also reads as an A, with the
+    marigold at its keystone.
+
+    RECOLOURING — edit the two custom properties below and nothing else.
+    They are declared here rather than inherited because an SVG used as a
+    favicon, an <img> src, or an OG asset gets no CSS from the page around it.
+    Anywhere the file *is* inlined (or referenced by an <object>), a
+    --logo-ink / --logo-accent set on an ancestor wins over these.
+  -->
+  <style>
+    svg { --logo-ink: #6b1f2a; --logo-accent: #c9a227; }
+    .ink { stroke: var(--logo-ink); }
+    .accent-stroke { stroke: var(--logo-accent); }
+    .accent-fill { fill: var(--logo-accent); }
+    /* Maroon disappears against a dark browser chrome; the ivory does not. */
+    @media (prefers-color-scheme: dark) { svg { --logo-ink: #f7e7c6; } }
+  </style>
+  <path class="ink" d="M5.4 27 L12.4 11.2 A4 4 0 0 1 19.6 11.2 L26.6 27"
+        fill="none" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" />
+  <path class="accent-stroke" d="M9.8 20.6 H22.2" fill="none" stroke-width="2.4" stroke-linecap="round" />
+  <circle class="accent-fill" cx="16" cy="5.4" r="2.4" />
+</svg>

@@ -85,263 +85,268 @@ export function LandingClient({
     <div className="min-h-screen bg-bg">
       <SiteHeader signedIn={signedIn} dashboardHref={dashboardHref} />
 
-      {/* hero */}
-      <section className="mx-auto grid max-w-6xl items-center gap-12 px-4 pb-20 pt-10 lg:grid-cols-2 lg:pt-16">
-        <motion.div variants={staggerContainer} initial="hidden" animate="visible">
-          <motion.p variants={fadeUpStagger} className="type-overline">
-            Digital invitations for every celebration
-          </motion.p>
-          <motion.h1 variants={fadeUpStagger} custom={1} className="mt-3 type-display-xl text-primary">
-            Your wedding countdown<br />starts from here
-          </motion.h1>
-          <motion.p variants={fadeUpStagger} custom={2} className="mt-5 max-w-md type-body-lg text-muted">
-            Join us in crafting the wedding invitation of your dreams. Animated invitation websites
-            that open like a real card — wax seal, envelope and all — built for Indian weddings and
-            every occasion after.
-          </motion.p>
-          <motion.div variants={fadeUpStagger} custom={3} className="mt-8 flex flex-wrap gap-3">
-            <Link href={signedIn ? "/onboarding" : "/signup"}>
-              <Button size="lg" variant="celebration">Get started</Button>
-            </Link>
-            <Link href="/showcase">
-              <Button size="lg" variant="secondary">View theme previews</Button>
-            </Link>
-          </motion.div>
-          {/* Three plain facts, stated rather than implied — they are what a
-              reader (and a model summarising this page) actually needs. */}
-          <motion.ul
-            variants={fadeUpStagger}
-            custom={4}
-            className="mt-8 flex flex-wrap gap-x-6 gap-y-2 type-caption"
-          >
-            <li>One link, shared once</li>
-            <li aria-hidden>·</li>
-            <li>Free to build, pay when you publish</li>
-            <li aria-hidden>·</li>
-            <li>No app for your guests</li>
-          </motion.ul>
-        </motion.div>
-        <Envelope guestName="Dear Guest & Family" sealMonogram="अ" autoPlay />
-      </section>
-
-      <Divider variant="motif" motif="diya" className="mx-auto max-w-4xl px-4" />
-
-      <WhatWeOffer />
-
-      <WhyChooseUs />
-
-      {/* occasions */}
-      <section className="mx-auto max-w-6xl px-4 py-20">
-        <h2 className="text-center type-display-lg text-primary">Not just weddings</h2>
-        <p className="mx-auto mt-3 max-w-xl text-center type-body-lg text-muted">
-          The same craft, whatever you&apos;re celebrating. Pick an occasion and the builder adapts
-          its ceremonies, vocabulary and layout to match.
-        </p>
-        <div className="mt-10 flex flex-wrap justify-center gap-3">
-          {occasionShowcase.map((type) => (
-            <span
-              key={type}
-              className="rounded-pill border border-ornate/60 bg-surface px-5 py-2.5 font-display text-lg font-semibold text-primary"
+      {/* The header's skip link points here, so this landmark has to exist and
+          has to be the first thing after the chrome. */}
+      <main id="main">
+        {/* hero */}
+        <section className="mx-auto grid max-w-6xl items-center gap-12 px-4 pb-20 pt-10 lg:grid-cols-2 lg:pt-16">
+          <motion.div variants={staggerContainer} initial="hidden" animate="visible">
+            <motion.p variants={fadeUpStagger} className="type-overline">
+              Digital invitations for every celebration
+            </motion.p>
+            <motion.h1 variants={fadeUpStagger} custom={1} className="mt-3 type-display-xl text-primary">
+              Your wedding countdown<br />starts from here
+            </motion.h1>
+            <motion.p variants={fadeUpStagger} custom={2} className="mt-5 max-w-md type-body-lg text-muted">
+              Join us in crafting the wedding invitation of your dreams. Animated invitation websites
+              that open like a real card — wax seal, envelope and all — built for Indian weddings and
+              every occasion after.
+            </motion.p>
+            <motion.div variants={fadeUpStagger} custom={3} className="mt-8 flex flex-wrap gap-3">
+              <Link href={signedIn ? "/onboarding" : "/signup"}>
+                <Button size="lg" variant="celebration">Get started</Button>
+              </Link>
+              <Link href="/showcase">
+                <Button size="lg" variant="secondary">View theme previews</Button>
+              </Link>
+            </motion.div>
+            {/* Three plain facts, stated rather than implied — they are what a
+                reader (and a model summarising this page) actually needs. */}
+            <motion.ul
+              variants={fadeUpStagger}
+              custom={4}
+              className="mt-8 flex flex-wrap gap-x-6 gap-y-2 type-caption"
             >
-              {eventTypeLabels[type]}
-            </span>
-          ))}
-        </div>
-      </section>
+              <li>One link, shared once</li>
+              <li aria-hidden>·</li>
+              <li>Free to build, pay when you publish</li>
+              <li aria-hidden>·</li>
+              <li>No app for your guests</li>
+            </motion.ul>
+          </motion.div>
+          <Envelope guestName="Dear Guest & Family" sealMonogram="अ" autoPlay />
+        </section>
 
-      {/* the making of your invitation */}
-      <section id="how" className="bg-surface py-20">
-        <div className="mx-auto max-w-6xl px-4">
-          <h2 className="text-center type-display-lg text-primary">The making of your invitation</h2>
+        <Divider variant="motif" motif="diya" className="mx-auto max-w-4xl px-4" />
+
+        <WhatWeOffer />
+
+        <WhyChooseUs />
+
+        {/* occasions */}
+        <section className="mx-auto max-w-6xl px-4 py-20">
+          <h2 className="text-center type-display-lg text-primary">Not just weddings</h2>
           <p className="mx-auto mt-3 max-w-xl text-center type-body-lg text-muted">
-            Six steps, about ten minutes. Nothing is locked in — change your theme, photos or
-            schedule any time, even after it&apos;s live.
+            The same craft, whatever you&apos;re celebrating. Pick an occasion and the builder adapts
+            its ceremonies, vocabulary and layout to match.
           </p>
-          <div className="mt-12 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {makingSteps.map(({ icon: Icon, title, text }, i) => (
-              <Card key={title} variant="ornate" className="p-8">
-                <div className="flex items-center gap-3">
-                  <span className="font-display text-4xl font-semibold text-accent">{i + 1}</span>
-                  <Icon className="size-6 text-primary" />
-                </div>
+          <div className="mt-10 flex flex-wrap justify-center gap-3">
+            {occasionShowcase.map((type) => (
+              <span
+                key={type}
+                className="rounded-pill border border-ornate/60 bg-surface px-5 py-2.5 font-display text-lg font-semibold text-primary"
+              >
+                {eventTypeLabels[type]}
+              </span>
+            ))}
+          </div>
+        </section>
+
+        {/* the making of your invitation */}
+        <section id="how" className="bg-surface py-20">
+          <div className="mx-auto max-w-6xl px-4">
+            <h2 className="text-center type-display-lg text-primary">The making of your invitation</h2>
+            <p className="mx-auto mt-3 max-w-xl text-center type-body-lg text-muted">
+              Six steps, about ten minutes. Nothing is locked in — change your theme, photos or
+              schedule any time, even after it&apos;s live.
+            </p>
+            <div className="mt-12 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {makingSteps.map(({ icon: Icon, title, text }, i) => (
+                <Card key={title} variant="ornate" className="p-8">
+                  <div className="flex items-center gap-3">
+                    <span className="font-display text-4xl font-semibold text-accent">{i + 1}</span>
+                    <Icon className="size-6 text-primary" />
+                  </div>
+                  <h3 className="mt-4 type-h2 text-primary">{title}</h3>
+                  <p className="mt-2 type-body text-muted">{text}</p>
+                </Card>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* uploading assets */}
+        <section className="mx-auto max-w-6xl px-4 py-20">
+          <div className="grid items-center gap-12 lg:grid-cols-2">
+            <div>
+              <p className="type-overline">Your photographs, your card</p>
+              <h2 className="mt-3 type-display-lg text-primary">Upload once, framed everywhere</h2>
+              <p className="mt-4 type-body-lg text-muted">
+                Drag in your engagement shoot, your family portraits, the candid your cousin took at
+                the roka. Each photo is stored on secure cloud storage, delivered from a global CDN,
+                and framed automatically in your theme&apos;s style.
+              </p>
+              <ul className="mt-6 space-y-3">
+                {[
+                  "JPG, PNG, WebP, AVIF and GIF, up to 25 MB each",
+                  "Uploaded straight from your browser — nothing passes through a middleman",
+                  "Only you and your agent can add or remove them",
+                  "Reorder any time; the first two become your story spread",
+                ].map((line) => (
+                  <li key={line} className="flex items-start gap-2.5 type-body">
+                    <Check className="mt-1 size-4 shrink-0 text-success" />
+                    {line}
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <Card variant="ornate" className="p-8">
+              <p className="type-overline">Gallery preview</p>
+              <div className="mt-4 grid grid-cols-3 gap-3">
+                {["upl1", "upl2", "upl3", "upl4", "upl5", "upl6"].map((seed) => (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    key={seed}
+                    src={`https://picsum.photos/seed/${seed}/200/200`}
+                    alt=""
+                    className="aspect-square w-full rounded-soft border border-ornate/40 object-cover"
+                  />
+                ))}
+              </div>
+              <p className="mt-4 type-caption">
+                Sample imagery. Your invitation shows your own photographs.
+              </p>
+            </Card>
+          </div>
+        </section>
+
+        {/* themes */}
+        <section className="bg-surface py-20">
+          <div className="mx-auto max-w-6xl px-4">
+            <h2 className="text-center type-display-lg text-primary">A theme for every tradition</h2>
+            <p className="mx-auto mt-3 max-w-xl text-center type-body-lg text-muted">
+              Hindu, Muslim, Sikh, Christian, interfaith — each with its own motifs, script,
+              vocabulary and petals. Never a template recolour.
+            </p>
+            <div className="mt-10 grid grid-cols-2 gap-4 lg:grid-cols-4">
+              {themes.map((t) => {
+                const Motif = motifs[t.motifSet.divider];
+                return (
+                  <Link key={t.id} href={`/showcase?theme=${t.id}`} className="group">
+                    <Card className="overflow-hidden transition-shadow group-hover:shadow-gold-glow">
+                      <div className="flex h-16">
+                        {t.palette.map((hex) => (
+                          <span key={hex} className="flex-1" style={{ background: hex }} />
+                        ))}
+                      </div>
+                      <div className="flex items-center justify-between p-4">
+                        <div>
+                          <p className="font-display font-semibold text-primary">{t.name}</p>
+                          <p className="type-caption capitalize">{t.religionTag} · {t.moodTag}</p>
+                        </div>
+                        <Motif className="size-6 text-accent" />
+                      </div>
+                    </Card>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+
+        {/* dashboard */}
+        <section className="mx-auto max-w-6xl px-4 py-20">
+          <h2 className="text-center type-display-lg text-primary">A dashboard that actually helps</h2>
+          <p className="mx-auto mt-3 max-w-xl text-center type-body-lg text-muted">
+            Sign in and everything about your celebration is in one place — who&apos;s coming, what
+            they&apos;re eating, and how your invitation is travelling.
+          </p>
+          <div className="mt-10 grid gap-6 md:grid-cols-3">
+            {dashboardFeatures.map(({ icon: Icon, title, text }) => (
+              <Card key={title} variant="envelope" className="p-7">
+                <Icon className="size-7 text-accent" />
                 <h3 className="mt-4 type-h2 text-primary">{title}</h3>
                 <p className="mt-2 type-body text-muted">{text}</p>
               </Card>
             ))}
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* uploading assets */}
-      <section className="mx-auto max-w-6xl px-4 py-20">
-        <div className="grid items-center gap-12 lg:grid-cols-2">
-          <div>
-            <p className="type-overline">Your photographs, your card</p>
-            <h2 className="mt-3 type-display-lg text-primary">Upload once, framed everywhere</h2>
-            <p className="mt-4 type-body-lg text-muted">
-              Drag in your engagement shoot, your family portraits, the candid your cousin took at
-              the roka. Each photo is stored on secure cloud storage, delivered from a global CDN,
-              and framed automatically in your theme&apos;s style.
+        {/* agents */}
+        <section className="bg-surface py-20">
+          <div className="mx-auto max-w-4xl px-4 text-center">
+            <Badge tone="accent">Partner programme</Badge>
+            <h2 className="mt-4 type-display-lg text-primary">Build invitations for a living</h2>
+            <p className="mx-auto mt-4 max-w-2xl type-body-lg text-muted">
+              Wedding planners, printers and studios: create invitations on behalf of your clients,
+              manage every celebration from one dashboard, and earn a commission on every plan you
+              sell. You get a referral code, a live earnings ledger, and full control of each invite
+              you build.
             </p>
-            <ul className="mt-6 space-y-3">
-              {[
-                "JPG, PNG, WebP, AVIF and GIF, up to 25 MB each",
-                "Uploaded straight from your browser — nothing passes through a middleman",
-                "Only you and your agent can add or remove them",
-                "Reorder any time; the first two become your story spread",
-              ].map((line) => (
-                <li key={line} className="flex items-start gap-2.5 type-body">
-                  <Check className="mt-1 size-4 shrink-0 text-success" />
-                  {line}
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <Card variant="ornate" className="p-8">
-            <p className="type-overline">Gallery preview</p>
-            <div className="mt-4 grid grid-cols-3 gap-3">
-              {["upl1", "upl2", "upl3", "upl4", "upl5", "upl6"].map((seed) => (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  key={seed}
-                  src={`https://picsum.photos/seed/${seed}/200/200`}
-                  alt=""
-                  className="aspect-square w-full rounded-soft border border-ornate/40 object-cover"
-                />
-              ))}
+            <div className="mt-8 flex flex-wrap justify-center gap-3">
+              <Link href="/signup?as=agent">
+                <Button size="lg" variant="celebration">Become a partner agent</Button>
+              </Link>
             </div>
-            <p className="mt-4 type-caption">
-              Sample imagery. Your invitation shows your own photographs.
-            </p>
-          </Card>
-        </div>
-      </section>
-
-      {/* themes */}
-      <section className="bg-surface py-20">
-        <div className="mx-auto max-w-6xl px-4">
-          <h2 className="text-center type-display-lg text-primary">A theme for every tradition</h2>
-          <p className="mx-auto mt-3 max-w-xl text-center type-body-lg text-muted">
-            Hindu, Muslim, Sikh, Christian, interfaith — each with its own motifs, script,
-            vocabulary and petals. Never a template recolour.
-          </p>
-          <div className="mt-10 grid grid-cols-2 gap-4 lg:grid-cols-4">
-            {themes.map((t) => {
-              const Motif = motifs[t.motifSet.divider];
-              return (
-                <Link key={t.id} href={`/showcase?theme=${t.id}`} className="group">
-                  <Card className="overflow-hidden transition-shadow group-hover:shadow-gold-glow">
-                    <div className="flex h-16">
-                      {t.palette.map((hex) => (
-                        <span key={hex} className="flex-1" style={{ background: hex }} />
-                      ))}
-                    </div>
-                    <div className="flex items-center justify-between p-4">
-                      <div>
-                        <p className="font-display font-semibold text-primary">{t.name}</p>
-                        <p className="type-caption capitalize">{t.religionTag} · {t.moodTag}</p>
-                      </div>
-                      <Motif className="size-6 text-accent" />
-                    </div>
-                  </Card>
-                </Link>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
-      {/* dashboard */}
-      <section className="mx-auto max-w-6xl px-4 py-20">
-        <h2 className="text-center type-display-lg text-primary">A dashboard that actually helps</h2>
-        <p className="mx-auto mt-3 max-w-xl text-center type-body-lg text-muted">
-          Sign in and everything about your celebration is in one place — who&apos;s coming, what
-          they&apos;re eating, and how your invitation is travelling.
-        </p>
-        <div className="mt-10 grid gap-6 md:grid-cols-3">
-          {dashboardFeatures.map(({ icon: Icon, title, text }) => (
-            <Card key={title} variant="envelope" className="p-7">
-              <Icon className="size-7 text-accent" />
-              <h3 className="mt-4 type-h2 text-primary">{title}</h3>
-              <p className="mt-2 type-body text-muted">{text}</p>
-            </Card>
-          ))}
-        </div>
-      </section>
-
-      {/* agents */}
-      <section className="bg-surface py-20">
-        <div className="mx-auto max-w-4xl px-4 text-center">
-          <Badge tone="accent">Partner programme</Badge>
-          <h2 className="mt-4 type-display-lg text-primary">Build invitations for a living</h2>
-          <p className="mx-auto mt-4 max-w-2xl type-body-lg text-muted">
-            Wedding planners, printers and studios: create invitations on behalf of your clients,
-            manage every celebration from one dashboard, and earn a commission on every plan you
-            sell. You get a referral code, a live earnings ledger, and full control of each invite
-            you build.
-          </p>
-          <div className="mt-8 flex flex-wrap justify-center gap-3">
-            <Link href="/signup?as=agent">
-              <Button size="lg" variant="celebration">Become a partner agent</Button>
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* pricing */}
-      {plans.length > 0 && (
-        <section className="mx-auto max-w-6xl px-4 py-20">
-          <h2 className="text-center type-display-lg text-primary">Simple pricing</h2>
-          <p className="mx-auto mt-3 max-w-xl text-center type-body-lg text-muted">
-            Every plan is unlocked while we&apos;re in preview — pick whichever fits and the demo
-            checkout always succeeds.
-          </p>
-          <div className="mt-10 grid gap-6 md:grid-cols-3">
-            {plans.map((plan) => (
-              <Card key={plan.code} variant="ornate" className="flex flex-col p-8">
-                <p className="type-overline">{plan.name}</p>
-                <p className="mt-3 font-display text-5xl font-semibold text-primary">
-                  {plan.price_inr === 0 ? "Free" : `₹${plan.price_inr.toLocaleString("en-IN")}`}
-                </p>
-                {plan.description && <p className="mt-2 type-caption">{plan.description}</p>}
-                <ul className="mt-6 flex-1 space-y-2 text-sm">
-                  {(plan.features ?? []).map((f) => (
-                    <li key={f} className="flex items-start gap-2">
-                      <Check className="mt-0.5 size-4 shrink-0 text-success" /> {f}
-                    </li>
-                  ))}
-                </ul>
-                <Link href={signedIn ? "/onboarding" : "/signup"} className="mt-6">
-                  <Button className="w-full">Get started</Button>
-                </Link>
-              </Card>
-            ))}
           </div>
         </section>
-      )}
 
-      <ReadyToCreate signedIn={signedIn} />
+        {/* pricing */}
+        {plans.length > 0 && (
+          <section className="mx-auto max-w-6xl px-4 py-20">
+            <h2 className="text-center type-display-lg text-primary">Simple pricing</h2>
+            <p className="mx-auto mt-3 max-w-xl text-center type-body-lg text-muted">
+              Every plan is unlocked while we&apos;re in preview — pick whichever fits and the demo
+              checkout always succeeds.
+            </p>
+            <div className="mt-10 grid gap-6 md:grid-cols-3">
+              {plans.map((plan) => (
+                <Card key={plan.code} variant="ornate" className="flex flex-col p-8">
+                  <p className="type-overline">{plan.name}</p>
+                  <p className="mt-3 font-display text-5xl font-semibold text-primary">
+                    {plan.price_inr === 0 ? "Free" : `₹${plan.price_inr.toLocaleString("en-IN")}`}
+                  </p>
+                  {plan.description && <p className="mt-2 type-caption">{plan.description}</p>}
+                  <ul className="mt-6 flex-1 space-y-2 text-sm">
+                    {(plan.features ?? []).map((f) => (
+                      <li key={f} className="flex items-start gap-2">
+                        <Check className="mt-0.5 size-4 shrink-0 text-success" /> {f}
+                      </li>
+                    ))}
+                  </ul>
+                  <Link href={signedIn ? "/onboarding" : "/signup"} className="mt-6">
+                    <Button className="w-full">Get started</Button>
+                  </Link>
+                </Card>
+              ))}
+            </div>
+          </section>
+        )}
 
-      <LatestBlogs posts={latestPosts} />
+        <ReadyToCreate signedIn={signedIn} />
 
-      <HomeFaq items={faq} />
+        <LatestBlogs posts={latestPosts} />
 
-      {/* closing CTA */}
-      <section className="border-t border-ornate/40 bg-surface">
-        <div className="mx-auto flex max-w-6xl flex-col items-center gap-6 px-4 py-16 text-center">
-          <h2 className="type-display-lg text-primary">Your story deserves a beautiful opening.</h2>
-          <div className="flex flex-wrap justify-center gap-3">
-            <Link href={signedIn ? "/onboarding" : "/signup"}>
-              <Button size="lg" variant="celebration">Create your invitation</Button>
-            </Link>
-            <Link href="/showcase">
-              <Button size="lg" variant="secondary">Browse the showcase</Button>
-            </Link>
+        <HomeFaq items={faq} />
+
+        {/* closing CTA */}
+        <section className="border-t border-ornate/40 bg-surface">
+          <div className="mx-auto flex max-w-6xl flex-col items-center gap-6 px-4 py-16 text-center">
+            <h2 className="type-display-lg text-primary">Your story deserves a beautiful opening.</h2>
+            <div className="flex flex-wrap justify-center gap-3">
+              <Link href={signedIn ? "/onboarding" : "/signup"}>
+                <Button size="lg" variant="celebration">Create your invitation</Button>
+              </Link>
+              <Link href="/showcase">
+                <Button size="lg" variant="secondary">Browse the showcase</Button>
+              </Link>
+            </div>
+            <Divider variant="motif" motif="marigold" className="w-full max-w-md" />
           </div>
-          <Divider variant="motif" motif="marigold" className="w-full max-w-md" />
-        </div>
-      </section>
+        </section>
+
+      </main>
 
       <SiteFooter />
     </div>

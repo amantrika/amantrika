@@ -56,6 +56,13 @@ another identity is rejected by Vercel on Hobby, which fails the deploy.
 - Next.js 15 App Router · Tailwind 4 · TypeScript · Framer Motion.
 - Design system: tokens as CSS variables with per-theme `[data-theme]` overrides,
   motifs, motion presets, ~60 components.
+- **The logo.** `src/design-system/brand/` exports `AmantrikaMark`,
+  `AmantrikaWordmark`, `AmantrikaLogo`, `AmantrikaBadge`; standalone SVGs live in
+  `public/brand/`; the favicon is `src/app/icon.svg` and the iOS icon is rendered
+  by `src/app/apple-icon.tsx`. Two colour slots only — `currentColor` for the
+  arch, `--logo-accent` (default: the theme accent) for the tie-beam and
+  marigold — so it recolours with the site instead of carrying brand hexes.
+  Documented at `/design-system/components/logo`.
 - 12 themes. Docs at `/design-system` are **local-only** — gated on the request
   host, because Next inlines `process.env` into middleware and static bundles at
   build time, so an env-based flag freezes to whatever the build machine had.
@@ -119,6 +126,12 @@ another identity is rejected by Vercel on Hobby, which fails the deploy.
 - Marketing reads are cached (`src/lib/cache.ts`). Homepage TTFB went
   **2.9s → ~0.5s**.
 - `.vercelignore` — CLI deploys were uploading ~500 MB and failing with EPIPE.
+
+### Site chrome
+- One `SiteHeader` / `SiteFooter` for the landing page and every marketing page,
+  wrapping the design system's `Navbar`. The header carries the logo, an
+  active-link rule, a scroll-reactive surface, a skip link to `#main`, and a
+  mobile drawer with a scrim and body scroll lock.
 
 ### Content
 - Blog, content pages, `llms.txt`, markdown twins, RSS, JSON-LD *(built by the
@@ -272,6 +285,16 @@ safe. Give each agent its own worktree, or run them one at a time.
 - **`events` ↔ `assets` has two foreign keys.** An unqualified PostgREST embed is
   ambiguous and fails with `PGRST201`, which surfaces as an *empty result*, not
   an error. Always pin: `assets!assets_event_id_fkey(...)`.
+- **Tailwind resolves conflicting utilities by stylesheet order, not class
+  order.** A component that ships its own `size-[1.5em]` default beats a
+  caller's `size-8`, silently. Defaults that a caller should be able to override
+  belong in `width`/`height` attributes, which any class beats.
+- **The logo shape exists in four files and they drift silently.**
+  `src/design-system/brand/index.tsx`, `public/brand/*.svg`, `src/app/icon.svg`,
+  `src/app/apple-icon.tsx`. The standalone ones declare their own colour
+  variables because a favicon or an `<img>` inherits no CSS from the page, and
+  the favicon is drawn heavier on purpose — the real mark's weight disappears at
+  16px. Change the mark, change all four.
 - **Never pass a function as a prop to a client component.** Formatters cross the
   boundary as a named string, not a callback.
 - **`NEXT_DIST_DIR` isolates a second Next process.** Two `next dev`/`next build`
