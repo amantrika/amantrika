@@ -286,7 +286,7 @@ that, and what breaks if it isn't.
 
 ## The three documents, and which to update
 
-Read `PROJECT-GRAPH.md` first in a new session. It holds the product's shape —
+Read `PROJECT-GRAPH.md` first in a new session, then `next.md` for what to do. It holds the product's shape —
 actors, entities, the rules that must not be broken, and the hard-won facts that
 are not guessable from the code.
 
@@ -295,6 +295,7 @@ are not guessable from the code.
 | `PROJECT-GRAPH.md` | What the product *is* and its invariants | The shape changes — new entity, actor, or rule. Not for ordinary features. |
 | `ARCHITECTURE.md` | Where code lives and why | A boundary moves, or a new module appears |
 | `progress.md` | Done / pending / known issues | **Every commit that changes either** |
+| `next.md` | The handoff — what to do next, in order, with enough detail to start cold | At the end of a session, or when priorities change |
 
 If you discover something that cost you more than ten minutes and is not
 guessable from reading the code, it belongs in `PROJECT-GRAPH.md` §11. That
