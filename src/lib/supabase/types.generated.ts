@@ -773,30 +773,42 @@ export type Database = {
       }
       profiles: {
         Row: {
+          bio: string | null
+          city: string | null
           created_at: string
           email: string | null
           full_name: string | null
           id: string
+          instagram: string | null
+          occasion_note: string | null
           phone: string | null
           referred_by: string | null
           role: Database["public"]["Enums"]["user_role"]
           updated_at: string
         }
         Insert: {
+          bio?: string | null
+          city?: string | null
           created_at?: string
           email?: string | null
           full_name?: string | null
           id: string
+          instagram?: string | null
+          occasion_note?: string | null
           phone?: string | null
           referred_by?: string | null
           role?: Database["public"]["Enums"]["user_role"]
           updated_at?: string
         }
         Update: {
+          bio?: string | null
+          city?: string | null
           created_at?: string
           email?: string | null
           full_name?: string | null
           id?: string
+          instagram?: string | null
+          occasion_note?: string | null
           phone?: string | null
           referred_by?: string | null
           role?: Database["public"]["Enums"]["user_role"]
@@ -989,6 +1001,10 @@ export type Database = {
       }
       admin_overview: { Args: never; Returns: Json }
       agent_stats: { Args: { p_agent_id: string }; Returns: Json }
+      apply_to_be_partner: {
+        Args: { p_agency_name?: string; p_note?: string }
+        Returns: string
+      }
       auth_role: {
         Args: never
         Returns: Database["public"]["Enums"]["user_role"]
@@ -1042,6 +1058,7 @@ export type Database = {
       }
       is_admin: { Args: never; Returns: boolean }
       my_feature_votes: { Args: { p_voter_hash: string }; Returns: string[] }
+      my_partner_status: { Args: never; Returns: Json }
       notification_claim: {
         Args: {
           p_channel: string

@@ -1,10 +1,12 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { LayoutDashboard, LogOut, Plus, Users, Wallet } from "lucide-react";
+import { LayoutDashboard, LogOut, Plus, User, Users, Wallet } from "lucide-react";
 import { Button } from "@/design-system/components";
 import { signOut } from "@/app/(auth)/actions";
 import { roleLabels } from "@/lib/auth";
 import type { Profile } from "@/lib/supabase/types";
+
+const PROFILE_LINK = { href: "/profile", label: "Profile", icon: User };
 
 const navByRole: Record<string, { href: string; label: string; icon: typeof Users }[]> = {
   host: [{ href: "/dashboard", label: "My celebrations", icon: LayoutDashboard }],
@@ -33,7 +35,9 @@ export function DashboardShell({
   action?: ReactNode;
   children: ReactNode;
 }) {
-  const nav = navByRole[profile.role] ?? navByRole.host;
+  // Profile is appended rather than repeated in each role's list, so a new
+  // role can never accidentally ship without it.
+  const nav = [...(navByRole[profile.role] ?? navByRole.host), PROFILE_LINK];
 
   return (
     <div className="min-h-screen bg-bg">

@@ -44,6 +44,10 @@ export const EVENTS = {
   invite_shared: "invite_shared",
   badge_clicked: "badge_clicked",
 
+  /* member profile */
+  profile_updated: "profile_updated",
+  partner_applied: "partner_applied",
+
   /* community roadmap */
   feature_proposed: "feature_proposed",
   feature_voted: "feature_voted",
