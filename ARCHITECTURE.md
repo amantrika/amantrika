@@ -145,13 +145,26 @@ a diff, and prose belongs in version control. `content/pages/changelog.mdx` and
 feature-request board beneath it, because half the page is our plan and half is
 everyone else's.
 
+**Editing that MDX has a UI: `/keystatic`**, configured in `keystatic.config.ts`
+and served by `src/app/keystatic/` and `src/app/api/keystatic/`. It is an editor,
+not a CMS — it writes the same files, and everything downstream reads the
+filesystem exactly as before. Two rules follow from that:
+
+- It is **local only**, gated in middleware. Local storage means it edits a
+  checkout, so on a deployment it could not work even if it were reachable.
+- `keystatic.config.ts` and `src/lib/content/schema.ts` describe the same
+  frontmatter and must agree. Import shared values (`categories`, `pageLayouts`)
+  rather than retyping them; the failure mode of drift is the editor cheerfully
+  saving something the build rejects.
+
 ---
 
 ## Where the boundaries are
 
 Three layers guard the same thing, deliberately:
 
-1. **Middleware** — redirects signed-out visitors, hides the design system off localhost.
+1. **Middleware** — redirects signed-out visitors, hides the design system and
+   the Keystatic editor off localhost.
 2. **Page guards** — `requireRole(...)` sends the wrong role somewhere useful.
 3. **RLS** — the real boundary. A forged session still reads nothing.
 
