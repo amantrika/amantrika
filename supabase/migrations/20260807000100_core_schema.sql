@@ -4,7 +4,9 @@
 -- so a birthday or a corporate launch uses the same tables with a different
 -- event_type and a different theme.
 
-create extension if not exists "pgcrypto";
+-- Randomness comes from gen_random_uuid(), which is core Postgres 13+. We avoid
+-- pgcrypto's gen_random_bytes() deliberately: on Supabase pgcrypto is installed
+-- into the `extensions` schema, so it isn't on the search path here.
 
 -- ---------------------------------------------------------------- enums
 
@@ -120,9 +122,9 @@ create table guests (
   meal          text,
   invited_keys  text[] not null default '{}',
   status        rsvp_status not null default 'pending',
-  -- Per-guest personalised link: /invite/<slug>?t=<token>. Hex, not base64 —
-  -- base64 emits '+' and '/', which would need escaping in a query string.
-  invite_token  text not null default encode(gen_random_bytes(9), 'hex'),
+  -- Per-guest personalised link: /invite/<slug>?t=<token>. A de-hyphenated uuid
+  -- is 32 hex chars — URL-safe with no escaping, and 128 bits of entropy.
+  invite_token  text not null default replace(gen_random_uuid()::text, '-', ''),
   created_at    timestamptz not null default now(),
   unique (event_id, invite_token)
 );
@@ -299,7 +301,7 @@ begin
     values (
       new.id,
       new.raw_user_meta_data ->> 'agency_name',
-      upper(substr(encode(gen_random_bytes(6), 'hex'), 1, 8))
+      upper(substr(replace(gen_random_uuid()::text, '-', ''), 1, 8))
     );
   end if;
 

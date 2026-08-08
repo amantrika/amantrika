@@ -40,11 +40,11 @@ export async function POST(request: NextRequest) {
   const { error } = await supabase.rpc("record_page_view", {
     p_slug: body.slug,
     p_visitor_hash: visitorHash(request),
-    p_referrer: body.referrer ?? null,
+    p_referrer: body.referrer || undefined,
     // Vercel injects these at the edge; absent locally.
-    p_country: request.headers.get("x-vercel-ip-country"),
-    p_city: request.headers.get("x-vercel-ip-city"),
-    p_guest_token: body.guestToken ?? null,
+    p_country: request.headers.get("x-vercel-ip-country") ?? undefined,
+    p_city: request.headers.get("x-vercel-ip-city") ?? undefined,
+    p_guest_token: body.guestToken || undefined,
   });
 
   // Analytics must never break the invite — swallow failures.
