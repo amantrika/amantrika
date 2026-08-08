@@ -1,6 +1,9 @@
 import { config, collection, fields } from "@keystatic/core";
 import { authors } from "./content/authors";
-import { categories } from "./src/lib/content/schema";
+import { categories, pageLayouts } from "./src/lib/content/schema";
+
+/** Sentence-case a value for a dropdown label: "wide" → "Wide". */
+const titleCase = (v: string) => v.charAt(0).toUpperCase() + v.slice(1);
 
 /**
  * Keystatic — an editing UI for the MDX that is already in this repo.
@@ -164,11 +167,10 @@ export default config({
         updatedAt: fields.date({ label: "Updated", validation: { isRequired: true } }),
         layout: fields.select({
           label: "Layout",
-          description: "Legal pages get a narrower column and a 'last updated' line.",
-          options: [
-            { label: "Prose", value: "prose" },
-            { label: "Legal", value: "legal" },
-          ],
+          description:
+            "Prose is a reading column with a contents rail. Legal drops the rail for an 'in effect from' line. Wide is for pages built out of designed <Section> bands, which want the whole page.",
+          // Built from the Zod enum, so adding a layout there adds it here.
+          options: pageLayouts.map((v) => ({ label: titleCase(v), value: v })),
           defaultValue: "prose",
         }),
         indexable: fields.checkbox({

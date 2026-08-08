@@ -27,6 +27,16 @@ export const categories = [
 
 export type Category = (typeof categories)[number];
 
+/**
+ * Page layouts. Exported as an array rather than inlined into the enum because
+ * `keystatic.config.ts` builds its layout dropdown from this — the editor and
+ * the validator have to offer the same set, and a comment asking two files to
+ * agree is not a mechanism. Adding one here is what makes it selectable.
+ */
+export const pageLayouts = ["prose", "legal", "wide"] as const;
+
+export type PageLayout = (typeof pageLayouts)[number];
+
 export const faqItemSchema = z.object({
   q: z.string().min(1),
   a: z.string().min(1),
@@ -87,8 +97,17 @@ export const pageFrontmatterSchema = z.object({
     .optional(),
   description: z.string().min(40).max(180),
   updatedAt: isoDate,
-  /** Legal pages get a narrower column and a "last updated" line. */
-  layout: z.enum(["prose", "legal"]).default("prose"),
+  /**
+   * How the page is laid out.
+   *   prose  — reading column with a sticky table of contents beside it
+   *   legal  — the same column, no contents, "in effect from" instead
+   *   wide   — full content width, no sidebar. For pages built out of designed
+   *            <Section> bands rather than continuous prose (about,
+   *            how-it-works): those want the whole page, and a contents rail
+   *            beside a page of banded sections is navigation for a document
+   *            that is already skimmable.
+   */
+  layout: z.enum(pageLayouts).default("prose"),
   /** Kept out of the sitemap when false. */
   indexable: z.boolean().default(true),
   faq: z.array(faqItemSchema).optional(),
