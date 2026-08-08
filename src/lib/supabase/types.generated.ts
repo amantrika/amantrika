@@ -281,6 +281,7 @@ export type Database = {
           main_datetime: string | null
           owner_id: string
           permissions: Json
+          plan_code: string
           published_at: string | null
           settings: Json
           showcase_source_id: string | null
@@ -309,6 +310,7 @@ export type Database = {
           main_datetime?: string | null
           owner_id: string
           permissions?: Json
+          plan_code?: string
           published_at?: string | null
           settings?: Json
           showcase_source_id?: string | null
@@ -337,6 +339,7 @@ export type Database = {
           main_datetime?: string | null
           owner_id?: string
           permissions?: Json
+          plan_code?: string
           published_at?: string | null
           settings?: Json
           showcase_source_id?: string | null
@@ -372,6 +375,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "events_plan_code_fkey"
+            columns: ["plan_code"]
+            isOneToOne: false
+            referencedRelation: "plans"
+            referencedColumns: ["code"]
           },
           {
             foreignKeyName: "events_showcase_source_id_fkey"

@@ -178,10 +178,16 @@ async function settle(
     return NextResponse.json({ error: "order update failed" }, { status: 500 });
   }
 
-  // SKU effect for the `invite` SKU: publishing is what was bought.
+  // SKU effect for the `invite` SKU: publishing is what was bought. `plan_code`
+  // is written here and nowhere else — it is what lifts the watermark, so only
+  // a settled payment may set it (see src/lib/entitlements.ts).
   const { data: published, error: publishError } = await supabase
     .from("events")
-    .update({ status: "published", published_at: new Date().toISOString() })
+    .update({
+      status: "published",
+      published_at: new Date().toISOString(),
+      plan_code: order.plan_code,
+    })
     .eq("id", order.event_id)
     .select("slug, title")
     .maybeSingle();

@@ -30,6 +30,8 @@ export interface InviteView {
   events: InviteSubEvent[];
   hotels: Hotel[];
   settings: EventSettings;
+  /** Drives src/lib/entitlements.ts — watermark, OG image, structured data. */
+  planCode: string;
   /** True for the built-in showcase invites that aren't backed by a row. */
   isDemo: boolean;
 }
@@ -90,6 +92,7 @@ export function toInviteView(
     events: subEvents.map(toInviteSubEvent),
     hotels: Array.isArray(event.hotels) ? event.hotels : [],
     settings: { ...defaultSettings, ...event.settings },
+    planCode: event.plan_code,
     isDemo: false,
   };
 }

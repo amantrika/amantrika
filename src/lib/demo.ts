@@ -50,6 +50,9 @@ function fromMock(c: CoupleData): InviteView {
     })),
     hotels: c.hotels,
     settings: { rsvpEnabled: true, blessingsEnabled: true, showCountdown: true },
+    // Marketing surfaces, not customer work: they advertise the product, so
+    // watermarking them would be self-defeating.
+    planCode: "premium",
     isDemo: true,
   };
 }

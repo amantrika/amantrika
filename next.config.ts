@@ -7,6 +7,14 @@ const POSTHOG_ASSETS = POSTHOG_HOST.replace(".i.posthog.com", "-assets.i.posthog
 
 const nextConfig: NextConfig = {
   /**
+   * Two `next dev` processes in one checkout corrupt each other's `.next`.
+   * Setting NEXT_DIST_DIR gives a second server its own build directory, which
+   * is the only way to run one alongside another (or alongside a build).
+   * Unset — which is every deployment — this is the stock `.next`.
+   */
+  distDir: process.env.NEXT_DIST_DIR || ".next",
+
+  /**
    * Same-origin proxy for PostHog. Content blockers block `*.posthog.com`
    * outright, which silently drops a large share of events; routing through our
    * own domain keeps the data honest. Must stay in sync with

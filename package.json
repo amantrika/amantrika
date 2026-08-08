@@ -6,7 +6,14 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "./scripts/test.sh",
+    "test:unit": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:live": "./scripts/test.sh live",
+    "test:report": "playwright show-report"
   },
   "dependencies": {
     "@opentelemetry/api-logs": "^0.221.0",

@@ -35,6 +35,13 @@ export { VideoFrame, VideoHero } from "./VideoFrame";
 /* Reusable section shells (theme-aware) */
 export { SectionHeader, ThemedSection, ThemedCard, ThemedHero, OurStorySection } from "./sections";
 
+/* Layout-model shell: renders a resolved SectionStyle from the active theme */
+export { LayoutSection, SectionTitle } from "./layout-section";
+
+/* Hero variants — the opening spread, seven ways */
+export { ThemedHeroVariant } from "./heroes";
+export type { HeroProps } from "./heroes";
+
 /* Border designs */
 export { DecorativeBorder, borderStyles } from "./borders";
 export type { BorderStyleName } from "./borders";

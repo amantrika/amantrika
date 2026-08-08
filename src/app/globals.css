@@ -46,6 +46,30 @@
   --space-card-padding: 1.5rem;
   --space-section-gap: calc(clamp(4rem, 8vw, 7rem) * var(--rhythm-scale, 1));
   --space-envelope-inset: 1.25rem;
+  /* Gap between blocks *inside* one section. Scales with the same rhythm as
+     the gap between sections, so a dense theme is dense at both levels. */
+  --space-block-gap: calc(clamp(1.25rem, 2.5vw, 2.25rem) * var(--rhythm-scale, 1));
+  /* Vertical padding a panelled section adds on top of the section gap. */
+  --space-panel-pad: calc(clamp(2.5rem, 5vw, 4.5rem) * var(--rhythm-scale, 1));
+
+  /* ---- Layout widths ----
+     Themes pick one as --width-content; sections may narrow further. */
+  --width-narrow: 40rem;
+  --width-regular: 56rem;
+  --width-wide: 72rem;
+  --width-content: var(--width-regular);
+
+  /* ---- Elevation / stacking ----
+     Named so nothing has to invent a z-index. Anything above `overlay`
+     belongs to the browser, not to us. */
+  --z-base: 0;
+  --z-pattern: 1;
+  --z-content: 2;
+  --z-sticky: 20;
+  --z-navbar: 30;
+  --z-dropdown: 40;
+  --z-overlay: 50;
+  --z-toast: 60;
 
   /* ---- Radii ---- */
   --radius-sharp: 0px;
@@ -74,7 +98,10 @@
      --font-script-local  the greeting-line face (Devanagari/Nastaliq/Latin)
      --tracking-display  heading letter-spacing
      --radius-theme   the radius personality of this theme
-     --rhythm-scale   multiplies section-gap: airy vs. dense */
+     --rhythm-scale   multiplies section-gap: airy vs. dense
+     --pattern-opacity        motif wash strength on a plain section
+     --pattern-opacity-panel  …and on a tinted/inverted panel, which needs more
+     --rule-weight    hairline vs. heavy for dividers and panel edges */
   --font-heading: var(--font-display);
   --font-accent: var(--font-script);
   --font-script-local: var(--font-display);
@@ -82,6 +109,9 @@
   --tracking-overline: 0.22em;
   --radius-theme: var(--radius-card);
   --rhythm-scale: 1;
+  --pattern-opacity: 0.06;
+  --pattern-opacity-panel: 0.1;
+  --rule-weight: 1px;
 }
 
 /* ============ THEME OVERRIDES (semantic tokens only) ============ */
@@ -93,7 +123,11 @@
   --tracking-display: -0.005em;
   --tracking-overline: 0.16em;
   --radius-theme: 24px;
-  --rhythm-scale: 0.88;
+  --rhythm-scale: 0.85;
+  --width-content: var(--width-wide);
+  --pattern-opacity: 0.09;
+  --pattern-opacity-panel: 0.14;
+  --rule-weight: 2px;
   --color-bg: #fff6df;
   --color-surface: #fffbef;
   --color-surface-raised: #ffffff;
@@ -112,7 +146,11 @@
   --tracking-display: 0.005em;
   --tracking-overline: 0.2em;
   --radius-theme: 20px;
-  --rhythm-scale: 0.95;
+  --rhythm-scale: 0.85;
+  --width-content: var(--width-regular);
+  --pattern-opacity: 0.08;
+  --pattern-opacity-panel: 0.13;
+  --rule-weight: 2px;
   --color-bg: #edf8f6;
   --color-surface: #f8fffd;
   --color-surface-raised: #ffffff;
@@ -131,7 +169,11 @@
   --tracking-display: 0.012em;
   --tracking-overline: 0.3em;
   --radius-theme: 4px;
-  --rhythm-scale: 1.15;
+  --rhythm-scale: 1.18;
+  --width-content: var(--width-narrow);
+  --pattern-opacity: 0.05;
+  --pattern-opacity-panel: 0.08;
+  --rule-weight: 1px;
   --color-bg: #fbf6ec;
   --color-surface: #fffdf3;
   --color-surface-raised: #ffffff;
@@ -150,7 +192,11 @@
   --tracking-display: 0.01em;
   --tracking-overline: 0.28em;
   --radius-theme: 2px;
-  --rhythm-scale: 1.12;
+  --rhythm-scale: 1.18;
+  --width-content: var(--width-regular);
+  --pattern-opacity: 0.06;
+  --pattern-opacity-panel: 0.1;
+  --rule-weight: 1px;
   --color-bg: #f2f8f2;
   --color-surface: #fbfffb;
   --color-surface-raised: #ffffff;
@@ -170,6 +216,10 @@
   --tracking-overline: 0.26em;
   --radius-theme: 18px;
   --rhythm-scale: 1;
+  --width-content: var(--width-wide);
+  --pattern-opacity: 0.1;
+  --pattern-opacity-panel: 0.15;
+  --rule-weight: 1px;
   --color-bg: #2a1533;
   --color-surface: #382044;
   --color-surface-raised: #452a54;
@@ -190,7 +240,11 @@
   --tracking-display: 0em;
   --tracking-overline: 0.24em;
   --radius-theme: 10px;
-  --rhythm-scale: 1.05;
+  --rhythm-scale: 1;
+  --width-content: var(--width-regular);
+  --pattern-opacity: 0.08;
+  --pattern-opacity-panel: 0.13;
+  --rule-weight: 2px;
   --color-bg: #fff7e9;
   --color-surface: #fffcf3;
   --color-surface-raised: #ffffff;
@@ -210,6 +264,10 @@
   --tracking-overline: 0.36em;
   --radius-theme: 0px;
   --rhythm-scale: 1.3;
+  --width-content: var(--width-narrow);
+  --pattern-opacity: 0.03;
+  --pattern-opacity-panel: 0.05;
+  --rule-weight: 1px;
   --color-bg: #fdfdfb;
   --color-surface: #ffffff;
   --color-surface-raised: #ffffff;
@@ -221,15 +279,112 @@
   --color-overlay: rgba(58, 64, 56, 0.5);
 }
 
+[data-theme="bandhani-blush"] {
+  --font-heading: var(--font-deva-fun);
+  --font-accent: var(--font-script);
+  --font-script-local: var(--font-deva-fun);
+  --tracking-display: -0.01em;
+  --tracking-overline: 0.14em;
+  --radius-theme: 28px;
+  --rhythm-scale: 0.85;
+  --width-content: var(--width-wide);
+  --pattern-opacity: 0.09;
+  --pattern-opacity-panel: 0.14;
+  --rule-weight: 2px;
+  --color-bg: #fff1f4;
+  --color-surface: #fff8fa;
+  --color-surface-raised: #ffffff;
+  --color-text: #4a1229;
+  --color-text-muted: #9a5f75;
+  --color-primary: #c2185b;
+  --color-accent: #f7c948;
+  --color-border-ornate: #c2185b;
+  --color-overlay: rgba(74, 18, 41, 0.55);
+}
+
+[data-theme="banarasi-gold"] {
+  --font-heading: var(--font-deva-display);
+  --font-accent: var(--font-display);
+  --font-script-local: var(--font-deva);
+  --tracking-display: 0.008em;
+  --tracking-overline: 0.3em;
+  --radius-theme: 6px;
+  --rhythm-scale: 1;
+  --width-content: var(--width-wide);
+  --pattern-opacity: 0.1;
+  --pattern-opacity-panel: 0.16;
+  --rule-weight: 2px;
+  --color-bg: #fff8ea;
+  --color-surface: #fffcf4;
+  --color-surface-raised: #ffffff;
+  --color-text: #3a1020;
+  --color-text-muted: #8a6072;
+  --color-primary: #7b1e3a;
+  --color-accent: #c9a227;
+  --color-border-ornate: #c9a227;
+  --color-overlay: rgba(58, 16, 32, 0.6);
+}
+
+[data-theme="coastal-lagoon"] {
+  --font-heading: var(--font-display);
+  --font-accent: var(--font-script);
+  --font-script-local: var(--font-display);
+  --tracking-display: 0.03em;
+  --tracking-overline: 0.32em;
+  --radius-theme: 14px;
+  --rhythm-scale: 1.18;
+  --width-content: var(--width-wide);
+  --pattern-opacity: 0.05;
+  --pattern-opacity-panel: 0.08;
+  --rule-weight: 1px;
+  --color-bg: #f4fbfb;
+  --color-surface: #ffffff;
+  --color-surface-raised: #ffffff;
+  --color-text: #123338;
+  --color-text-muted: #5c8085;
+  --color-primary: #0e7c86;
+  --color-accent: #e8b25f;
+  --color-border-ornate: #9fcbcd;
+  --color-overlay: rgba(18, 51, 56, 0.5);
+}
+
+[data-theme="ivory-minimal"] {
+  --font-heading: var(--font-body);
+  --font-accent: var(--font-display);
+  --font-script-local: var(--font-body);
+  --tracking-display: 0.06em;
+  --tracking-overline: 0.4em;
+  --radius-theme: 0px;
+  --rhythm-scale: 1.35;
+  --width-content: var(--width-narrow);
+  --pattern-opacity: 0;
+  --pattern-opacity-panel: 0.03;
+  --rule-weight: 1px;
+  --color-bg: #fafaf7;
+  --color-surface: #ffffff;
+  --color-surface-raised: #ffffff;
+  --color-text: #1f1f1d;
+  --color-text-muted: #6b6b63;
+  --color-primary: #1f1f1d;
+  --color-accent: #a8926b;
+  --color-border-ornate: #ddd8cc;
+  --color-overlay: rgba(31, 31, 29, 0.5);
+}
+
 
 /* ============ DERIVED TOKENS ============
    Ramps and gradients are computed FROM the semantic tokens. They must be
    re-declared on every element that redefines a semantic token, otherwise a
    nested [data-theme] scope (e.g. a themed preview inside the docs) would
    inherit the parent theme's already-resolved values. Matching both :root and
-   [data-theme] makes every theme scope recompute its own ramp. */
+   [data-theme] makes every theme scope recompute its own ramp.
+
+   `[data-surface]` is in the list for the same reason: an inverted panel
+   redefines --color-text and --color-primary, so its ramp must be recomputed
+   from the inverted values, not the page's. */
 :root,
-[data-theme] {
+[data-theme],
+[data-surface="inverted"] {
   --color-primary-soft: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface));
   --color-primary-tint: color-mix(in srgb, var(--color-primary) 24%, var(--color-surface));
   --color-primary-strong: color-mix(in srgb, var(--color-primary) 82%, var(--color-text));
@@ -354,6 +509,64 @@ body {
 .type-deva-display { font-family: var(--font-deva-display), serif; line-height: 1.4; }
 .type-deva-fun { font-family: var(--font-deva-fun), cursive; line-height: 1.4; }
 .type-nastaliq { font-family: var(--font-nastaliq), serif; line-height: 2; direction: rtl; }
+
+/* ============ SECTION SURFACES ============
+   The four backgrounds a themed section can sit on. A theme's layout picks one
+   per section (see src/themes/layout.ts), which is what lets two themes render
+   the same content as visibly different pages. Set as `data-surface` rather
+   than a class so the derived-token block above can rescope on it. */
+
+[data-surface="plain"] {
+  background: transparent;
+}
+
+[data-surface="panel"] {
+  background: var(--color-surface);
+  border-top: var(--rule-weight) solid color-mix(in srgb, var(--color-border-ornate) 30%, transparent);
+  border-bottom: var(--rule-weight) solid color-mix(in srgb, var(--color-border-ornate) 30%, transparent);
+  padding-bottom: var(--space-panel-pad);
+}
+
+[data-surface="tinted"] {
+  background: color-mix(in srgb, var(--color-primary) 6%, var(--color-bg));
+  padding-bottom: var(--space-panel-pad);
+}
+
+/* Reverses the page: the theme's primary becomes the ground and the surface
+   becomes the ink. Every semantic token it depends on is redeclared, so
+   descendants using text-muted / border-ornate stay legible without knowing
+   they are on a dark panel. */
+[data-surface="inverted"] {
+  background: var(--gradient-royal);
+  padding-bottom: var(--space-panel-pad);
+  --color-surface: color-mix(in srgb, var(--color-primary) 78%, black);
+  --color-surface-raised: color-mix(in srgb, var(--color-primary) 62%, black);
+  --color-text: var(--color-bg);
+  --color-text-muted: color-mix(in srgb, var(--color-bg) 68%, var(--color-primary));
+  --color-primary: var(--color-bg);
+  --color-border-ornate: var(--color-accent);
+}
+
+/* The content column. Width comes from the theme unless a section narrows it. */
+.section-shell {
+  position: relative;
+  padding-top: var(--space-section-gap);
+}
+.section-column {
+  position: relative;
+  z-index: var(--z-content);
+  margin-inline: auto;
+  width: 100%;
+  max-width: var(--width-content);
+  padding-inline: 1rem;
+}
+.section-column[data-width="narrow"] { max-width: var(--width-narrow); }
+.section-column[data-width="regular"] { max-width: var(--width-regular); }
+.section-column[data-width="wide"] { max-width: var(--width-wide); }
+.section-column[data-width="full"] { max-width: none; padding-inline: 0; }
+
+/* Stack rhythm inside a section — the second axis of "dense vs. airy". */
+.block-stack > * + * { margin-top: var(--space-block-gap); }
 
 /* ============ ORNAMENT UTILITIES ============ */
 

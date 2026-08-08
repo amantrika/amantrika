@@ -191,6 +191,44 @@ export function webPageJsonLd(input: {
 }
 
 /**
+ * An invitation as a schema.org Event.
+ *
+ * Emitted **only** for a published, non-watermarked, non-hidden invitation
+ * (CLAUDE.md §3). Announcing a free preview as a real event would put an
+ * unpaid-for celebration into rich results, and would tell a crawler the
+ * watermarked page is the finished article.
+ */
+export function eventJsonLd(input: {
+  name: string;
+  path: string;
+  startDate: string;
+  city?: string;
+  description?: string;
+  image?: string;
+}): Json {
+  return {
+    "@type": "Event",
+    "@id": `${absolute(input.path)}#event`,
+    name: input.name,
+    url: absolute(input.path),
+    startDate: input.startDate,
+    eventStatus: "https://schema.org/EventScheduled",
+    eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
+    ...(input.description ? { description: input.description } : {}),
+    ...(input.image ? { image: [input.image] } : {}),
+    ...(input.city
+      ? {
+          location: {
+            "@type": "Place",
+            name: input.city,
+            address: { "@type": "PostalAddress", addressLocality: input.city },
+          },
+        }
+      : {}),
+  };
+}
+
+/**
  * Wraps one or more nodes into a single @graph document. One script tag per
  * page keeps the entities cross-referenced by @id instead of duplicated.
  */

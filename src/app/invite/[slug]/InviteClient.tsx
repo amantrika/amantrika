@@ -5,51 +5,28 @@ import { useSearchParams } from "next/navigation";
 import { motion, useReducedMotion } from "framer-motion";
 import { Copy, MessageCircle } from "lucide-react";
 import Link from "next/link";
-import { getTheme } from "@/themes";
+import { getTheme, resolveSectionStyle } from "@/themes";
 import { useTheme } from "@/design-system/ThemeProvider";
 import {
-  BlessingsWall, CountdownTimer, Divider, EventCalendar, EventTimelineItem, FamilyTree,
-  GiftBlock, MapEmbedPlaceholder, MusicToggle, OurStorySection, PetalRain, PhotoFrame,
-  RSVPForm, ThemedCard, ThemedHero, ThemedOpening, VideoHero, CoupleMonogram,
+  Divider, LayoutSection, MusicToggle, PetalRain, ThemedHeroVariant, ThemedOpening,
 } from "@/design-system/components";
-import { brideFamily, groomFamily } from "@/data/families";
-import { fadeUpStagger, staggerContainer } from "@/design-system/motion/presets";
+import type { Theme } from "@/themes";
 import type { Blessing } from "@/data/blessings";
 import { hostLine, monogramInitials, type InviteView } from "@/lib/invite";
 import { capture } from "@/lib/posthog/client";
 import { EVENTS } from "@/lib/posthog/events";
 import { submitBlessing, submitRsvp } from "./actions";
+import { renderSection, type SectionContext } from "./sections";
 
-/** Scroll-revealed section with ornate motif divider above it. */
-function Section({ id, overline, title, divider, children }: {
-  id: string;
-  overline?: string;
-  title?: string;
-  divider: Parameters<typeof Divider>[0]["motif"];
-  children: React.ReactNode;
-}) {
-  return (
-    <motion.section
-      id={id}
-      variants={staggerContainer}
-      initial="hidden"
-      whileInView="visible"
-      viewport={{ once: true, margin: "-80px" }}
-      className="mx-auto w-full max-w-4xl px-4"
-      style={{ marginTop: "var(--space-section-gap)" }}
-    >
-      <Divider variant="motif" motif={divider} className="mb-10" />
-      {(overline || title) && (
-        <motion.header variants={fadeUpStagger} className="mb-8 text-center">
-          {overline && <p className="type-overline">{overline}</p>}
-          {title && <h2 className="mt-1 type-display-lg shimmer-gold">{title}</h2>}
-        </motion.header>
-      )}
-      {children}
-    </motion.section>
-  );
-}
-
+/**
+ * The invitation.
+ *
+ * This component composes nothing by hand: the hero variant, the section list,
+ * their order, backgrounds, widths and headings all come from the active
+ * theme's `layout` (src/themes/layout.ts). Two themes render the same invite as
+ * two genuinely different pages, and adding a thirteenth theme touches no code
+ * in this file.
+ */
 export function InviteClient({
   invite,
   blessings,
@@ -69,6 +46,8 @@ export function InviteClient({
   const themeOverride = search.get("theme");
 
   const theme = getTheme(themeOverride ?? invite.themeId);
+  const layout = theme.layout;
+
   useEffect(() => setThemeId(theme.id), [theme.id, setThemeId]);
 
   useEffect(() => {
@@ -95,9 +74,6 @@ export function InviteClient({
 
   const names = hostLine(invite.hosts);
   const initials = monogramInitials(invite.hosts);
-  const [first, second] = invite.hosts;
-  const rsvpEnabled = invite.settings.rsvpEnabled !== false;
-  const blessingsEnabled = invite.settings.blessingsEnabled !== false;
 
   const copyLink = () => {
     navigator.clipboard?.writeText(window.location.href.split("?")[0]);
@@ -118,19 +94,7 @@ export function InviteClient({
   };
 
   if (!opened) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-bg px-4">
-        <div className="w-full">
-          <p className="mb-8 text-center type-overline">{names} invite you</p>
-          <ThemedOpening
-            theme={theme}
-            initials={initials}
-            guestName={guestName ?? undefined}
-            onOpened={handleOpened}
-          />
-        </div>
-      </div>
-    );
+    return <InviteCover theme={theme} names={names} initials={initials} guestName={guestName} onOpened={handleOpened} />;
   }
 
   const mainDateLabel = new Date(invite.mainDate).toLocaleDateString("en-IN", {
@@ -139,6 +103,29 @@ export function InviteClient({
     year: "numeric",
   });
 
+  const hero = invite.photos[0];
+
+  const baseContext: Omit<SectionContext, "align"> = {
+    invite,
+    theme,
+    blessings,
+    guestName,
+    guestToken,
+    onOpenPhoto: setLightbox,
+    onRsvp: (submission) =>
+      submitRsvp({
+        slug: invite.slug,
+        guestName: submission.guestName,
+        attending: submission.attending,
+        headcount: submission.headcount,
+        subEventKeys: submission.events,
+        meal: submission.meal,
+        message: submission.message,
+        guestToken,
+      }),
+    onBlessing: (blessing) => submitBlessing({ slug: invite.slug, ...blessing }),
+  };
+
   return (
     <motion.div
       initial={reduced ? false : { opacity: 0, scale: 0.98 }}
@@ -146,11 +133,13 @@ export function InviteClient({
       transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
       className="min-h-screen bg-bg pb-24"
     >
-      <PetalRain type={theme.petalType} density={12} />
+      {/* A theme may opt out of falling petals entirely. */}
+      {layout.ornament !== "none" && (
+        <PetalRain type={theme.petalType} density={layout.ornament === "rich" ? 12 : 6} />
+      )}
       <MusicToggle />
 
-      {/* 1 · HERO */}
-      <ThemedHero
+      <ThemedHeroVariant
         theme={theme}
         names={invite.hosts.map((h) => h.name)}
         joiner={invite.eventType === "wedding" ? "weds" : "&"}
@@ -159,229 +148,128 @@ export function InviteClient({
         city={invite.city}
         hashtag={invite.hashtag}
         guestName={guestName}
-      >
-        <CoupleMonogram
-          initials={initials}
-          ring={theme.monogramRing}
-          className="size-28 text-accent sm:size-36"
-          title="Monogram"
-        />
-      </ThemedHero>
+        photoUrl={hero?.url}
+        photoAlt={hero?.caption ?? `${names} — photograph`}
+      />
 
-      {/* 2 · COUNTDOWN */}
-      {invite.settings.showCountdown !== false && (
-        <Section id="countdown" divider={theme.motifSet.divider} overline="The celebration begins in">
-          <motion.div variants={fadeUpStagger}>
-            <CountdownTimer target={invite.mainDate} />
-          </motion.div>
-        </Section>
-      )}
-
-      {/* 3 · OUR STORY */}
-      {invite.story && (
-        <Section id="story" divider={theme.motifSet.accent} overline="Two families, one story" title="Our Story">
-          <OurStorySection
+      {layout.order.map((id, index) => {
+        const style = resolveSectionStyle(layout, id);
+        const rendered = renderSection(id, { ...baseContext, align: style.align });
+        if (!rendered) return null;
+        return (
+          <LayoutSection
+            key={id}
+            id={id}
             theme={theme}
-            story={invite.story}
-            moments={invite.storyMoments}
-            photos={[invite.photos[0]?.url, invite.photos[1]?.url].filter(Boolean) as string[]}
-          />
-        </Section>
-      )}
-
-      {/* 3b · THE FILM */}
-      <Section id="film" divider={theme.motifSet.divider} overline="Press play" title="Our Film">
-        <motion.div variants={fadeUpStagger}>
-          <VideoHero posterSeed={`${invite.slug}-film`} title="Watch our story" subtitle="three minutes, one monsoon" />
-        </motion.div>
-      </Section>
-
-      {/* 4 · EVENTS */}
-      {invite.events.length > 0 && (
-        <Section id="events" divider={theme.motifSet.divider} overline="Join us for" title="The Celebrations">
-          <motion.div variants={fadeUpStagger} className="mx-auto mb-8 max-w-md">
-            <EventCalendar events={invite.events} />
-          </motion.div>
-          <div className="flex flex-col gap-5">
-            {invite.events.map((ev, i) => (
-              <motion.div key={ev.id} variants={fadeUpStagger} custom={i}>
-                <EventTimelineItem event={ev} />
-              </motion.div>
-            ))}
-          </div>
-        </Section>
-      )}
-
-      {/* 5 · FAMILY — the full tree is demo-only; real events show host households. */}
-      {invite.isDemo && first && second ? (
-        <Section id="family" divider={theme.motifSet.accent} overline="With the blessings of" title="Our Families">
-          <motion.div variants={fadeUpStagger}>
-            <FamilyTree
-              groomSide={{ ...groomFamily, household: first.family ?? "", partner: { ...groomFamily.partner, name: first.name } }}
-              brideSide={{ ...brideFamily, household: second.family ?? "", partner: { ...brideFamily.partner, name: second.name } }}
-              order="groom-first"
-            />
-          </motion.div>
-        </Section>
-      ) : (
-        invite.hosts.some((h) => h.family) && (
-          <Section id="family" divider={theme.motifSet.accent} overline="With the blessings of" title="Our Families">
-            <div className="grid gap-5 sm:grid-cols-2">
-              {invite.hosts.filter((h) => h.family).map((h) => (
-                <motion.div key={h.name} variants={fadeUpStagger}>
-                  <ThemedCard theme={theme} className="!p-6 text-center">
-                    <p className="type-verse text-primary">{h.family}</p>
-                    <p className="mt-1 type-overline">{h.name}</p>
-                  </ThemedCard>
-                </motion.div>
-              ))}
-            </div>
-          </Section>
-        )
-      )}
-
-      {/* 6 · GALLERY */}
-      {invite.photos.length > 0 && (
-        <Section id="gallery" divider={theme.motifSet.divider} overline="Moments" title="Gallery">
-          <div className="columns-2 gap-4 sm:columns-3 [&>*]:mb-4">
-            {invite.photos.slice(0, 12).map((photo, i) => (
-              <motion.button
-                key={photo.id}
-                variants={fadeUpStagger}
-                custom={i}
-                onClick={() => setLightbox(photo.url)}
-                className="block w-full cursor-pointer break-inside-avoid"
-                aria-label={`View photo ${i + 1} full size`}
-              >
-                <PhotoFrame
-                  src={photo.url}
-                  caption={photo.caption}
-                  variant={theme.frameStyle}
-                  width={300}
-                  height={i % 2 ? 380 : 300}
-                  className="w-full [&_img]:w-full"
-                />
-              </motion.button>
-            ))}
-          </div>
-          {lightbox && (
-            <button
-              className="fixed inset-0 z-50 flex cursor-zoom-out items-center justify-center bg-overlay p-6"
-              onClick={() => setLightbox(null)}
-              aria-label="Close photo"
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={lightbox} alt="Photograph, enlarged" className="max-h-full max-w-full rounded-card shadow-lifted" />
-            </button>
-          )}
-        </Section>
-      )}
-
-      {/* 7 · RSVP */}
-      {rsvpEnabled && (
-        <Section id="rsvp" divider={theme.motifSet.accent} overline="Kindly respond" title="RSVP">
-          <motion.div variants={fadeUpStagger}>
-            <RSVPForm
-              events={invite.events}
-              mealOptions={theme.mealOptions}
-              guestName={guestName ?? ""}
-              onSubmit={(submission) =>
-                submitRsvp({
-                  slug: invite.slug,
-                  guestName: submission.guestName,
-                  attending: submission.attending,
-                  headcount: submission.headcount,
-                  subEventKeys: submission.events,
-                  meal: submission.meal,
-                  message: submission.message,
-                  guestToken,
-                })
-              }
-            />
-          </motion.div>
-        </Section>
-      )}
-
-      {/* 8 · BLESSINGS */}
-      {blessingsEnabled && (
-        <Section id="blessings" divider={theme.motifSet.divider} overline="From loved ones" title="Blessings Wall">
-          <motion.div variants={fadeUpStagger}>
-            <BlessingsWall
-              seed={blessings}
-              onSubmit={(blessing) => submitBlessing({ slug: invite.slug, ...blessing })}
-            />
-          </motion.div>
-        </Section>
-      )}
-
-      {/* 9 · TRAVEL & VENUE */}
-      {invite.events.length > 0 && (
-        <Section id="travel" divider={theme.motifSet.accent} overline="Getting there" title="Travel & Venue">
-          <div className="grid gap-5 sm:grid-cols-2">
-            {[...new Map(invite.events.filter((e) => e.venue).map((e) => [e.venue, e])).values()]
-              .slice(0, 2)
-              .map((ev, i) => (
-                <motion.div key={ev.venue} variants={fadeUpStagger} custom={i}>
-                  <MapEmbedPlaceholder venue={ev.venue} address={ev.address} />
-                </motion.div>
-              ))}
-          </div>
-          {invite.hotels.length > 0 && (
-            <motion.div variants={fadeUpStagger} className="mt-8">
-              <h3 className="mb-4 text-center type-h2 text-primary">Where to stay</h3>
-              <div className="grid gap-4 sm:grid-cols-3">
-                {invite.hotels.map((h) => (
-                  <ThemedCard key={h.name} theme={theme} className="!p-5 text-center">
-                    <p className="font-semibold text-primary">{h.name}</p>
-                    <p className="type-caption">{h.distance}</p>
-                    <p className="type-caption">{h.phone}</p>
-                  </ThemedCard>
-                ))}
-              </div>
-            </motion.div>
-          )}
-          {invite.events.some((e) => e.dressCode) && (
-            <motion.div variants={fadeUpStagger} className="mt-8 text-center">
-              <p className="type-overline mb-3">Dress codes</p>
-              <div className="flex flex-wrap justify-center gap-2">
-                {invite.events.filter((e) => e.dressCode).map((e) => (
-                  <span key={e.id} className="rounded-pill border border-ornate/60 px-4 py-1.5 text-sm">
-                    <strong>{e.name}:</strong> {e.dressCode}
-                  </span>
-                ))}
-              </div>
-            </motion.div>
-          )}
-        </Section>
-      )}
-
-      {/* FOOTER */}
-      <footer className="mx-auto mt-24 w-full max-w-4xl px-4 text-center">
-        <Divider variant="motif" motif={theme.motifSet.divider} className="mb-10" />
-        {invite.hashtag && <p className="type-h2 text-primary">{invite.hashtag}</p>}
-        <GiftBlock className="mx-auto mt-8 max-w-md" />
-        <div className="mt-8 flex justify-center gap-3">
-          <a
-            href={`https://wa.me/?text=${encodeURIComponent(`You're invited! ${names} — `)}`}
-            target="_blank"
-            rel="noreferrer"
-            onClick={() => capture(EVENTS.invite_shared, { slug: invite.slug, channel: "whatsapp" })}
-            className="inline-flex items-center gap-2 rounded-pill border border-ornate/60 px-5 py-2 text-sm font-semibold text-primary hover:bg-accent/10"
+            style={style}
+            index={index}
+            overline={rendered.overline}
+            title={rendered.title}
           >
-            <MessageCircle className="size-4" /> Share on WhatsApp
-          </a>
-          <button
-            onClick={copyLink}
-            className="inline-flex items-center gap-2 rounded-pill border border-ornate/60 px-5 py-2 text-sm font-semibold text-primary hover:bg-accent/10 cursor-pointer"
-          >
-            <Copy className="size-4" /> {copied ? "Copied!" : "Copy link"}
-          </button>
-        </div>
-        <Link href="/" className="mt-10 inline-block">
-          <span className="type-caption">Crafted with</span>{" "}
-          <span className="font-display text-lg font-semibold text-primary">Amantrika</span>
-        </Link>
-      </footer>
+            {rendered.body}
+          </LayoutSection>
+        );
+      })}
+
+      {lightbox && (
+        <button
+          className="fixed inset-0 flex cursor-zoom-out items-center justify-center bg-overlay p-6"
+          style={{ zIndex: "var(--z-overlay)" }}
+          onClick={() => setLightbox(null)}
+          aria-label="Close photo"
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={lightbox} alt="Photograph, enlarged" className="max-h-full max-w-full rounded-card shadow-lifted" />
+        </button>
+      )}
+
+      <InviteFooter
+        theme={theme}
+        invite={invite}
+        names={names}
+        copied={copied}
+        onCopy={copyLink}
+      />
     </motion.div>
+  );
+}
+
+/* ---------- the sealed cover, before the guest opens it ---------- */
+
+function InviteCover({
+  theme,
+  names,
+  initials,
+  guestName,
+  onOpened,
+}: {
+  theme: Theme;
+  names: string;
+  initials: [string, string];
+  guestName?: string;
+  onOpened: () => void;
+}) {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-bg px-4">
+      <div className="w-full">
+        <p className="mb-8 text-center type-overline">{names} invite you</p>
+        <ThemedOpening theme={theme} initials={initials} guestName={guestName} onOpened={onOpened} />
+      </div>
+    </div>
+  );
+}
+
+/* ---------- footer, in the theme's three flavours ---------- */
+
+function InviteFooter({
+  theme,
+  invite,
+  names,
+  copied,
+  onCopy,
+}: {
+  theme: Theme;
+  invite: InviteView;
+  names: string;
+  copied: boolean;
+  onCopy: () => void;
+}) {
+  const variant = theme.layout.footer;
+
+  return (
+    <footer
+      className="section-column mt-24 text-center"
+      data-width={variant === "minimal" ? "narrow" : "regular"}
+    >
+      {variant === "ornate" && (
+        <Divider variant="motif" motif={theme.motifSet.divider} className="mb-10" />
+      )}
+      {variant === "centered" && <Divider className="mb-10" />}
+
+      {invite.hashtag && <p className="type-h2 text-primary">{invite.hashtag}</p>}
+
+      <div className="mt-8 flex flex-wrap justify-center gap-3">
+        <a
+          href={`https://wa.me/?text=${encodeURIComponent(`You're invited! ${names} — `)}`}
+          target="_blank"
+          rel="noreferrer"
+          onClick={() => capture(EVENTS.invite_shared, { slug: invite.slug, channel: "whatsapp" })}
+          className="inline-flex items-center gap-2 rounded-pill border border-ornate/60 px-5 py-2 text-sm font-semibold text-primary hover:bg-accent/10"
+        >
+          <MessageCircle className="size-4" /> Share on WhatsApp
+        </a>
+        <button
+          onClick={onCopy}
+          className="inline-flex cursor-pointer items-center gap-2 rounded-pill border border-ornate/60 px-5 py-2 text-sm font-semibold text-primary hover:bg-accent/10"
+        >
+          <Copy className="size-4" /> {copied ? "Copied!" : "Copy link"}
+        </button>
+      </div>
+
+      <Link href="/" className="mt-10 inline-block">
+        <span className="type-caption">Crafted with</span>{" "}
+        <span className="font-display text-lg font-semibold text-primary">Amantrika</span>
+      </Link>
+    </footer>
   );
 }
