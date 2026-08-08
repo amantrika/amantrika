@@ -20,6 +20,7 @@ export { RSVPForm } from "./RSVPForm";
 export { BlessingsWall, MusicToggle, GiftBlock, MapEmbedPlaceholder } from "./wedding-extras";
 export { PhotoFrame } from "./PhotoFrame";
 export { PhotoUploader } from "./PhotoUploader";
+export { ShehnaiLoader, ShehnaiLoadingBlock } from "./ShehnaiLoader";
 export type { UploadedAsset } from "./PhotoUploader";
 export { PetalRain } from "./PetalRain";
 
@@ -41,6 +42,10 @@ export { LayoutSection, SectionTitle } from "./layout-section";
 /* Hero variants — the opening spread, seven ways */
 export { ThemedHeroVariant } from "./heroes";
 export type { HeroProps } from "./heroes";
+
+/* Navigation — header bar, breadcrumbs, section nav, pagination */
+export { Navbar, Breadcrumbs, SideNav, Pager } from "./navigation";
+export type { NavItem, NavbarVariant, SideNavGroup } from "./navigation";
 
 /* Border designs */
 export { DecorativeBorder, borderStyles } from "./borders";

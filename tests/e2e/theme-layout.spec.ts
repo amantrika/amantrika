@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { getTheme, resolveSectionStyle, themes } from "@/themes";
+import { getTheme, resolveSectionStyle, themes, type SectionId } from "@/themes";
 
 /**
  * Themes are layouts, not palettes.
@@ -24,10 +24,10 @@ async function openInvite(page: Page, themeId: string) {
 }
 
 /** Section ids in the order they actually appear in the document. */
-async function renderedSectionIds(page: Page): Promise<string[]> {
-  return page.locator("section[data-surface][id]").evaluateAll((nodes) =>
-    nodes.map((n) => n.id)
-  );
+async function renderedSectionIds(page: Page): Promise<SectionId[]> {
+  return page
+    .locator("section[data-surface][id]")
+    .evaluateAll((nodes) => nodes.map((n) => n.id)) as Promise<SectionId[]>;
 }
 
 test.describe("every theme renders its own layout", () => {
@@ -54,7 +54,7 @@ test.describe("every theme renders its own layout", () => {
       const rendered = await renderedSectionIds(page);
 
       for (const id of rendered) {
-        const expected = resolveSectionStyle(theme.layout, id as never).surface;
+        const expected = resolveSectionStyle(theme.layout, id).surface;
         await expect(page.locator(`section#${id}[data-surface]`)).toHaveAttribute(
           "data-surface",
           expected
@@ -89,13 +89,16 @@ test.describe("themes are structurally distinct from one another", () => {
   });
 
   test("column width follows the theme, not the page", async ({ page }) => {
-    await openInvite(page, "ivory-minimal");
-    const narrow = await page.locator(".section-column").first().evaluate((n) => n.clientWidth);
+    // `events` is measured because neither theme overrides its width, so what
+    // is being compared is the themes' own `contentWidth` — narrow vs. wide.
+    const widthOfEvents = async (themeId: string) => {
+      await openInvite(page, themeId);
+      return page.locator("section#events .section-column").evaluate((n) => n.clientWidth);
+    };
 
-    await openInvite(page, "banarasi-gold");
-    const wide = await page.locator(".section-column").first().evaluate((n) => n.clientWidth);
-
-    expect(wide).toBeGreaterThan(narrow);
+    expect(await widthOfEvents("banarasi-gold")).toBeGreaterThan(
+      await widthOfEvents("ivory-minimal")
+    );
   });
 });
 

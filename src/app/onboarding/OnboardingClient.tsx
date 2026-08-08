@@ -6,9 +6,8 @@ import { motion } from "framer-motion";
 import { Check, Plus, Trash2 } from "lucide-react";
 import { getTheme, suggestedReligions, themes, type ReligionTag } from "@/themes";
 import { useTheme } from "@/design-system/ThemeProvider";
-import { motifs } from "@/design-system/motifs";
 import {
-  Button, Card, CoupleMonogram, DatePicker, Divider, Input, Modal, PetalRain, PhotoUploader,
+  Button, Card, DatePicker, Divider, Input, PetalRain, PhotoUploader,
   Select, Stepper, Textarea, TimePicker, WaxSeal, type UploadedAsset,
 } from "@/design-system/components";
 import { eventTypeLabels, subEventPresets } from "@/lib/invite";
@@ -16,8 +15,27 @@ import { capture } from "@/lib/posthog/client";
 import { EVENTS } from "@/lib/posthog/events";
 import type { EventType, PlanRow } from "@/lib/supabase/types";
 import { checkSlug, saveDraft, startCheckout } from "./actions";
+import { ThemeChooser, draftToInviteView } from "./ThemeChooser";
 
-const STEPS = ["Occasion", "Region", "Theme", "Details", "Link", "Photos", "Publish"];
+/**
+ * Theme comes second-to-last, deliberately.
+ *
+ * It used to come third, before the host had entered a single name — so the
+ * gallery could only show sample cards, and the choice was made against
+ * somebody else's wedding. Now the details exist by the time the question is
+ * asked, and each theme is previewed with the host's own invitation in it.
+ */
+const STEPS = ["Occasion", "Region", "Details", "Link", "Photos", "Theme", "Publish"];
+
+const STEP = {
+  occasion: 0,
+  region: 1,
+  details: 2,
+  link: 3,
+  photos: 4,
+  theme: 5,
+  publish: 6,
+} as const;
 
 const countries = ["India", "Pakistan", "UAE", "USA", "United Kingdom", "Australia", "Canada", "Other"];
 const traditions: { value: ReligionTag | "other"; label: string }[] = [
@@ -106,7 +124,6 @@ export function OnboardingClient({ plans, isAgent }: { plans: PlanRow[]; isAgent
   const [draft, setDraft] = useState<Draft>(emptyDraft);
   const [eventId, setEventId] = useState<string | null>(null);
   const [assets, setAssets] = useState<UploadedAsset[]>([]);
-  const [previewTheme, setPreviewTheme] = useState<string | null>(null);
   const [slugState, setSlugState] = useState<"idle" | "checking" | "ok" | "taken" | "invalid">("idle");
   const [slugMessage, setSlugMessage] = useState("");
   const [saving, setSaving] = useState(false);
@@ -179,6 +196,16 @@ export function OnboardingClient({ plans, isAgent }: { plans: PlanRow[]; isAgent
 
   const liveSlug = draft.slug || defaultSlug(draft);
   const isWedding = draft.eventType === "wedding";
+
+  /**
+   * The theme step renders the real invitation for whichever theme is being
+   * looked at. Rebuilt whenever the draft or the uploaded photographs change,
+   * so switching themes after editing a detail shows the edit.
+   */
+  const previewInvite = useCallback(
+    (themeId: string) => draftToInviteView({ ...draft, slug: liveSlug }, themeId, assets),
+    [draft, liveSlug, assets]
+  );
   const hostLabel = (i: number) =>
     isWedding ? `Partner ${i + 1} name` : i === 0 ? "Host name" : `Co-host ${i} name`;
 
@@ -311,15 +338,16 @@ export function OnboardingClient({ plans, isAgent }: { plans: PlanRow[]; isAgent
 
   /* ---------- navigation ---------- */
   const canContinue = (() => {
-    if (step === 3) return draft.hosts.some((h) => h.name.trim());
-    if (step === 4) return slugState === "ok";
+    if (step === STEP.details) return draft.hosts.some((h) => h.name.trim());
+    if (step === STEP.link) return slugState === "ok";
     return true;
   })();
 
   async function next() {
     // The draft is written to the database once the link is confirmed, so photo
-    // uploads have an event to attach to.
-    if (step === 4) {
+    // uploads have an event to attach to. It is written again on leaving the
+    // theme step, because the theme chosen there is what publishing will use.
+    if (step === STEP.link || step === STEP.theme) {
       const saved = await persist();
       if (!saved) return;
     }
@@ -370,8 +398,8 @@ export function OnboardingClient({ plans, isAgent }: { plans: PlanRow[]; isAgent
       <div className="mx-auto max-w-3xl px-4">
         <Stepper steps={STEPS} current={step} className="mb-10" />
 
-        {/* STEP 1 — occasion */}
-        {step === 0 && (
+        {/* OCCASION */}
+        {step === STEP.occasion && (
           <Card variant="ornate" className="p-8">
             <h1 className="text-center type-h1 text-primary">What are we celebrating?</h1>
             <p className="mt-2 text-center type-body text-muted">
@@ -400,8 +428,8 @@ export function OnboardingClient({ plans, isAgent }: { plans: PlanRow[]; isAgent
           </Card>
         )}
 
-        {/* STEP 2 — region & tradition */}
-        {step === 1 && (
+        {/* REGION & TRADITION */}
+        {step === STEP.region && (
           <Card variant="ornate" className="p-8">
             <h1 className="text-center type-h1 text-primary">Where &amp; how are you celebrating?</h1>
             <div className="mx-auto mt-8 grid max-w-md gap-5">
@@ -437,108 +465,25 @@ export function OnboardingClient({ plans, isAgent }: { plans: PlanRow[]; isAgent
           </Card>
         )}
 
-        {/* STEP 3 — theme gallery */}
-        {step === 2 && (
-          <div>
-            <h1 className="text-center type-h1 text-primary">Choose your theme</h1>
-            <p className="mt-2 text-center type-body text-muted">Filtered for you — browse them all, always.</p>
-            <div className="mt-8 grid gap-4 sm:grid-cols-2">
-              {filteredThemes.map((t) => {
-                const Corner = motifs[t.motifSet.corner];
-                const active = draft.themeId === t.id;
-                return (
-                  <button
-                    key={t.id}
-                    onClick={() => {
-                      setPreviewTheme(t.id);
-                      capture(EVENTS.onboarding_theme_previewed, {
-                        theme_id: t.id,
-                        religion_tag: t.religionTag,
-                      });
-                    }}
-                    className={`rounded-card border p-5 text-left transition-all cursor-pointer ${
-                      active ? "ornate-border shadow-gold-glow" : "border-ornate/40 hover:border-ornate"
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="font-display text-xl font-semibold text-primary">{t.name}</span>
-                      <Corner className="size-6 text-accent" />
-                    </div>
-                    <p className="type-caption">{t.religionTag} · {t.moodTag} · {t.regionTag}</p>
-                    <div className="mt-3 flex h-6 overflow-hidden rounded-soft">
-                      {t.palette.map((hex) => (
-                        <span key={hex} className="flex-1" style={{ background: hex }} />
-                      ))}
-                    </div>
-                    {active && (
-                      <p className="mt-2 flex items-center gap-1 text-sm font-bold text-success">
-                        <Check className="size-4" /> Selected
-                      </p>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-            <Modal
-              open={!!previewTheme}
-              onClose={() => setPreviewTheme(null)}
-              title={previewTheme ? getTheme(previewTheme).name : ""}
-              wide
-            >
-              {previewTheme && (() => {
-                const t = getTheme(previewTheme);
-                const names = draft.hosts.map((h) => h.name).filter(Boolean);
-                return (
-                  <div>
-                    <div className="rounded-card p-8 text-center" style={{ background: t.palette[2], color: t.palette[3] }}>
-                      <CoupleMonogram
-                        initials={[names[0]?.[0] ?? "A", names[1]?.[0] ?? "A"]}
-                        ring={t.monogramRing}
-                        className="mx-auto size-20"
-                      />
-                      <p
-                        className={`mt-3 text-xl ${
-                          t.greetingScript === "arabic"
-                            ? "font-arabic"
-                            : t.greetingScript === "devanagari"
-                              ? "font-deva"
-                              : "font-display italic"
-                        }`}
-                        style={{ color: t.palette[0] }}
-                        dir={t.greetingScript === "arabic" ? "rtl" : undefined}
-                      >
-                        {t.greetingCopy}
-                      </p>
-                      <p className="mt-2 font-display text-4xl font-semibold" style={{ color: t.palette[0] }}>
-                        {names.length ? names.join(isWedding ? " weds " : " & ") : "Your names here"}
-                      </p>
-                      <p className="mt-3 text-sm opacity-80">{t.eventVocabulary.join(" · ")}</p>
-                    </div>
-                    <div className="mt-4 flex justify-end gap-2">
-                      <Button variant="ghost" onClick={() => setPreviewTheme(null)}>Keep browsing</Button>
-                      <Button
-                        onClick={() => {
-                          patch({ themeId: t.id });
-                          setPreviewTheme(null);
-                          capture(EVENTS.onboarding_theme_chosen, {
-                            theme_id: t.id,
-                            religion_tag: t.religionTag,
-                            event_type: draft.eventType,
-                          });
-                        }}
-                      >
-                        Choose this theme
-                      </Button>
-                    </div>
-                  </div>
-                );
-              })()}
-            </Modal>
-          </div>
+        {/* THEME — asked last, previewed with the host's own details */}
+        {step === STEP.theme && (
+          <ThemeChooser
+            themes={filteredThemes}
+            selectedId={draft.themeId}
+            invite={previewInvite}
+            onSelect={(t) => {
+              patch({ themeId: t.id });
+              capture(EVENTS.onboarding_theme_chosen, {
+                theme_id: t.id,
+                religion_tag: t.religionTag,
+                event_type: draft.eventType,
+              });
+            }}
+          />
         )}
 
-        {/* STEP 4 — details */}
-        {step === 3 && (
+        {/* DETAILS */}
+        {step === STEP.details && (
           <Card variant="ornate" className="p-8">
             <h1 className="text-center type-h1 text-primary">
               {isWedding ? "Tell us about you two" : "Tell us about the occasion"}
@@ -683,8 +628,8 @@ export function OnboardingClient({ plans, isAgent }: { plans: PlanRow[]; isAgent
           </Card>
         )}
 
-        {/* STEP 5 — permalink */}
-        {step === 4 && (
+        {/* PERMALINK */}
+        {step === STEP.link && (
           <Card variant="ornate" className="p-8 text-center">
             <h1 className="type-h1 text-primary">Your forever link</h1>
             <p className="mt-2 type-body text-muted">One link for every guest, every event, every blessing.</p>
@@ -718,8 +663,8 @@ export function OnboardingClient({ plans, isAgent }: { plans: PlanRow[]; isAgent
           </Card>
         )}
 
-        {/* STEP 6 — photos */}
-        {step === 5 && (
+        {/* PHOTOS */}
+        {step === STEP.photos && (
           <Card variant="ornate" className="p-8">
             <h1 className="text-center type-h1 text-primary">Add your photographs</h1>
             <p className="mt-2 text-center type-body text-muted">
@@ -787,8 +732,8 @@ export function OnboardingClient({ plans, isAgent }: { plans: PlanRow[]; isAgent
           </Card>
         )}
 
-        {/* STEP 7 — plan + dummy payment */}
-        {step === 6 && (
+        {/* PLAN + PAYMENT */}
+        {step === STEP.publish && (
           <div className="grid gap-6 sm:grid-cols-2">
             <div className="flex flex-col gap-4">
               {plans.map((plan) => (

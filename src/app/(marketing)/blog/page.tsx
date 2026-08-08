@@ -10,7 +10,7 @@ const DESCRIPTION =
   "Guides, traditions and practical planning notes for Indian weddings — and for sending an invitation people actually keep.";
 
 export const metadata: Metadata = pageMetadata({
-  title: `${TITLE} · Indian wedding guides and invitation advice`,
+  title: `${TITLE} · Indian wedding and invitation guides`,
   description: DESCRIPTION,
   path: "/blog",
 });

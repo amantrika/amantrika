@@ -1,10 +1,14 @@
 import Link from "next/link";
-import { Button } from "@/design-system/components";
+import { Button, Navbar } from "@/design-system/components";
 
 /**
  * One header and one footer for every public page — landing, blog, content
  * pages, showcase. Previously the landing page and the marketing section each
  * had their own, so navigating between them changed the chrome underfoot.
+ *
+ * The header is the design system's `Navbar` with this site's brand, links and
+ * actions poured in — which is also how the nav became usable on a phone, where
+ * it previously had no menu at all.
  *
  * Deliberately *not* used by the invite pages: an invitation is the couple's
  * page, and wrapping it in our navigation would make it feel like ours.
@@ -64,8 +68,9 @@ export function SiteHeader({
   dashboardHref?: string;
 }) {
   return (
-    <header className="sticky top-0 z-40 border-b border-ornate/30 bg-bg/90 backdrop-blur">
-      <div className="mx-auto flex max-w-6xl items-center gap-6 px-4 py-4">
+    <Navbar
+      items={siteNav}
+      brand={
         <Link href="/" className="inline-flex flex-col leading-none">
           <span className="font-display text-2xl font-semibold text-primary">Amantrika</span>
           <svg aria-hidden viewBox="0 0 120 8" className="h-1.5 w-24 text-accent">
@@ -78,39 +83,26 @@ export function SiteHeader({
             />
           </svg>
         </Link>
-
-        <nav aria-label="Main" className="ml-auto hidden items-center gap-6 md:flex">
-          {siteNav.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="type-body font-medium text-foreground/80 transition-colors hover:text-primary"
-            >
-              {item.label}
+      }
+      actions={
+        signedIn ? (
+          <Link href={dashboardHref}>
+            <Button size="sm">Dashboard</Button>
+          </Link>
+        ) : (
+          <>
+            <Link href="/login" className="hidden sm:block">
+              <Button variant="ghost" size="sm">
+                Sign in
+              </Button>
             </Link>
-          ))}
-        </nav>
-
-        <div className="ml-auto flex items-center gap-2 md:ml-0">
-          {signedIn ? (
-            <Link href={dashboardHref}>
-              <Button size="sm">Dashboard</Button>
+            <Link href="/signup">
+              <Button size="sm">Create yours</Button>
             </Link>
-          ) : (
-            <>
-              <Link href="/login" className="hidden sm:block">
-                <Button variant="ghost" size="sm">
-                  Sign in
-                </Button>
-              </Link>
-              <Link href="/signup">
-                <Button size="sm">Create yours</Button>
-              </Link>
-            </>
-          )}
-        </div>
-      </div>
-    </header>
+          </>
+        )
+      }
+    />
   );
 }
 

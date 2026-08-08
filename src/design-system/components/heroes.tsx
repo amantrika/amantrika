@@ -157,7 +157,7 @@ function CenteredMonogramHero({ theme, names, initials, dateLabel, city, hashtag
   return (
     <HeroShell
       theme={theme}
-      className="flex min-h-[92vh] flex-col items-center justify-center px-4 pt-16 text-center"
+      className="flex min-h-[var(--hero-min-height,92vh)] flex-col items-center justify-center px-4 pt-16 text-center"
     >
       <HeroPattern theme={theme} />
       <div className="relative flex flex-col items-center" style={{ zIndex: "var(--z-content)" }}>
@@ -187,7 +187,7 @@ function ArchWindowHero({ theme, names, initials, dateLabel, city, hashtag, gues
   return (
     <HeroShell
       theme={theme}
-      className="flex min-h-[94vh] items-center justify-center px-4 py-16"
+      className="flex min-h-[var(--hero-min-height,94vh)] items-center justify-center px-4 py-16"
     >
       <HeroPattern theme={theme} />
       <div
@@ -211,8 +211,8 @@ function ArchWindowHero({ theme, names, initials, dateLabel, city, hashtag, gues
 /** Photograph beside the names on desktop, stacked above them on a phone. */
 function SplitPortraitHero({ theme, names, dateLabel, city, hashtag, guestName, joiner, photoUrl, photoAlt }: HeroProps) {
   return (
-    <HeroShell theme={theme} className="min-h-[92vh]" textured={false}>
-      <div className="grid min-h-[92vh] grid-cols-1 lg:grid-cols-2">
+    <HeroShell theme={theme} className="min-h-[var(--hero-min-height,92vh)]" textured={false}>
+      <div className="grid min-h-[var(--hero-min-height,92vh)] grid-cols-1 lg:grid-cols-2">
         <div className="relative order-1 min-h-[42vh] lg:order-none lg:min-h-full">
           {photoUrl ? (
             /* eslint-disable-next-line @next/next/no-img-element */
@@ -254,7 +254,7 @@ function SplitPortraitHero({ theme, names, dateLabel, city, hashtag, guestName, 
  */
 function FullBleedPhotoHero({ theme, names, dateLabel, city, hashtag, guestName, joiner, photoUrl, photoAlt }: HeroProps) {
   return (
-    <HeroShell theme={theme} className="flex min-h-[96vh] items-end" textured={!photoUrl}>
+    <HeroShell theme={theme} className="flex min-h-[var(--hero-min-height,96vh)] items-end" textured={!photoUrl}>
       {photoUrl ? (
         <>
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -293,7 +293,7 @@ function BannerScrollHero({ theme, names, dateLabel, city, hashtag, guestName, j
   return (
     <HeroShell
       theme={theme}
-      className="flex min-h-[88vh] flex-col items-center justify-center px-4 py-16 text-center"
+      className="flex min-h-[var(--hero-min-height,88vh)] flex-col items-center justify-center px-4 py-16 text-center"
     >
       <HeroPattern theme={theme} />
       <div className="relative w-full" style={{ zIndex: "var(--z-content)" }}>
@@ -326,7 +326,7 @@ function MinimalTypeHero({ theme, names, dateLabel, city, hashtag, guestName, jo
   return (
     <HeroShell
       theme={theme}
-      className="flex min-h-[90vh] flex-col items-center justify-center px-6 text-center"
+      className="flex min-h-[var(--hero-min-height,90vh)] flex-col items-center justify-center px-6 text-center"
       textured={false}
     >
       <div className="max-w-3xl">
@@ -352,7 +352,7 @@ function VerseFirstHero({ theme, names, dateLabel, city, hashtag, guestName, joi
   return (
     <HeroShell
       theme={theme}
-      className="flex min-h-[90vh] flex-col items-center justify-center px-4 py-16 text-center"
+      className="flex min-h-[var(--hero-min-height,90vh)] flex-col items-center justify-center px-4 py-16 text-center"
     >
       <HeroPattern theme={theme} />
       <div className="relative max-w-2xl" style={{ zIndex: "var(--z-content)" }}>

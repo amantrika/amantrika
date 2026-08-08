@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import { getProfile, homeFor } from "@/lib/auth";
-import { createClient } from "@/lib/supabase/server";
 import { LandingClient } from "./LandingClient";
 import type { HomePostSummary } from "@/components/site/HomeSections";
 import { getAllPosts } from "@/lib/content/blog";
+import { getCachedPlans } from "@/lib/cache";
 import { JsonLd } from "@/lib/seo/json-ld";
 import { faqJsonLd, organizationJsonLd, websiteJsonLd } from "@/lib/seo/jsonld";
 import { pageMetadata } from "@/lib/seo/metadata";
@@ -38,20 +38,20 @@ const homepageFaq = [
 ];
 
 export const metadata: Metadata = pageMetadata({
-  title: "Amantrika · Digital wedding invitations for Indian celebrations",
+  title: "Amantrika · Wedding invitations for Indian celebrations",
   description:
-    "Create a wedding invitation website in minutes. Animated Indian invitation themes, RSVPs, directions and a countdown — all at one link you share on WhatsApp.",
+    "Create a wedding invitation website in minutes. Animated Indian themes, RSVPs, directions and a countdown — all at one link you share on WhatsApp.",
   path: "/",
   image: "/assets/og-default.png",
   imageAlt: "An ornate Indian wedding invitation card with a gold double border",
 });
 
 export default async function LandingPage() {
-  const profile = await getProfile();
-
-  const supabase = await createClient();
-  const [{ data: plans }, posts] = await Promise.all([
-    supabase.from("plans").select("*").eq("is_active", true).order("sort_order"),
+  // All three in parallel rather than the session first and the data after it.
+  // Plans come from a shared cache, so a visitor almost never waits on Postgres.
+  const [profile, plans, posts] = await Promise.all([
+    getProfile(),
+    getCachedPlans(),
     getAllPosts(),
   ]);
 
@@ -71,7 +71,7 @@ export default async function LandingPage() {
     <>
       <JsonLd nodes={[organizationJsonLd(), websiteJsonLd(), faqJsonLd(homepageFaq)]} />
       <LandingClient
-        plans={(plans ?? []) as PlanRow[]}
+        plans={plans}
         signedIn={Boolean(profile)}
         dashboardHref={profile ? homeFor(profile.role) : "/login"}
         latestPosts={latestPosts}

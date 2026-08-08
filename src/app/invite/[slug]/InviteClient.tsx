@@ -5,18 +5,16 @@ import { useSearchParams } from "next/navigation";
 import { motion, useReducedMotion } from "framer-motion";
 import { Copy, MessageCircle } from "lucide-react";
 import Link from "next/link";
-import { getTheme, resolveSectionStyle } from "@/themes";
+import { getTheme } from "@/themes";
 import { useTheme } from "@/design-system/ThemeProvider";
-import {
-  Divider, LayoutSection, MusicToggle, PetalRain, ThemedHeroVariant, ThemedOpening,
-} from "@/design-system/components";
+import { Divider, MusicToggle, PetalRain, ThemedOpening } from "@/design-system/components";
 import type { Theme } from "@/themes";
 import type { Blessing } from "@/data/blessings";
+import { InviteBody } from "@/components/invite/InviteBody";
 import { hostLine, monogramInitials, type InviteView } from "@/lib/invite";
 import { capture } from "@/lib/posthog/client";
 import { EVENTS } from "@/lib/posthog/events";
 import { submitBlessing, submitRsvp } from "./actions";
-import { renderSection, type SectionContext } from "./sections";
 
 /**
  * The invitation.
@@ -97,35 +95,6 @@ export function InviteClient({
     return <InviteCover theme={theme} names={names} initials={initials} guestName={guestName} onOpened={handleOpened} />;
   }
 
-  const mainDateLabel = new Date(invite.mainDate).toLocaleDateString("en-IN", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
-
-  const hero = invite.photos[0];
-
-  const baseContext: Omit<SectionContext, "align"> = {
-    invite,
-    theme,
-    blessings,
-    guestName,
-    guestToken,
-    onOpenPhoto: setLightbox,
-    onRsvp: (submission) =>
-      submitRsvp({
-        slug: invite.slug,
-        guestName: submission.guestName,
-        attending: submission.attending,
-        headcount: submission.headcount,
-        subEventKeys: submission.events,
-        meal: submission.meal,
-        message: submission.message,
-        guestToken,
-      }),
-    onBlessing: (blessing) => submitBlessing({ slug: invite.slug, ...blessing }),
-  };
-
   return (
     <motion.div
       initial={reduced ? false : { opacity: 0, scale: 0.98 }}
@@ -139,37 +108,27 @@ export function InviteClient({
       )}
       <MusicToggle />
 
-      <ThemedHeroVariant
+      <InviteBody
+        invite={invite}
         theme={theme}
-        names={invite.hosts.map((h) => h.name)}
-        joiner={invite.eventType === "wedding" ? "weds" : "&"}
-        initials={initials}
-        dateLabel={mainDateLabel}
-        city={invite.city}
-        hashtag={invite.hashtag}
+        blessings={blessings}
         guestName={guestName}
-        photoUrl={hero?.url}
-        photoAlt={hero?.caption ?? `${names} — photograph`}
+        onOpenPhoto={setLightbox}
+        onRsvp={(submission) =>
+          submitRsvp({
+            slug: invite.slug,
+            guestName: submission.guestName,
+            attending: submission.attending,
+            headcount: submission.headcount,
+            subEventKeys: submission.events,
+            meal: submission.meal,
+            message: submission.message,
+            guestToken,
+          })
+        }
+        onBlessing={(blessing) => submitBlessing({ slug: invite.slug, ...blessing })}
       />
 
-      {layout.order.map((id, index) => {
-        const style = resolveSectionStyle(layout, id);
-        const rendered = renderSection(id, { ...baseContext, align: style.align });
-        if (!rendered) return null;
-        return (
-          <LayoutSection
-            key={id}
-            id={id}
-            theme={theme}
-            style={style}
-            index={index}
-            overline={rendered.overline}
-            title={rendered.title}
-          >
-            {rendered.body}
-          </LayoutSection>
-        );
-      })}
 
       {lightbox && (
         <button

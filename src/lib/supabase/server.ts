@@ -35,3 +35,18 @@ export function createAdminClient() {
     cookies: { getAll: () => [], setAll: () => {} },
   });
 }
+
+/**
+ * Session-less client for public, cacheable reads.
+ *
+ * `createClient()` reads cookies, and Next forbids touching a dynamic data
+ * source inside `unstable_cache`. These reads are the same for every visitor —
+ * plans, the showcase gallery, a published invitation — so they neither need
+ * nor should carry a session. Uses the anon key, so RLS still applies exactly
+ * as it does for a signed-out visitor.
+ */
+export function createPublicClient() {
+  return createServerClient<Database>(env.supabaseUrl, env.supabaseAnonKey, {
+    cookies: { getAll: () => [], setAll: () => {} },
+  });
+}

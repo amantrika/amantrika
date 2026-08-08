@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Badge, Button, Card } from "@/design-system/components";
-import { listShowcase, showcaseEventTypes } from "@/lib/showcase";
+import { getCachedShowcase, getCachedShowcaseTypes } from "@/lib/cache";
 import { eventTypeLabels } from "@/lib/invite";
 import { getTheme } from "@/themes";
 import type { EventType } from "@/lib/supabase/types";
@@ -21,9 +21,9 @@ export default async function ShowcasePage({
   searchParams: Promise<{ type?: string }>;
 }) {
   const { type } = await searchParams;
-  const types = await showcaseEventTypes();
+  const types = await getCachedShowcaseTypes();
   const activeType = types.includes(type as EventType) ? (type as EventType) : undefined;
-  const items = await listShowcase(activeType);
+  const items = await getCachedShowcase(activeType);
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-16">

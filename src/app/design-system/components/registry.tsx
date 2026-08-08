@@ -16,10 +16,12 @@ import {
   AnimatedCounter, StatelessDemos,
   FamilyTree, EventCalendar, VideoFrame, VideoHero, DecorativeBorder,
   SectionHeader, ThemedCard, ThemedHero, OurStorySection, ThemedOpening,
+  Navbar, Breadcrumbs, SideNav, Pager, LayoutSection, SectionTitle, ThemedHeroVariant,
 } from "./registry-helpers";
+import type { NavItem } from "@/design-system/components";
 import { getCouple } from "@/data/couples";
 import { brideFamily, groomFamily } from "@/data/families";
-import { getTheme } from "@/themes";
+import { defaultSectionStyle, getTheme, heroVariants } from "@/themes";
 import { icons } from "@/design-system/icons";
 
 export interface DemoEntry {
@@ -31,7 +33,7 @@ export interface DemoEntry {
 export interface ComponentDoc {
   slug: string;
   title: string;
-  category: "Core UI" | "Ornaments" | "Wedding décor" | "Typography" | "Timeline" | "Interactive" | "Signature" | "Features" | "Sections";
+  category: "Core UI" | "Navigation" | "Ornaments" | "Wedding décor" | "Typography" | "Timeline" | "Interactive" | "Signature" | "Features" | "Sections" | "Layout";
   description: string;
   demos: DemoEntry[];
 }
@@ -40,6 +42,42 @@ const couple = getCouple("swarnil-weds-prachi");
 const theme = getTheme("royal-maroon");
 const Shehnai = icons.shehnai;
 const Dhol = icons.dhol;
+
+/* ---- fixtures for the Navigation and Layout entries ---- */
+
+const navSample: NavItem[] = [
+  { href: "/showcase", label: "Showcase" },
+  { href: "/how-it-works", label: "How it works" },
+  { href: "/blog", label: "Blog" },
+  { href: "/about", label: "About" },
+];
+
+const heroSample = {
+  names: [couple.partner1.name, couple.partner2.name],
+  initials: [couple.partner1.name[0], couple.partner2.name[0]] as [string, string],
+  dateLabel: "14 February 2027",
+  city: "Udaipur",
+  hashtag: "#SwarnilWedsPrachi",
+  photoUrl: "https://picsum.photos/seed/amantrika-hero/900/1200",
+  photoAlt: "The couple, photographed at the lake palace",
+};
+
+/**
+ * One demo per hero variant. Each is the *same* theme with only `layout.hero`
+ * swapped, so what the reader sees is the variant and nothing else — and it
+ * doubles as proof that the hero is data, not a per-theme component.
+ */
+const heroVariantDemos: DemoEntry[] = heroVariants.map((hero) => ({
+  title: hero,
+  node: (
+    <div className="h-[420px] overflow-y-auto rounded-card border border-ornate/30">
+      <ThemedHeroVariant
+        {...heroSample}
+        theme={{ ...theme, layout: { ...theme.layout, hero } }}
+      />
+    </div>
+  ),
+}));
 
 export const componentDocs: ComponentDoc[] = [
   /* ================= SIGNATURE ================= */
@@ -760,9 +798,197 @@ export const componentDocs: ComponentDoc[] = [
       { title: "Rope · jaali key · stamp", node: <div className="grid gap-5 sm:grid-cols-3">{(["rope", "meander", "stamp"] as const).map((v) => (<DecorativeBorder key={v} variant={v}><p className="text-center type-caption">{v}</p></DecorativeBorder>))}</div> },
     ],
   },
+
+  /* ================= NAVIGATION ================= */
+  {
+    slug: "navbar",
+    title: "Navbar",
+    category: "Navigation",
+    description:
+      "The product's header bar: brand slot, links with active state, an actions slot, and a real mobile drawer. Three grounds; stacks at --z-navbar.",
+    demos: [
+      {
+        title: "Translucent (the marketing default)",
+        note: "Blurred page background with a hairline rule. Narrow the window to see the mobile drawer.",
+        node: (
+          <Navbar
+            sticky={false}
+            activeHref="/showcase"
+            brand={<span className="font-display text-2xl font-semibold text-primary">Amantrika</span>}
+            items={navSample}
+            actions={<Button size="sm">Create yours</Button>}
+          />
+        ),
+      },
+      {
+        title: "Solid",
+        note: "Opaque surface — for shells that scroll content underneath a coloured page.",
+        node: (
+          <Navbar
+            sticky={false}
+            variant="solid"
+            activeHref="/blog"
+            brand={<span className="font-display text-2xl font-semibold text-primary">Amantrika</span>}
+            items={navSample}
+            actions={<Button size="sm" variant="ghost">Sign in</Button>}
+          />
+        ),
+      },
+      {
+        title: "Bare, brand only",
+        note: "No links, no rule. Checkout and onboarding, where navigating away is the wrong thing to encourage.",
+        node: (
+          <Navbar
+            sticky={false}
+            variant="bare"
+            brand={<span className="font-display text-2xl font-semibold text-primary">Amantrika</span>}
+            actions={<Badge tone="accent">Step 3 of 7</Badge>}
+          />
+        ),
+      },
+    ],
+  },
+  {
+    slug: "breadcrumbs",
+    title: "Breadcrumbs",
+    category: "Navigation",
+    description:
+      "Root-to-here trail. The current page is text, not a link to itself, and the separators are hidden from screen readers.",
+    demos: [
+      {
+        title: "Three levels",
+        node: (
+          <Breadcrumbs
+            items={[
+              { href: "/", label: "Home" },
+              { href: "/blog", label: "Blog" },
+              { href: "/blog/category/guides", label: "Guides" },
+              { href: "#", label: "How to word a wedding invitation" },
+            ]}
+          />
+        ),
+      },
+      {
+        title: "Two levels",
+        node: (
+          <Breadcrumbs
+            items={[
+              { href: "/design-system", label: "Design system" },
+              { href: "#", label: "Components" },
+            ]}
+          />
+        ),
+      },
+    ],
+  },
+  {
+    slug: "side-nav",
+    title: "SideNav",
+    category: "Navigation",
+    description: "Grouped section navigation for the docs and the dashboard, with an active row and optional trailing slots.",
+    demos: [
+      {
+        title: "Grouped, with counts",
+        node: (
+          <div className="max-w-xs">
+            <SideNav
+              activeHref="/design-system/components"
+              groups={[
+                {
+                  heading: "Foundations",
+                  items: [
+                    { href: "/design-system/tokens", label: "Tokens" },
+                    { href: "/design-system/motion", label: "Motion" },
+                  ],
+                },
+                {
+                  heading: "Library",
+                  items: [
+                    { href: "/design-system/components", label: "Components", trailing: <Badge>82</Badge> },
+                    { href: "/design-system/patterns", label: "Patterns", trailing: <Badge>10</Badge> },
+                    { href: "/design-system/themes", label: "Themes", trailing: <Badge>12</Badge> },
+                  ],
+                },
+              ]}
+            />
+          </div>
+        ),
+      },
+    ],
+  },
+  {
+    slug: "pager",
+    title: "Pager",
+    category: "Navigation",
+    description:
+      "Numbered pagination with an ellipsis window. Every page is a real link, so the blog archive stays crawlable and retrievable.",
+    demos: [
+      { title: "Early pages", node: <Pager page={2} totalPages={9} hrefFor={(p) => `#page-${p}`} /> },
+      { title: "Deep in a long archive", node: <Pager page={14} totalPages={40} hrefFor={(p) => `#page-${p}`} /> },
+      { title: "Last page", node: <Pager page={9} totalPages={9} hrefFor={(p) => `#page-${p}`} /> },
+    ],
+  },
+
+  /* ================= LAYOUT ================= */
+  {
+    slug: "layout-section",
+    title: "LayoutSection",
+    category: "Layout",
+    description:
+      "The shell every invitation section goes through. It renders a resolved SectionStyle — surface, width, pattern, alignment, heading, divider — which is how a theme reshapes the page instead of recolouring it.",
+    demos: [
+      {
+        title: "Four surfaces",
+        note: "plain · panel · tinted · inverted. Everything else is held constant.",
+        node: (
+          <div>
+            {(["plain", "panel", "tinted", "inverted"] as const).map((surface) => (
+              <LayoutSection
+                key={surface}
+                id={`demo-${surface}`}
+                theme={theme}
+                style={{ ...defaultSectionStyle, surface, pattern: "theme", width: "regular" }}
+                overline="Join us for"
+                title="The Celebrations"
+              >
+                <p className="text-center type-body text-muted">
+                  data-surface=&quot;{surface}&quot;
+                </p>
+              </LayoutSection>
+            ))}
+          </div>
+        ),
+      },
+      {
+        title: "Heading treatments",
+        note: "overline-title · title-only · numbered · rule-through. Chosen per section by the theme.",
+        node: (
+          <div className="flex flex-col gap-8">
+            {(["overline-title", "title-only", "numbered", "rule-through"] as const).map((heading, i) => (
+              <SectionTitle
+                key={heading}
+                style={{ ...defaultSectionStyle, heading }}
+                overline="Join us for"
+                title="The Celebrations"
+                index={i}
+              />
+            ))}
+          </div>
+        ),
+      },
+    ],
+  },
+  {
+    slug: "hero-variants",
+    title: "ThemedHeroVariant",
+    category: "Layout",
+    description:
+      "The opening spread, seven ways — the single biggest difference between two themes, because for most guests the hero is the whole invitation.",
+    demos: heroVariantDemos,
+  },
 ];
 
-export const categories = ["Signature", "Features", "Sections", "Core UI", "Ornaments", "Wedding décor", "Typography", "Timeline", "Interactive"] as const;
+export const categories = ["Signature", "Features", "Layout", "Sections", "Navigation", "Core UI", "Ornaments", "Wedding décor", "Typography", "Timeline", "Interactive"] as const;
 
 export function getComponentDoc(slug: string): ComponentDoc | undefined {
   return componentDocs.find((c) => c.slug === slug);
