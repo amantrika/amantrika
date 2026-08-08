@@ -57,6 +57,37 @@ test.describe("every marketing page", () => {
         }
       });
 
+      test("emits no block element inside a paragraph", async ({ page }) => {
+        // A <p> holds phrasing content only. Put a <p>, a <div> or a list
+        // inside one and the browser closes the paragraph early — a repair
+        // that happens in the DOM and not in the string the server sent, so
+        // the two disagree and React refuses to hydrate. The page then looks
+        // finished and is inert.
+        //
+        // This is easy to reintroduce from MDX, which wraps any text between
+        // blank lines in a paragraph of its own: a block component that also
+        // renders a <p> nests them without anyone writing nested tags.
+        // `MissionStatement` on /about did exactly that.
+        const response = await page.goto(path);
+        const html = (await response!.text()).toLowerCase();
+
+        // Compare what the parser built against the string it was built from.
+        // Any repair shows up as a difference the browser made and the server
+        // did not.
+        const offenders = await page.evaluate(() =>
+          [...document.querySelectorAll("p")]
+            .filter((p) =>
+              p.querySelector("p, div, ul, ol, dl, table, figure, section, h1, h2, h3")
+            )
+            .map((p) => p.outerHTML.slice(0, 120))
+        );
+
+        expect(offenders).toEqual([]);
+        // The server string must be clean too — the DOM check above cannot see
+        // a paragraph the parser already closed and discarded.
+        expect(html).not.toMatch(/<p\b[^>]*>(?:(?!<\/p>)[\s\S]){0,400}?<p\b/);
+      });
+
       test("serves its content in the HTML, not only after hydration", async ({ page }) => {
         // A retriever that does not run JavaScript must still see the page.
         const response = await page.goto(path);
