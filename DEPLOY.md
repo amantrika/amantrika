@@ -42,17 +42,25 @@ stops and reports the line, and nothing is half-applied.
 
 ### Auth settings
 
-In **Authentication → URL Configuration**:
+These are **declarative** — they live in `supabase/config.toml` under `[auth]`
+and `[auth.email]`, and are applied with:
 
-- Site URL: `https://amantrika.imswarnil.com`
-- Redirect URLs: add `https://amantrika.imswarnil.com/auth/callback`
-  and `http://localhost:3000/auth/callback`
+```bash
+supabase config push
+```
 
-**Keep email confirmation on** (the Supabase default, under
-**Authentication → Providers → Email**). The signup form already handles it:
-when no session comes back it shows a "check `you@example.com` for a
-confirmation link" notice, and `/auth/callback` exchanges the emailed code for a
-session and routes the user to the dashboard their role belongs to.
+Which sets the site URL, the exact redirect allow-list (`/auth/callback` for the
+live domain, the Vercel alias and localhost), `enable_confirmations = true`, and
+`minimum_password_length = 8` to match the signup form's own validation.
+
+> **Careful:** `config push` pushes the *whole* local `[auth]` block, not just
+> what you changed. Any value left at the CLI's scaffold default will silently
+> overwrite the remote setting. Always read the diff it prints before accepting
+> it — running it once and re-running it should report `up_to_date`.
+
+Email confirmation being on means signup returns no session; the form handles
+that by showing a "check your email" notice, and `/auth/callback` exchanges the
+emailed code for a session and routes to the right dashboard.
 
 ### Make yourself an admin
 
