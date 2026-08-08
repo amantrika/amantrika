@@ -8,6 +8,33 @@ Last updated: **8 Aug 2026**
 
 ---
 
+---
+
+## 🔴 Before you take a single real customer
+
+Verified 8 Aug 2026. **`orders` where `status = 'paid'` is zero — a checkout has
+never successfully completed on this system.** Everything below the money is
+built and working; the money itself is untested end to end.
+
+1. **Complete one test-mode purchase.** Provider is `dodo`, `DODO_ENVIRONMENT`
+   is `test_mode`, keys are set in Vercel. Nobody has driven a card through it.
+2. **Register the webhook** in the Dodo dashboard against
+   `https://amantrika.imswarnil.com/api/payments/webhook` (the route responds and
+   correctly rejects malformed posts, so it is ready — it is just not called).
+   Without it a customer pays and their invitation never publishes. That is the
+   worst failure this product can have.
+3. **Add `https://amantrika.imswarnil.com/auth/callback`** to the authorised
+   redirect URIs in Google Cloud. Google SSO works locally and fails on the live
+   domain only, which is the kind of bug that is invisible until a real person
+   hits it.
+4. **Rotate the OpenRouter key.** Scrubbed from git history and never pushed to
+   GitHub, but it sat in a local repo, two agents' context windows and a stash.
+   Never pushed is not the same as never seen.
+
+Items 1–3 need a human with dashboard access. No agent can do them.
+
+---
+
 ## Where it runs
 
 | | |
