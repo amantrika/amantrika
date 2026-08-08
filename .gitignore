@@ -15,6 +15,9 @@
 
 # next.js
 /.next/
+# Alternate build dirs from NEXT_DIST_DIR — see next.config.ts. Running a second
+# dev server needs one, and it must never reach a commit.
+/.next-*/
 /out/
 
 # production
@@ -32,6 +35,9 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+# ...except the contract. CLAUDE.md §5 calls .env.example checked-in, and it
+# holds no values — only variable names and what each one is for.
+!.env.example
 
 # vercel
 .vercel

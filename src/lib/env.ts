@@ -66,6 +66,38 @@ export function resendApiKey(): string {
  */
 export const emailFrom = process.env.EMAIL_FROM ?? "Amantrika <onboarding@resend.dev>";
 
+/* ----------------------------------------------------------------- AI */
+
+/**
+ * Whether AI features are configured at all.
+ *
+ * Deliberately *not* a `NEXT_PUBLIC_` variable and deliberately not throwing:
+ * a deployment without a key is a supported configuration in which every AI
+ * feature is simply absent. See `src/lib/ai/disabled.ts`.
+ *
+ * Safe to call from a Server Component to decide whether to render an
+ * AI-powered control — it reads whether the key exists, never its value.
+ */
+export function hasOpenRouterKey(): boolean {
+  if (typeof window !== "undefined") return false;
+  return Boolean(process.env.OPENROUTER_API_KEY);
+}
+
+/**
+ * Server-only. Throws if imported into a client bundle.
+ *
+ * There is no `NEXT_PUBLIC_` counterpart and there must never be one: an
+ * OpenRouter key shipped to the browser is a key anyone can spend your balance
+ * with, and OpenRouter bills prepaid credit rather than a metered account you
+ * could dispute.
+ */
+export function openRouterApiKey(): string {
+  if (typeof window !== "undefined") {
+    throw new Error("openRouterApiKey() must never be called in the browser.");
+  }
+  return required("OPENROUTER_API_KEY", process.env.OPENROUTER_API_KEY);
+}
+
 export const siteUrl =
   process.env.NEXT_PUBLIC_SITE_URL ??
   (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
