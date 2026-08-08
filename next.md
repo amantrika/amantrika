@@ -24,12 +24,20 @@ The `/invite/[slug]` and `/roadmap` 500s are **fixed, deployed and verified
 live**: both return 200, a missing slug still 404s. `main` and
 `n8n-automation-layer` are both at `bddc17a`.
 
-**Correction, and it cost an outage:** this section used to say "production
-deploys from `n8n-automation-layer`, so `git push` is the deploy." That is
-false. The GitHub integration does not build this project — **deploying is a
-manual `vercel --prod`**. The fix had been committed *and* pushed and was still
-not live. Check `vercel ls` after any change you expect to see on the site, and
-load the page: a READY deploy is not a rendering page.
+**How deploying actually works** — this cost an outage and then two wrong
+corrections, so it is written from what was observed rather than assumed:
+
+- Push to **`main`** → Vercel builds it as **Production** and it goes live.
+- Push to **`n8n-automation-layer`** (or any other branch) → **Preview** only.
+  Nothing changes on the live site. This is what made the `/invite/[slug]` fix
+  look shipped while the site stayed broken.
+- `vercel --prod` deploys without pushing, and is what the CLI-authored
+  deployments in `vercel ls` are.
+
+Work happens on `n8n-automation-layer`; shipping means fast-forwarding `main`
+(`git push origin n8n-automation-layer:main`). Then check `vercel ls` for a row
+marked **Production**, and load the page — a READY deployment is not a rendering
+page.
 
 Cause, for the record: caching those reads left them calling `createClient()`
 inside `unstable_cache`, and Next throws rather than degrading when a cached

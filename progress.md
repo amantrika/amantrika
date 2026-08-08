@@ -44,10 +44,20 @@ Items 1–3 need a human with dashboard access. No agent can do them.
 | Supabase | project `Amantrika`, ref `wzwzeoqaaronnuvfzvxf`, region `ap-southeast-1` |
 | Vercel | project `amantrika`, Hobby plan |
 
-**Deploying is a manual `vercel --prod` — `git push` does not deploy.** The
-GitHub integration does not build this project; every deployment in
-`vercel ls` is CLI-authored. Pushing and assuming it shipped is how the
-`/invite/[slug]` 500 fix sat live-broken after it was "deployed".
+**Pushing to `main` deploys production. Pushing to any other branch builds a
+Preview and changes nothing live.**
+
+This has now been wrong in this file twice, in both directions, so here is what
+was actually observed on 8 Aug 2026: a push to `n8n-automation-layer` produced a
+deployment marked `Preview`; a push to `main` produced one marked `Production`,
+and the live site served it a minute later. The GitHub integration *is*
+connected — the earlier note saying it "does not build this project" was drawn
+from a `vercel ls` full of CLI-authored deploys, which is what you get when
+every push goes to a non-production branch.
+
+`vercel --prod` still works and is the way to ship without pushing. Either way,
+`vercel ls` tells you whether the deployment was Production or Preview — and a
+READY deployment is still not a rendering page, so load it.
 
 Accounts for Supabase, Vercel and GitHub are **dedicated to Amantrika**, separate
 from any personal ones. Git commits are authored as `Amantrika` — a commit from
