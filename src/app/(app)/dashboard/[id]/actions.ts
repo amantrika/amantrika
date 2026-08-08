@@ -1,7 +1,8 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { z } from "zod";
+import { inviteTag } from "@/lib/cache";
 import { createClient } from "@/lib/supabase/server";
 import { requireProfile } from "@/lib/auth";
 import { captureServer } from "@/lib/posthog/server";
@@ -45,6 +46,7 @@ export async function updateSettings(eventId: string, settings: EventSettings): 
 
   revalidatePath(`/dashboard/${eventId}`);
   revalidatePath(`/invite/${current.slug}`);
+  revalidateTag(inviteTag(current.slug));
   return { ok: true };
 }
 
@@ -88,6 +90,7 @@ export async function setEventStatus(eventId: string, status: EventStatus): Prom
 
   revalidatePath(`/dashboard/${eventId}`);
   revalidatePath(`/invite/${current.slug}`);
+  revalidateTag(inviteTag(current.slug));
   return { ok: true };
 }
 

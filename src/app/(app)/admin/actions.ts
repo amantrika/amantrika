@@ -1,7 +1,8 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { z } from "zod";
+import { inviteTag } from "@/lib/cache";
 import { createClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/auth";
 import { captureServer } from "@/lib/posthog/server";
@@ -144,6 +145,7 @@ export async function setInvitationStatus(
   await captureServer(admin.id, EVENTS.admin_invitation_moderated, { status });
   revalidatePath("/admin/invitations");
   revalidatePath(`/invite/${current.slug}`);
+  revalidateTag(inviteTag(current.slug));
   return { ok: true, notice: `Invitation set to ${status}.` };
 }
 

@@ -2,9 +2,10 @@
 
 import { createHash } from "node:crypto";
 import { headers } from "next/headers";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { CACHE_TAGS } from "@/lib/cache";
 import { getProfile, requireProfile, requireRole } from "@/lib/auth";
 import { captureServer, captureAnonymousServer } from "@/lib/posthog/server";
 import { log } from "@/lib/posthog/logger";
@@ -65,6 +66,7 @@ export async function voteForFeature(requestId: string): Promise<FeatureResult> 
   await captureAnonymousServer(hash, EVENTS.feature_voted, { request_id: requestId });
 
   revalidatePath("/roadmap");
+  revalidateTag(CACHE_TAGS.features);
   return { ok: true, votes: data as number };
 }
 
@@ -121,6 +123,7 @@ export async function proposeFeature(input: z.input<typeof proposalSchema>): Pro
   await captureServer(profile.id, EVENTS.feature_proposed, { has_detail: Boolean(parsed.data.body) });
 
   revalidatePath("/roadmap");
+  revalidateTag(CACHE_TAGS.features);
   return { ok: true, notice: "Posted. Others can vote on it now." };
 }
 
@@ -160,6 +163,7 @@ export async function setFeatureStatus(input: z.input<typeof statusSchema>): Pro
   await captureServer(admin.id, EVENTS.feature_status_changed, { status: parsed.data.status });
 
   revalidatePath("/roadmap");
+  revalidateTag(CACHE_TAGS.features);
   revalidatePath("/admin/requests");
   return { ok: true, notice: `Marked ${parsed.data.status}.` };
 }

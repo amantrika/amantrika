@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { InviteClient } from "./InviteClient";
-import { getBlessings, getPublishedInvite } from "@/lib/invites/queries";
+import { getBlessings } from "@/lib/invites/queries";
+import { getCachedInvite } from "@/lib/cache";
 import { hostLine } from "@/lib/invites/invite";
 import { seedBlessings } from "@/data/blessings";
 import { siteUrl } from "@/lib/env";
@@ -13,7 +14,7 @@ type Params = Promise<{ slug: string }>;
 
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
   const { slug } = await params;
-  const invite = await getPublishedInvite(slug);
+  const invite = await getCachedInvite(slug);
   if (!invite) return { title: "Invitation not found · Amantrika" };
 
   const entitlements = entitlementsFor(invite.planCode);
@@ -50,7 +51,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
 
 export default async function InvitePage({ params }: { params: Params }) {
   const { slug } = await params;
-  const invite = await getPublishedInvite(slug);
+  const invite = await getCachedInvite(slug);
   if (!invite) notFound();
 
   const entitlements = entitlementsFor(invite.planCode);

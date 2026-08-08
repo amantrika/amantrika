@@ -4,7 +4,7 @@ import { FeatureBoard } from "@/components/roadmap/FeatureBoard";
 import { MdxBody } from "@/lib/content/render";
 import { getContentPage } from "@/lib/content/blog";
 import { pageMetadata } from "@/lib/seo/metadata";
-import { listFeatureRequests, featureLeaderboard } from "@/lib/features/queries";
+import { getCachedFeatureBoard } from "@/lib/cache";
 import { canPropose, myVotedRequestIds } from "@/lib/features/actions";
 
 /**
@@ -31,9 +31,9 @@ export default async function RoadmapPage() {
   const page = await getContentPage("roadmap");
   if (!page) notFound();
 
-  const [requests, leaderboard, votedIds, signedIn] = await Promise.all([
-    listFeatureRequests(),
-    featureLeaderboard(),
+  // The board is public and shared; the last two are per-visitor and cannot be.
+  const [{ requests, leaderboard }, votedIds, signedIn] = await Promise.all([
+    getCachedFeatureBoard(),
     myVotedRequestIds(),
     canPropose(),
   ]);

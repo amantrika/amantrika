@@ -1,7 +1,8 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { z } from "zod";
+import { inviteTag } from "@/lib/cache";
 import { createClient } from "@/lib/supabase/server";
 import { captureAnonymousServer } from "@/lib/posthog/server";
 import { log } from "@/lib/posthog/logger";
@@ -88,6 +89,8 @@ export async function submitRsvp(input: RsvpInput): Promise<SubmitResult> {
   });
 
   revalidatePath(`/invite/${data.slug}`);
+
+  revalidateTag(inviteTag(data.slug));
   return { ok: true };
 }
 
@@ -139,6 +142,8 @@ export async function submitBlessing(input: BlessingInput): Promise<SubmitResult
   });
 
   revalidatePath(`/invite/${slug}`);
+
+  revalidateTag(inviteTag(slug));
   return {
     ok: true,
     notice: moderate ? "Thank you — your blessing will appear once the hosts approve it." : undefined,

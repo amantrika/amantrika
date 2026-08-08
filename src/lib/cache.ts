@@ -25,7 +25,11 @@ export const CACHE_TAGS = {
   plans: "plans",
   showcase: "showcase",
   invite: "invite",
+  features: "features",
 } as const;
+
+/** Per-invitation tag, so editing one does not flush every other invitation. */
+export const inviteTag = (slug: string) => `invite:${slug}`;
 
 /** Pricing: read on the landing page and in checkout, edited a few times a year. */
 export const getCachedPlans = unstable_cache(
@@ -116,4 +120,57 @@ export const getCachedShowcaseTypes = unstable_cache(
   },
   ["showcase:types"],
   { revalidate: 1800, tags: [CACHE_TAGS.showcase] }
+);
+
+
+/* ------------------------------------------------------- the guest-facing page */
+
+/**
+ * A published invitation, cached per slug.
+ *
+ * This is the single most-loaded page in the product — every guest of every
+ * wedding hits it, most of them on a phone over patchy mobile data — and it was
+ * fetching three tables on every single request. The content changes when a host
+ * edits, which is rare, so it is exactly the shape caching is for.
+ *
+ * Tagged per slug rather than globally: editing one invitation must not flush
+ * every other couple's. `revalidateTag(inviteTag(slug))` on any write that
+ * touches the invitation keeps it correct.
+ *
+ * Blessings are deliberately *not* cached here — a guest who posts one expects
+ * to see it, and a stale guestbook reads as the site having lost their message.
+ */
+export function getCachedInvite(slug: string) {
+  return unstable_cache(
+    async () => {
+      const { getPublishedInvite } = await import("@/lib/invites/queries");
+      return getPublishedInvite(slug);
+    },
+    ["invite", slug],
+    { revalidate: 300, tags: [CACHE_TAGS.invite, inviteTag(slug)] }
+  )();
+}
+
+/* ---------------------------------------------------------------- roadmap */
+
+/**
+ * The feature board and its leaderboard. Both are public and identical for
+ * everyone, and were being fetched fresh on every roadmap view — the slowest
+ * page on the site at 2s.
+ *
+ * Thirty seconds, not an hour: someone who has just voted or posted an idea
+ * should see it appear. Voting and proposing both `revalidateTag`, so the wait
+ * is a ceiling rather than the normal case.
+ */
+export const getCachedFeatureBoard = unstable_cache(
+  async () => {
+    const { listFeatureRequests, featureLeaderboard } = await import("@/lib/features/queries");
+    const [requests, leaderboard] = await Promise.all([
+      listFeatureRequests(),
+      featureLeaderboard(),
+    ]);
+    return { requests, leaderboard };
+  },
+  ["feature-board"],
+  { revalidate: 30, tags: [CACHE_TAGS.features] }
 );
