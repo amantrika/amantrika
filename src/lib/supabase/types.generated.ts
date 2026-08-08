@@ -428,6 +428,13 @@ export type Database = {
             referencedRelation: "events"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "events_theme_id_fkey"
+            columns: ["theme_id"]
+            isOneToOne: false
+            referencedRelation: "themes"
+            referencedColumns: ["id"]
+          },
         ]
       }
       feature_requests: {
@@ -982,6 +989,48 @@ export type Database = {
           },
         ]
       }
+      themes: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          mood_tag: string
+          name: string
+          palette: string[]
+          region_tag: string
+          religion_tag: string
+          sort_order: number
+          tier: Database["public"]["Enums"]["theme_tier"]
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id: string
+          is_active?: boolean
+          mood_tag: string
+          name: string
+          palette?: string[]
+          region_tag?: string
+          religion_tag: string
+          sort_order?: number
+          tier?: Database["public"]["Enums"]["theme_tier"]
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          mood_tag?: string
+          name?: string
+          palette?: string[]
+          region_tag?: string
+          religion_tag?: string
+          sort_order?: number
+          tier?: Database["public"]["Enums"]["theme_tier"]
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -1128,6 +1177,7 @@ export type Database = {
       feature_status: "open" | "planned" | "building" | "shipped" | "declined"
       order_status: "pending" | "paid" | "failed" | "refunded"
       rsvp_status: "yes" | "no" | "maybe" | "pending"
+      theme_tier: "free" | "premium"
       user_role: "host" | "agent" | "admin"
     }
     CompositeTypes: {
@@ -1279,6 +1329,7 @@ export const Constants = {
       feature_status: ["open", "planned", "building", "shipped", "declined"],
       order_status: ["pending", "paid", "failed", "refunded"],
       rsvp_status: ["yes", "no", "maybe", "pending"],
+      theme_tier: ["free", "premium"],
       user_role: ["host", "agent", "admin"],
     },
   },

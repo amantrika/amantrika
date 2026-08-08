@@ -2,7 +2,7 @@ import "server-only";
 import { unstable_cache } from "next/cache";
 import { createPublicClient } from "@/lib/supabase/server";
 import { assetUrl } from "@/lib/invites/invite";
-import type { EventType, PlanRow } from "@/lib/supabase/types";
+import type { EventType, PlanRow, ThemeRow } from "@/lib/supabase/types";
 
 /**
  * Cached reads for data that is public and changes rarely.
@@ -23,6 +23,7 @@ import type { EventType, PlanRow } from "@/lib/supabase/types";
 
 export const CACHE_TAGS = {
   plans: "plans",
+  themes: "themes",
   showcase: "showcase",
   invite: "invite",
   features: "features",
@@ -44,6 +45,31 @@ export const getCachedPlans = unstable_cache(
   },
   ["plans:active"],
   { revalidate: 3600, tags: [CACHE_TAGS.plans] }
+);
+
+/**
+ * The theme catalogue: which themes are offered, in what order, and at which
+ * tier. Read by the builder's picker and by the marketing pages that show the
+ * range.
+ *
+ * This is the *catalogue* only. How a theme actually looks and lays itself out
+ * is `src/themes/index.ts`, which is typed and tested; a row here decides
+ * whether a theme is offered and to whom. Withdrawing one is `is_active =
+ * false`, which hides it from the picker and leaves every invitation already
+ * using it untouched.
+ */
+export const getCachedThemes = unstable_cache(
+  async (): Promise<ThemeRow[]> => {
+    const supabase = createPublicClient();
+    const { data } = await supabase
+      .from("themes")
+      .select("*")
+      .eq("is_active", true)
+      .order("sort_order");
+    return (data ?? []) as ThemeRow[];
+  },
+  ["themes:active"],
+  { revalidate: 3600, tags: [CACHE_TAGS.themes] }
 );
 
 export interface ShowcaseCard {

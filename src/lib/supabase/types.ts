@@ -203,6 +203,9 @@ export type RsvpRow = Row<"rsvps">;
 export type BlessingRow = Row<"blessings">;
 export type AssetRow = Row<"assets">;
 export type PlanRow = Row<"plans">;
+export type ThemeRow = Row<"themes">;
+/** Gates which themes a plan may choose — never what an invitation can do. */
+export type ThemeTier = ThemeRow["tier"];
 export type OrderRow = Row<"orders">;
 export type CommissionRow = Row<"commissions">;
 export type ShowcaseConsent = Row<"showcase_consents">;
