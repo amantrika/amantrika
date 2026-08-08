@@ -83,6 +83,8 @@ export type EventStats = {
   rsvp_no: number;
   rsvp_maybe: number;
   blessings: number;
+  /** Taps on the "Made with Amantrika" badge on this invitation. */
+  badge_clicks: number;
 };
 
 export type AgentStats = {

@@ -3,6 +3,7 @@ import { Button, Card, Stat } from "@/design-system/components";
 import { TrendChart } from "./Charts";
 import { AdminSection } from "./AdminShell";
 import { createClient } from "@/lib/supabase/server";
+import { Table } from "@/design-system/components";
 import type { AdminDailyPoint, AdminOverview } from "@/lib/supabase/types";
 
 const inr = (n: number) => `₹${n.toLocaleString("en-IN")}`;
@@ -15,6 +16,14 @@ export default async function AdminOverviewPage() {
     supabase.rpc("admin_overview"),
     supabase.rpc("admin_daily_series", { p_days: 30 }),
   ]);
+
+  const { data: badge } = await supabase.rpc("admin_badge_stats", { p_days: 30 });
+  const badgeStats = (badge ?? {}) as {
+    total?: number;
+    window?: number;
+    uniques?: number;
+    top?: { slug: string; title: string; clicks: number; uniques: number }[];
+  };
 
   const stats = (overview as AdminOverview) ?? null;
   const daily = (series as AdminDailyPoint[]) ?? [];
@@ -109,6 +118,32 @@ export default async function AdminOverviewPage() {
           format="compact"
         />
       </div>
+
+      <AdminSection
+        title="Made with Amantrika"
+        description="Guests who tapped the badge on a free invitation and came back to the site — the product's only organic acquisition loop."
+      >
+        <div className="grid gap-4 sm:grid-cols-3">
+          <Stat label="Clicks (all time)" value={badgeStats.total ?? 0} />
+          <Stat label="Clicks (30 days)" value={badgeStats.window ?? 0} />
+          <Stat label="Unique people (30 days)" value={badgeStats.uniques ?? 0} />
+        </div>
+
+        {(badgeStats.top?.length ?? 0) > 0 && (
+          <div className="mt-4">
+            <Table headers={["Invitation", "Link", "Clicks", "Unique people"]}>
+              {badgeStats.top!.map((row) => (
+                <tr key={row.slug}>
+                  <td className="px-4 py-3 font-semibold">{row.title}</td>
+                  <td className="px-4 py-3 font-mono type-caption">/invite/{row.slug}</td>
+                  <td className="px-4 py-3">{row.clicks}</td>
+                  <td className="px-4 py-3">{row.uniques}</td>
+                </tr>
+              ))}
+            </Table>
+          </div>
+        )}
+      </AdminSection>
 
       <AdminSection title="At a glance" description="The rest of the platform in numbers.">
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

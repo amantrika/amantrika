@@ -42,6 +42,7 @@ export const EVENTS = {
   blessing_submitted: "blessing_submitted",
   invite_link_copied: "invite_link_copied",
   invite_shared: "invite_shared",
+  badge_clicked: "badge_clicked",
 
   /* host tooling */
   guest_added: "guest_added",

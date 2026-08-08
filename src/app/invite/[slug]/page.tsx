@@ -6,8 +6,7 @@ import { hostLine } from "@/lib/invite";
 import { seedBlessings } from "@/data/blessings";
 import { siteUrl } from "@/lib/env";
 import { entitlementsFor } from "@/lib/entitlements";
-import { createWatermarkPlan } from "@/lib/watermark";
-import { Watermark } from "@/components/invite/Watermark";
+import { MadeWithBadge } from "@/components/invite/MadeWithBadge";
 import { eventJsonLd, graph } from "@/lib/seo/jsonld";
 
 type Params = Promise<{ slug: string }>;
@@ -85,9 +84,10 @@ export default async function InvitePage({ params }: { params: Params }) {
         />
       )}
 
-      {/* Rendered last and unwrapped, so the marks are siblings of the page
-          content rather than children of one deletable container. */}
-      {entitlements.watermarked && <Watermark plan={createWatermarkPlan()} />}
+      {/* A quiet corner badge rather than a tiled watermark. Defacing a
+          family's invitation would make guests resent the mark instead of
+          following it — and following it is the entire point. */}
+      {entitlements.watermarked && <MadeWithBadge slug={slug} />}
     </>
   );
 }

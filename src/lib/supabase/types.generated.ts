@@ -183,6 +183,44 @@ export type Database = {
           },
         ]
       }
+      badge_clicks: {
+        Row: {
+          country: string | null
+          event_id: string | null
+          id: number
+          occurred_at: string
+          placement: string | null
+          slug: string
+          visitor_hash: string | null
+        }
+        Insert: {
+          country?: string | null
+          event_id?: string | null
+          id?: number
+          occurred_at?: string
+          placement?: string | null
+          slug: string
+          visitor_hash?: string | null
+        }
+        Update: {
+          country?: string | null
+          event_id?: string | null
+          id?: number
+          occurred_at?: string
+          placement?: string | null
+          slug?: string
+          visitor_hash?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "badge_clicks_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       blessings: {
         Row: {
           created_at: string
@@ -851,6 +889,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_badge_stats: { Args: { p_days?: number }; Returns: Json }
       admin_daily_series: {
         Args: { p_days?: number }
         Returns: {
@@ -884,6 +923,15 @@ export type Database = {
         Returns: string
       }
       is_admin: { Args: never; Returns: boolean }
+      record_badge_click: {
+        Args: {
+          p_country?: string
+          p_placement?: string
+          p_slug: string
+          p_visitor_hash?: string
+        }
+        Returns: undefined
+      }
       record_page_view: {
         Args: {
           p_city?: string

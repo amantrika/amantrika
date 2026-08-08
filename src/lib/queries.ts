@@ -116,6 +116,7 @@ const emptyStats: EventStats = {
   rsvp_no: 0,
   rsvp_maybe: 0,
   blessings: 0,
+  badge_clicks: 0,
 };
 
 export async function getEventStats(eventId: string): Promise<EventStats> {

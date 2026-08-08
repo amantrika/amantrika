@@ -119,6 +119,7 @@ function Overview({
         <Stat label="Unique visitors" value={stats.unique_viewers} />
         <Stat label="Attending (headcount)" value={stats.rsvp_yes} />
         <Stat label="Blessings" value={stats.blessings} />
+        <Stat label="Badge clicks" value={stats.badge_clicks ?? 0} />
       </div>
 
       <Card className="p-6">

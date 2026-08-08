@@ -383,7 +383,10 @@ export async function startCheckout(input: {
         provider_product_id: plan.dodo_product_id,
       },
       customer: { email: profile.email, name: profile.full_name ?? "Amantrika host" },
-      successUrl: `${siteUrl}/dashboard/${event.id}?paid=1`,
+      // The dashboard is where you go to work, not where you go to be told it
+      // worked. Checkout lands on a page that just says "it is live" and offers
+      // the only two things anyone wants next: see it, or manage it.
+      successUrl: `${siteUrl}/checkout/success/${event.id}`,
       cancelUrl: `${siteUrl}/dashboard/${event.id}`,
     });
   } catch (cause) {
