@@ -9,6 +9,8 @@ import {
   Noto_Nastaliq_Urdu,
   Yatra_One,
 } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import { ThemeProvider } from "@/design-system/ThemeProvider";
 import { DevThemeSwitcher } from "@/design-system/DevThemeSwitcher";
 import { siteUrl } from "@/lib/env";
@@ -102,6 +104,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           {children}
           <DevThemeSwitcher />
         </ThemeProvider>
+        {/* Vercel's own analytics: aggregate traffic and Core Web Vitals for the
+            whole site. Distinct from our per-invite view counts in `page_views`,
+            which are what a couple sees on their dashboard. */}
+        <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );
