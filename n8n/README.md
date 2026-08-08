@@ -64,16 +64,14 @@ The Postgres user needs to bypass RLS to read `events`, `profiles`, `orders` and
 would silently find nothing — which is exactly the failure mode the `admin_overview()` note below
 warns about, so prefer being explicit here.
 
-### 3. Environment
+### 3. Configuration
 
-Copy `n8n/.env.example` into your n8n instance's environment. n8n also needs:
+Each workflow carries a **Config** node on the left of its canvas holding site URL, sender, owner
+address, the dry-run switch and the WhatsApp settings. Edit it in the UI and save — no environment
+variables, no container access, no restart.
 
-```
-N8N_BLOCK_ENV_ACCESS_IN_NODE=false
-```
-
-Without it, `$env.*` in expressions returns undefined and every workflow will try to email
-`undefined`. This is the single most common setup mistake.
+`.env.example` documents the same keys for reference, and is what you would use if you ever moved
+this config to the container instead.
 
 ### 4. Import
 

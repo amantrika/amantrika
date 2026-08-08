@@ -54,45 +54,31 @@ ledger is how a workflow knows it already emailed someone.
 
 ---
 
-## Step 2 — Set environment variables on your instance
+## Step 2 — Nothing. Config lives in the workflow
 
-The workflows read config through `$env.*`. On a self-hosted instance these are set on the
-container and need a restart to take effect.
+There is no environment setup. Every workflow carries a **Config** node on the left of its canvas,
+holding the eight values it needs:
 
-Add these to your n8n `docker-compose.yml` under `environment:` (or your systemd unit / `.env`):
+| Key | Value |
+|---|---|
+| `AMANTRIKA_SITE_URL` | `https://amantrika.com` |
+| `AMANTRIKA_EMAIL_FROM` | `Amantrika <onboarding@resend.dev>` |
+| `AMANTRIKA_OWNER_EMAIL` | `theamantrika@gmail.com` |
+| `AMANTRIKA_DRY_RUN` | `true` — **nothing sends while this is true** |
+| `AMANTRIKA_WA_PHONE_NUMBER_ID` | empty until you set up WhatsApp |
+| `AMANTRIKA_OWNER_WHATSAPP` | empty until you set up WhatsApp |
+| `AMANTRIKA_WA_TEMPLATE` | `amantrika_ops_alert` |
+| `AMANTRIKA_UNSUBSCRIBE_MAILBOX` | `unsubscribe@amantrika.com` |
 
-```yaml
-      # Without this, every $env.* is undefined and the workflow emails "undefined".
-      # This is the single most common mistake — do not skip it.
-      N8N_BLOCK_ENV_ACCESS_IN_NODE: "false"
+Click the node, edit a value, save. No container access, no restart, no admin rights.
 
-      AMANTRIKA_SITE_URL: "https://amantrika.com"
-      AMANTRIKA_OWNER_EMAIL: "theamantrika@gmail.com"
-      AMANTRIKA_EMAIL_FROM: "Amantrika <onboarding@resend.dev>"
+This design was forced by your instance and is better anyway: `$env.*` needs container access you do
+not have as a member, and n8n Variables are licensed off (`/api/v1/variables` returns 403 here).
 
-      # Nothing sends while this is true. Leave it until step 6.
-      AMANTRIKA_DRY_RUN: "true"
-```
-
-Then restart and verify:
-
-```bash
-docker compose up -d
-docker compose exec n8n printenv | grep AMANTRIKA
-```
-
-If that prints nothing, n8n is not seeing them and no workflow will work.
-
-> **Set `AMANTRIKA_EMAIL_FROM` to `onboarding@resend.dev` for now.** Resend's shared sender only
-> delivers to the address that owns the Resend account. That is perfect for testing this workflow,
-> because you are the only recipient. Before the *customer* workflows (05–10) go live you must
-> verify a real sending domain, or their emails will silently go nowhere.
-
-### If you cannot set environment variables
-
-Some instances make this awkward — a managed host, or an account without container access. Tell me
-and I'll regenerate the workflows to read from a **Config** node pinned at the top of each canvas
-instead. Same values, edited in the UI, no restart. It is a 10-minute change on my side.
+> **`onboarding@resend.dev` is Resend's shared sender and only delivers to the address that owns the
+> Resend account.** Perfect for the owner workflows (01–04), where you are the only recipient.
+> Before the customer-facing ones (05–10) go live, verify a real domain in Resend and change
+> `AMANTRIKA_EMAIL_FROM` in each Config node — otherwise those emails silently go nowhere.
 
 ---
 
@@ -161,14 +147,15 @@ wait indefinitely.
 
 ---
 
-## Step 5 — Import workflow 01
+## Step 5 — Open workflow 01
 
-n8n → **Workflows → Import from File** → `n8n/workflows/01-owner-new-signup-alert.json`.
+**All eleven workflows are already on your instance**, pushed via the API and inactive. Open
+**Amantrika · 01 Owner — new signup alert**.
 
-You should see a canvas with a sticky note and thirteen nodes:
+Fourteen nodes:
 
 ```
-Every 10 minutes → Find new signups → Render alert → Claim in ledger → New only → Dry run?
+Every 10 minutes → Config → Find new signups → Render alert → Claim in ledger → New only → Dry run?
                                                                                     ├ Mark skipped
                                                                                     └ Alert owner on WhatsApp
                                                                                         ├ Mark sent
@@ -176,7 +163,8 @@ Every 10 minutes → Find new signups → Render alert → Claim in ledger → N
 ```
 
 Open **Find new signups** and **Claim in ledger** and confirm each shows the Postgres credential
-rather than a red warning. It arrives **inactive**. Leave it that way.
+rather than a red warning. If they are red, the credential name does not match character for
+character.
 
 ---
 
@@ -243,7 +231,8 @@ the ledger and no other workflow should be activated.
 delete from automation.notifications where status = 'skipped';
 ```
 
-Set `AMANTRIKA_DRY_RUN: "false"`, restart n8n, and **Execute Workflow** once more.
+Open the **Config** node, set `AMANTRIKA_DRY_RUN` to `false`, save, and **Execute Workflow** once
+more. No restart — that is the point of the Config node.
 
 Expected: **Alert owner on WhatsApp** goes red (the placeholder token), the run continues down the
 error branch to **Fall back to email**, and the alert lands in `theamantrika@gmail.com`.
@@ -266,7 +255,7 @@ from automation.notifications order by claimed_at desc limit 5;
 | `password authentication failed` | User must be `postgres.wzwzeoqaaronnuvfzvxf`, not `postgres` |
 | `no pg_hba.conf entry` / SSL error | SSL must be `require` |
 | Every query returns 0 rows, always | Connected as a role that does not bypass RLS. Use the `postgres` user |
-| Emails addressed to `undefined` | `N8N_BLOCK_ENV_ACCESS_IN_NODE=false` missing, or no restart after adding it |
+| Emails addressed to `undefined` | A Config value is blank, or the node was renamed away from `Config` |
 | `credential not found` | Credential name is not character-for-character as listed above |
 | Resend 403 `domain not verified` | Send only to your own address, or verify a domain |
 | Ledger count grows on re-run | Stop. The migration may not have applied. Check `automation.notifications` has a unique index on `dedupe_key` |

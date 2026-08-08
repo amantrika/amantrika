@@ -3,7 +3,7 @@
   "nodes": [
     {
       "parameters": {
-        "content": "## 07 · Publish confirmation & share kit\n\nEvery 10 min. There are two publish paths and only one sends mail today:\n\n- **paid** — the webhook settles, publishes and sends a receipt. These hosts already heard from us, so they get the sharing tools only. A second confirmation would read as a double charge.\n- **free** — `src/app/onboarding/actions.ts` publishes inline; the webhook never runs, so these hosts currently receive **nothing**. They get the full confirmation.\n\nThe free plan is watermarked and emits no `og:image` by design, so the free copy does not promise a rich WhatsApp preview it will not deliver.\n\n**Third-party dependency:** the QR image comes from `api.qrserver.com`. To drop it, delete the `qr` line in the render node.\n\nQuery: `n8n/sql/07-recent-publishes.sql`",
+        "content": "## 07 · Publish confirmation & share kit\n\nEvery 10 min. There are two publish paths and only one sends mail today:\n\n- **paid** — the webhook settles, publishes and sends a receipt. These hosts already heard from us, so they get the sharing tools only. A second confirmation would read as a double charge.\n- **free** — `src/app/onboarding/actions.ts` publishes inline; the webhook never runs, so these hosts currently receive **nothing**. They get the full confirmation.\n\nThe free plan is watermarked and emits no `og:image` by design, so the free copy does not promise a rich WhatsApp preview it will not deliver.\n\n**Third-party dependency:** the QR image comes from `api.qrserver.com`. To drop it, delete the `qr` line in the render node.\n\nQuery: `n8n/sql/07-recent-publishes.sql`\n\n**Config is the node on the left.** Set `AMANTRIKA_DRY_RUN` to `false` there when you are ready to send.",
         "height": 260,
         "width": 420,
         "color": 4
@@ -33,7 +33,7 @@
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
       "position": [
-        -260,
+        -520,
         0
       ]
     },
@@ -61,7 +61,7 @@
     {
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "// ---- shared chrome -------------------------------------------------------\n// Inline styles only: Gmail strips <style> blocks. Coral #e35d5d is the brand\n// accent from project-overview.md §25.2.\nconst brand = '#e35d5d';\nconst site = ($env.AMANTRIKA_SITE_URL || 'https://amantrika.com').replace(/\\/+$/, '');\nconst esc = (s) => String(s ?? '').replace(/[&<>\"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;' }[c]));\nconst inr = (n) => '₹' + Number(n || 0).toLocaleString('en-IN');\nconst stat = (label, value) => `<div style=\"display:inline-block;min-width:118px;margin:0 14px 14px 0;\"><div style=\"font-size:26px;font-weight:600;color:#1f1a19;line-height:1.1;\">${value}</div><div style=\"font-size:12px;color:#8a7d7a;text-transform:uppercase;letter-spacing:.06em;margin-top:3px;\">${label}</div></div>`;\nconst shell = (heading, bodyHtml, ctaLabel, ctaHref, footNote) => `\n<div style=\"margin:0;padding:24px 12px;background:#faf7f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;\">\n  <div style=\"max-width:560px;margin:0 auto;background:#ffffff;border-radius:14px;padding:32px 28px;border:1px solid #f0e6e2;\">\n    <div style=\"font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:${brand};font-weight:600;\">Amantrika</div>\n    <h1 style=\"margin:14px 0 18px;font-size:22px;line-height:1.32;color:#1f1a19;font-weight:600;\">${heading}</h1>\n    <div style=\"font-size:15px;line-height:1.65;color:#453c3a;\">${bodyHtml}</div>\n    ${ctaHref ? `<div style=\"margin:26px 0 6px;\"><a href=\"${ctaHref}\" style=\"display:inline-block;background:${brand};color:#ffffff;text-decoration:none;padding:13px 26px;border-radius:9px;font-weight:600;font-size:15px;\">${ctaLabel}</a></div>` : ''}\n    ${footNote ? `<p style=\"margin:24px 0 0;font-size:13px;line-height:1.6;color:#8a7d7a;\">${footNote}</p>` : ''}\n  </div>\n  <div style=\"max-width:560px;margin:16px auto 0;text-align:center;font-size:12px;color:#a29793;\">\n    Amantrika · digital invitations for Indian celebrations<br/>\n    <a href=\"${site}\" style=\"color:#a29793;\">${site.replace(/^https?:\\/\\//, '')}</a>\n  </div>\n</div>`;\n// No /unsubscribe route exists in the app yet, so RFC 8058's mailto form is\n// used. See \"Follow-ups\" in n8n/README.md.\nconst unsub = (scope) => 'mailto:' + ($env.AMANTRIKA_UNSUBSCRIBE_MAILBOX || 'unsubscribe@amantrika.com')\n  + '?subject=' + encodeURIComponent('unsubscribe ' + scope);\nconst d = $json;\n\nconst url  = site + '/invite/' + encodeURIComponent(d.slug);\nconst dash = site + '/dashboard/' + encodeURIComponent(d.event_id);\n\n// Pre-filled WhatsApp deep link. NOT the WhatsApp API — project-overview.md §18\n// permits batched deep links and forbids unofficial automation. This just opens\n// the host's own WhatsApp with the message ready.\nconst waText = `${d.title}\\n${d.event_date_long ? d.event_date_long.replace(/\\s+/g, ' ').trim() : ''}\\n\\n${url}`;\nconst waLink = 'https://wa.me/?text=' + encodeURIComponent(waText);\nconst qr = 'https://api.qrserver.com/v1/create-qr-code/?size=240x240&margin=8&data=' + encodeURIComponent(url);\nconst shareKit = `\n  <div style=\"background:#faf7f5;border-radius:12px;padding:20px;margin:0 0 18px;text-align:center;\">\n    <div style=\"font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:14px;color:#1f1a19;word-break:break-all;margin:0 0 14px;\">${esc(url)}</div>\n    <a href=\"${waLink}\" style=\"display:inline-block;background:#25d366;color:#ffffff;text-decoration:none;padding:11px 22px;border-radius:8px;font-weight:600;font-size:14px;\">Share on WhatsApp</a>\n  </div>\n  <div style=\"text-align:center;margin:0 0 18px;\">\n    <img src=\"${qr}\" width=\"150\" height=\"150\" alt=\"QR code linking to ${esc(d.title)}\" style=\"border-radius:10px;border:1px solid #f0e6e2;\" />\n    <div style=\"font-size:12px;color:#8a7d7a;margin-top:7px;\">Print this on a card. It opens the invitation.</div>\n  </div>`;\n\nlet heading, bodyHtml, subject, footNote;\n\nif (d.variant === 'confirmation') {\n  heading = 'Your invitation is live';\n  subject = 'Your invitation is live \\u2014 ' + d.title;\n  bodyHtml = `\n    <p style=\"margin:0 0 18px;\">Hi ${esc(d.owner_name)}, <strong>${esc(d.title)}</strong> is published. One link, and it works on every phone.</p>\n    ${shareKit}\n    ${d.is_watermarked ? `<div style=\"background:#fff5f3;border-left:3px solid ${brand};padding:12px 16px;border-radius:6px;margin:0 0 4px;\">\n        <strong>You are on the free plan.</strong> Your invitation carries an Amantrika mark, and links shared to WhatsApp show as plain text rather than a rich preview card. Upgrading removes both.\n      </div>` : ''}`;\n  footNote = d.is_watermarked\n    ? `See what each plan includes at <a href=\"${site}/pricing\" style=\"color:${brand};\">${site.replace(/^https?:\\/\\//, '')}/pricing</a>.`\n    : null;\n} else {\n  heading = 'Everything you need to share it';\n  subject = 'Share ' + d.title;\n  bodyHtml = `\n    <p style=\"margin:0 0 18px;\">Hi ${esc(d.owner_name)}, your receipt is already in your inbox. This one is the sharing kit for <strong>${esc(d.title)}</strong>.</p>\n    ${shareKit}\n    <p style=\"margin:0;\">${Number(d.guests_added) > 0\n      ? 'You have <strong>' + d.guests_added + '</strong> guests on your list. Personalised links \\u2014 one per guest, so their RSVP is pre-filled \\u2014 are on your dashboard.'\n      : 'Add your guest list on the dashboard to get personalised links, one per guest, so their RSVP arrives pre-filled.'}</p>`;\n  footNote = null;\n}\n\nreturn { json: {\n  dedupe_key: d.dedupe_key,\n  to: d.owner_email,\n  stored: {\n    event_id: d.event_id, slug: d.slug, title: d.title, plan_code: d.plan_code,\n    variant: d.variant, is_watermarked: d.is_watermarked, url,\n    dedupe_key: d.dedupe_key,\n    subject,\n    html: shell(heading, bodyHtml, 'Open your dashboard', dash, footNote),\n    text: heading + '\\n\\n' + d.title + '\\n' + url + '\\n\\nDashboard: ' + dash,\n  },\n} };"
+        "jsCode": "// ---- shared chrome -------------------------------------------------------\n// Inline styles only: Gmail strips <style> blocks. Coral #e35d5d is the brand\n// accent from project-overview.md §25.2.\nconst brand = '#e35d5d';\nconst site = ($('Config').first().json.AMANTRIKA_SITE_URL || 'https://amantrika.com').replace(/\\/+$/, '');\nconst esc = (s) => String(s ?? '').replace(/[&<>\"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;' }[c]));\nconst inr = (n) => '₹' + Number(n || 0).toLocaleString('en-IN');\nconst stat = (label, value) => `<div style=\"display:inline-block;min-width:118px;margin:0 14px 14px 0;\"><div style=\"font-size:26px;font-weight:600;color:#1f1a19;line-height:1.1;\">${value}</div><div style=\"font-size:12px;color:#8a7d7a;text-transform:uppercase;letter-spacing:.06em;margin-top:3px;\">${label}</div></div>`;\nconst shell = (heading, bodyHtml, ctaLabel, ctaHref, footNote) => `\n<div style=\"margin:0;padding:24px 12px;background:#faf7f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;\">\n  <div style=\"max-width:560px;margin:0 auto;background:#ffffff;border-radius:14px;padding:32px 28px;border:1px solid #f0e6e2;\">\n    <div style=\"font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:${brand};font-weight:600;\">Amantrika</div>\n    <h1 style=\"margin:14px 0 18px;font-size:22px;line-height:1.32;color:#1f1a19;font-weight:600;\">${heading}</h1>\n    <div style=\"font-size:15px;line-height:1.65;color:#453c3a;\">${bodyHtml}</div>\n    ${ctaHref ? `<div style=\"margin:26px 0 6px;\"><a href=\"${ctaHref}\" style=\"display:inline-block;background:${brand};color:#ffffff;text-decoration:none;padding:13px 26px;border-radius:9px;font-weight:600;font-size:15px;\">${ctaLabel}</a></div>` : ''}\n    ${footNote ? `<p style=\"margin:24px 0 0;font-size:13px;line-height:1.6;color:#8a7d7a;\">${footNote}</p>` : ''}\n  </div>\n  <div style=\"max-width:560px;margin:16px auto 0;text-align:center;font-size:12px;color:#a29793;\">\n    Amantrika · digital invitations for Indian celebrations<br/>\n    <a href=\"${site}\" style=\"color:#a29793;\">${site.replace(/^https?:\\/\\//, '')}</a>\n  </div>\n</div>`;\n// No /unsubscribe route exists in the app yet, so RFC 8058's mailto form is\n// used. See \"Follow-ups\" in n8n/README.md.\nconst unsub = (scope) => 'mailto:' + ($('Config').first().json.AMANTRIKA_UNSUBSCRIBE_MAILBOX || 'unsubscribe@amantrika.com')\n  + '?subject=' + encodeURIComponent('unsubscribe ' + scope);\nconst d = $json;\n\nconst url  = site + '/invite/' + encodeURIComponent(d.slug);\nconst dash = site + '/dashboard/' + encodeURIComponent(d.event_id);\n\n// Pre-filled WhatsApp deep link. NOT the WhatsApp API — project-overview.md §18\n// permits batched deep links and forbids unofficial automation. This just opens\n// the host's own WhatsApp with the message ready.\nconst waText = `${d.title}\\n${d.event_date_long ? d.event_date_long.replace(/\\s+/g, ' ').trim() : ''}\\n\\n${url}`;\nconst waLink = 'https://wa.me/?text=' + encodeURIComponent(waText);\nconst qr = 'https://api.qrserver.com/v1/create-qr-code/?size=240x240&margin=8&data=' + encodeURIComponent(url);\nconst shareKit = `\n  <div style=\"background:#faf7f5;border-radius:12px;padding:20px;margin:0 0 18px;text-align:center;\">\n    <div style=\"font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:14px;color:#1f1a19;word-break:break-all;margin:0 0 14px;\">${esc(url)}</div>\n    <a href=\"${waLink}\" style=\"display:inline-block;background:#25d366;color:#ffffff;text-decoration:none;padding:11px 22px;border-radius:8px;font-weight:600;font-size:14px;\">Share on WhatsApp</a>\n  </div>\n  <div style=\"text-align:center;margin:0 0 18px;\">\n    <img src=\"${qr}\" width=\"150\" height=\"150\" alt=\"QR code linking to ${esc(d.title)}\" style=\"border-radius:10px;border:1px solid #f0e6e2;\" />\n    <div style=\"font-size:12px;color:#8a7d7a;margin-top:7px;\">Print this on a card. It opens the invitation.</div>\n  </div>`;\n\nlet heading, bodyHtml, subject, footNote;\n\nif (d.variant === 'confirmation') {\n  heading = 'Your invitation is live';\n  subject = 'Your invitation is live \\u2014 ' + d.title;\n  bodyHtml = `\n    <p style=\"margin:0 0 18px;\">Hi ${esc(d.owner_name)}, <strong>${esc(d.title)}</strong> is published. One link, and it works on every phone.</p>\n    ${shareKit}\n    ${d.is_watermarked ? `<div style=\"background:#fff5f3;border-left:3px solid ${brand};padding:12px 16px;border-radius:6px;margin:0 0 4px;\">\n        <strong>You are on the free plan.</strong> Your invitation carries an Amantrika mark, and links shared to WhatsApp show as plain text rather than a rich preview card. Upgrading removes both.\n      </div>` : ''}`;\n  footNote = d.is_watermarked\n    ? `See what each plan includes at <a href=\"${site}/pricing\" style=\"color:${brand};\">${site.replace(/^https?:\\/\\//, '')}/pricing</a>.`\n    : null;\n} else {\n  heading = 'Everything you need to share it';\n  subject = 'Share ' + d.title;\n  bodyHtml = `\n    <p style=\"margin:0 0 18px;\">Hi ${esc(d.owner_name)}, your receipt is already in your inbox. This one is the sharing kit for <strong>${esc(d.title)}</strong>.</p>\n    ${shareKit}\n    <p style=\"margin:0;\">${Number(d.guests_added) > 0\n      ? 'You have <strong>' + d.guests_added + '</strong> guests on your list. Personalised links \\u2014 one per guest, so their RSVP is pre-filled \\u2014 are on your dashboard.'\n      : 'Add your guest list on the dashboard to get personalised links, one per guest, so their RSVP arrives pre-filled.'}</p>`;\n  footNote = null;\n}\n\nreturn { json: {\n  dedupe_key: d.dedupe_key,\n  to: d.owner_email,\n  stored: {\n    event_id: d.event_id, slug: d.slug, title: d.title, plan_code: d.plan_code,\n    variant: d.variant, is_watermarked: d.is_watermarked, url,\n    dedupe_key: d.dedupe_key,\n    subject,\n    html: shell(heading, bodyHtml, 'Open your dashboard', dash, footNote),\n    text: heading + '\\n\\n' + d.title + '\\n' + url + '\\n\\nDashboard: ' + dash,\n  },\n} };"
       },
       "id": "n0105",
       "name": "Render email",
@@ -141,7 +141,7 @@
           "conditions": [
             {
               "id": "c0109",
-              "leftValue": "={{ $env.AMANTRIKA_DRY_RUN }}",
+              "leftValue": "={{ $('Config').first().json.AMANTRIKA_DRY_RUN }}",
               "rightValue": "true",
               "operator": {
                 "type": "string",
@@ -202,7 +202,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({\n  from: $env.AMANTRIKA_EMAIL_FROM,\n  to: [ $json.recipient ],\n  subject: $json.payload.subject,\n  html: $json.payload.html,\n  text: $json.payload.text,\n  headers: $json.payload.unsubscribe\n    ? { 'List-Unsubscribe': '<' + $json.payload.unsubscribe + '>',\n        'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click' }\n    : {}\n}) }}",
+        "jsonBody": "={{ JSON.stringify({\n  from: $('Config').first().json.AMANTRIKA_EMAIL_FROM,\n  to: [ $json.recipient ],\n  subject: $json.payload.subject,\n  html: $json.payload.html,\n  text: $json.payload.text,\n  headers: $json.payload.unsubscribe\n    ? { 'List-Unsubscribe': '<' + $json.payload.unsubscribe + '>',\n        'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click' }\n    : {}\n}) }}",
         "options": {}
       },
       "id": "n0112",
@@ -270,6 +270,73 @@
         }
       },
       "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "cfg-0",
+              "name": "AMANTRIKA_SITE_URL",
+              "value": "https://amantrika.com",
+              "type": "string"
+            },
+            {
+              "id": "cfg-1",
+              "name": "AMANTRIKA_EMAIL_FROM",
+              "value": "Amantrika <onboarding@resend.dev>",
+              "type": "string"
+            },
+            {
+              "id": "cfg-2",
+              "name": "AMANTRIKA_OWNER_EMAIL",
+              "value": "theamantrika@gmail.com",
+              "type": "string"
+            },
+            {
+              "id": "cfg-3",
+              "name": "AMANTRIKA_DRY_RUN",
+              "value": "true",
+              "type": "string"
+            },
+            {
+              "id": "cfg-4",
+              "name": "AMANTRIKA_WA_PHONE_NUMBER_ID",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "cfg-5",
+              "name": "AMANTRIKA_OWNER_WHATSAPP",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "cfg-6",
+              "name": "AMANTRIKA_WA_TEMPLATE",
+              "value": "amantrika_ops_alert",
+              "type": "string"
+            },
+            {
+              "id": "cfg-7",
+              "name": "AMANTRIKA_UNSUBSCRIBE_MAILBOX",
+              "value": "unsubscribe@amantrika.com",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      },
+      "id": "config-07",
+      "name": "Config",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -290,
+        0
+      ],
+      "notes": "Edit these here. AMANTRIKA_DRY_RUN=true means nothing is sent."
     }
   ],
   "connections": {
@@ -277,7 +344,7 @@
       "main": [
         [
           {
-            "node": "Find recent publishes",
+            "node": "Config",
             "type": "main",
             "index": 0
           }
@@ -358,6 +425,17 @@
         [
           {
             "node": "Mark failed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config": {
+      "main": [
+        [
+          {
+            "node": "Find recent publishes",
             "type": "main",
             "index": 0
           }

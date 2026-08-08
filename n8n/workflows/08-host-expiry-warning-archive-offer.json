@@ -3,7 +3,7 @@
   "nodes": [
     {
       "parameters": {
-        "content": "## 08 · Expiry warning & archive offer\n\nDaily 04:30 UTC = 10:00 IST. project-overview.md §14 calls the archive offer \"the easiest margin in the product\": sentimentality peaks about a month after the celebration and hosting cost is near zero.\n\n**This workflow mutates nothing.** `event_status` is ('draft','published','archived') — there is no `expired` value. Adding one changes what /invite/[slug] renders and belongs in an app phase, not a side-car. So these are warnings; the invitation stays live.\n\n**There is no archive SKU.** `plans` holds free/classic/premium only, so the CTA links to /pricing#archive rather than opening a checkout. Wiring it to money needs a plans row and a Dodo product id first.\n\nQuery: `n8n/sql/08-expiry-candidates.sql`",
+        "content": "## 08 · Expiry warning & archive offer\n\nDaily 04:30 UTC = 10:00 IST. project-overview.md §14 calls the archive offer \"the easiest margin in the product\": sentimentality peaks about a month after the celebration and hosting cost is near zero.\n\n**This workflow mutates nothing.** `event_status` is ('draft','published','archived') — there is no `expired` value. Adding one changes what /invite/[slug] renders and belongs in an app phase, not a side-car. So these are warnings; the invitation stays live.\n\n**There is no archive SKU.** `plans` holds free/classic/premium only, so the CTA links to /pricing#archive rather than opening a checkout. Wiring it to money needs a plans row and a Dodo product id first.\n\nQuery: `n8n/sql/08-expiry-candidates.sql`\n\n**Config is the node on the left.** Set `AMANTRIKA_DRY_RUN` to `false` there when you are ready to send.",
         "height": 260,
         "width": 420,
         "color": 4
@@ -35,7 +35,7 @@
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
       "position": [
-        -260,
+        -520,
         0
       ]
     },
@@ -63,7 +63,7 @@
     {
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "// ---- shared chrome -------------------------------------------------------\n// Inline styles only: Gmail strips <style> blocks. Coral #e35d5d is the brand\n// accent from project-overview.md §25.2.\nconst brand = '#e35d5d';\nconst site = ($env.AMANTRIKA_SITE_URL || 'https://amantrika.com').replace(/\\/+$/, '');\nconst esc = (s) => String(s ?? '').replace(/[&<>\"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;' }[c]));\nconst inr = (n) => '₹' + Number(n || 0).toLocaleString('en-IN');\nconst stat = (label, value) => `<div style=\"display:inline-block;min-width:118px;margin:0 14px 14px 0;\"><div style=\"font-size:26px;font-weight:600;color:#1f1a19;line-height:1.1;\">${value}</div><div style=\"font-size:12px;color:#8a7d7a;text-transform:uppercase;letter-spacing:.06em;margin-top:3px;\">${label}</div></div>`;\nconst shell = (heading, bodyHtml, ctaLabel, ctaHref, footNote) => `\n<div style=\"margin:0;padding:24px 12px;background:#faf7f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;\">\n  <div style=\"max-width:560px;margin:0 auto;background:#ffffff;border-radius:14px;padding:32px 28px;border:1px solid #f0e6e2;\">\n    <div style=\"font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:${brand};font-weight:600;\">Amantrika</div>\n    <h1 style=\"margin:14px 0 18px;font-size:22px;line-height:1.32;color:#1f1a19;font-weight:600;\">${heading}</h1>\n    <div style=\"font-size:15px;line-height:1.65;color:#453c3a;\">${bodyHtml}</div>\n    ${ctaHref ? `<div style=\"margin:26px 0 6px;\"><a href=\"${ctaHref}\" style=\"display:inline-block;background:${brand};color:#ffffff;text-decoration:none;padding:13px 26px;border-radius:9px;font-weight:600;font-size:15px;\">${ctaLabel}</a></div>` : ''}\n    ${footNote ? `<p style=\"margin:24px 0 0;font-size:13px;line-height:1.6;color:#8a7d7a;\">${footNote}</p>` : ''}\n  </div>\n  <div style=\"max-width:560px;margin:16px auto 0;text-align:center;font-size:12px;color:#a29793;\">\n    Amantrika · digital invitations for Indian celebrations<br/>\n    <a href=\"${site}\" style=\"color:#a29793;\">${site.replace(/^https?:\\/\\//, '')}</a>\n  </div>\n</div>`;\n// No /unsubscribe route exists in the app yet, so RFC 8058's mailto form is\n// used. See \"Follow-ups\" in n8n/README.md.\nconst unsub = (scope) => 'mailto:' + ($env.AMANTRIKA_UNSUBSCRIBE_MAILBOX || 'unsubscribe@amantrika.com')\n  + '?subject=' + encodeURIComponent('unsubscribe ' + scope);\nconst d = $json;\n\nconst url  = site + '/invite/' + encodeURIComponent(d.slug);\nconst dash = site + '/dashboard/' + encodeURIComponent(d.event_id);\nconst archiveCta = site + '/pricing#archive';\n\nconst memories = `<div style=\"margin:0 0 20px;\">\n    ${stat('Views', d.total_views)}${stat('Attended', d.rsvp_yes)}\n    ${stat('Blessings', d.blessings)}${stat('Photos', d.photos)}\n  </div>`;\n\nconst steps = {\n  expiry_7d: {\n    subject: 'Your invitation comes down in a week',\n    heading: 'A week left',\n    body: `<p style=\"margin:0 0 16px;\">Hi ${esc(d.owner_name)}, <strong>${esc(d.title)}</strong> comes down on ${esc(d.expires_on)} \\u2014 a week from now.</p>\n           ${memories}\n           <p style=\"margin:0;\">If you want to keep the link working \\u2014 the photos, the blessings, the guest list \\u2014 you can archive it permanently. The URL never changes, so every message you already sent keeps working.</p>`,\n    cta: 'Keep it permanently', href: archiveCta,\n  },\n  expiry_1d: {\n    subject: 'Your invitation comes down tomorrow',\n    heading: 'Tomorrow',\n    body: `<p style=\"margin:0 0 16px;\">Hi ${esc(d.owner_name)}, this is the last reminder: <strong>${esc(d.title)}</strong> comes down on ${esc(d.expires_on)}.</p>\n           ${memories}\n           <p style=\"margin:0;\">Archiving keeps the same link alive permanently. After tomorrow you can still archive it, but the link will have been dark in the meantime.</p>`,\n    cta: 'Keep it permanently', href: archiveCta,\n  },\n  archive_offer: {\n    subject: 'Keep ' + (d.title || 'your invitation') + ' forever',\n    heading: 'Keep it forever',\n    body: `<p style=\"margin:0 0 16px;\">Hi ${esc(d.owner_name)}, it has been about a month since ${esc(d.event_date)}. Here is what ${esc(d.title)} did:</p>\n           ${memories}\n           <p style=\"margin:0 0 14px;\">${Number(d.blessings) > 0\n             ? '<strong>' + d.blessings + ' people</strong> left you a message on it. Those are worth keeping.'\n             : 'Everything is still there \\u2014 the photos, the story, the guest list.'}</p>\n           <p style=\"margin:0;\">Archiving keeps the same link working permanently, on the same URL you already shared.</p>`,\n    cta: 'Archive my invitation', href: archiveCta,\n  },\n};\n\nconst step = steps[d.kind];\nreturn { json: {\n  dedupe_key: d.dedupe_key,\n  to: d.owner_email,\n  stored: {\n    event_id: d.event_id, slug: d.slug, title: d.title, kind: d.kind,\n    expires_on: d.expires_on, days_to_expiry: d.days_to_expiry,\n    total_views: d.total_views, blessings: d.blessings, dedupe_key: d.dedupe_key,\n    subject: step.subject,\n    html: shell(step.heading, step.body, step.cta, step.href,\n      `Your invitation: <a href=\"${url}\" style=\"color:#8a7d7a;\">${esc(d.slug)}</a> \\u00b7 <a href=\"${dash}\" style=\"color:#8a7d7a;\">dashboard</a> \\u00b7 <a href=\"${unsub('reminder')}\" style=\"color:#8a7d7a;\">unsubscribe</a>`),\n    text: step.heading + '\\n\\n' + d.title + '\\nExpires ' + d.expires_on + '\\n'\n      + d.total_views + ' views, ' + d.rsvp_yes + ' attended, ' + d.blessings + ' blessings\\n\\n'\n      + step.cta + ': ' + step.href,\n    unsubscribe: unsub('reminder'),\n  },\n} };"
+        "jsCode": "// ---- shared chrome -------------------------------------------------------\n// Inline styles only: Gmail strips <style> blocks. Coral #e35d5d is the brand\n// accent from project-overview.md §25.2.\nconst brand = '#e35d5d';\nconst site = ($('Config').first().json.AMANTRIKA_SITE_URL || 'https://amantrika.com').replace(/\\/+$/, '');\nconst esc = (s) => String(s ?? '').replace(/[&<>\"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;' }[c]));\nconst inr = (n) => '₹' + Number(n || 0).toLocaleString('en-IN');\nconst stat = (label, value) => `<div style=\"display:inline-block;min-width:118px;margin:0 14px 14px 0;\"><div style=\"font-size:26px;font-weight:600;color:#1f1a19;line-height:1.1;\">${value}</div><div style=\"font-size:12px;color:#8a7d7a;text-transform:uppercase;letter-spacing:.06em;margin-top:3px;\">${label}</div></div>`;\nconst shell = (heading, bodyHtml, ctaLabel, ctaHref, footNote) => `\n<div style=\"margin:0;padding:24px 12px;background:#faf7f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;\">\n  <div style=\"max-width:560px;margin:0 auto;background:#ffffff;border-radius:14px;padding:32px 28px;border:1px solid #f0e6e2;\">\n    <div style=\"font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:${brand};font-weight:600;\">Amantrika</div>\n    <h1 style=\"margin:14px 0 18px;font-size:22px;line-height:1.32;color:#1f1a19;font-weight:600;\">${heading}</h1>\n    <div style=\"font-size:15px;line-height:1.65;color:#453c3a;\">${bodyHtml}</div>\n    ${ctaHref ? `<div style=\"margin:26px 0 6px;\"><a href=\"${ctaHref}\" style=\"display:inline-block;background:${brand};color:#ffffff;text-decoration:none;padding:13px 26px;border-radius:9px;font-weight:600;font-size:15px;\">${ctaLabel}</a></div>` : ''}\n    ${footNote ? `<p style=\"margin:24px 0 0;font-size:13px;line-height:1.6;color:#8a7d7a;\">${footNote}</p>` : ''}\n  </div>\n  <div style=\"max-width:560px;margin:16px auto 0;text-align:center;font-size:12px;color:#a29793;\">\n    Amantrika · digital invitations for Indian celebrations<br/>\n    <a href=\"${site}\" style=\"color:#a29793;\">${site.replace(/^https?:\\/\\//, '')}</a>\n  </div>\n</div>`;\n// No /unsubscribe route exists in the app yet, so RFC 8058's mailto form is\n// used. See \"Follow-ups\" in n8n/README.md.\nconst unsub = (scope) => 'mailto:' + ($('Config').first().json.AMANTRIKA_UNSUBSCRIBE_MAILBOX || 'unsubscribe@amantrika.com')\n  + '?subject=' + encodeURIComponent('unsubscribe ' + scope);\nconst d = $json;\n\nconst url  = site + '/invite/' + encodeURIComponent(d.slug);\nconst dash = site + '/dashboard/' + encodeURIComponent(d.event_id);\nconst archiveCta = site + '/pricing#archive';\n\nconst memories = `<div style=\"margin:0 0 20px;\">\n    ${stat('Views', d.total_views)}${stat('Attended', d.rsvp_yes)}\n    ${stat('Blessings', d.blessings)}${stat('Photos', d.photos)}\n  </div>`;\n\nconst steps = {\n  expiry_7d: {\n    subject: 'Your invitation comes down in a week',\n    heading: 'A week left',\n    body: `<p style=\"margin:0 0 16px;\">Hi ${esc(d.owner_name)}, <strong>${esc(d.title)}</strong> comes down on ${esc(d.expires_on)} \\u2014 a week from now.</p>\n           ${memories}\n           <p style=\"margin:0;\">If you want to keep the link working \\u2014 the photos, the blessings, the guest list \\u2014 you can archive it permanently. The URL never changes, so every message you already sent keeps working.</p>`,\n    cta: 'Keep it permanently', href: archiveCta,\n  },\n  expiry_1d: {\n    subject: 'Your invitation comes down tomorrow',\n    heading: 'Tomorrow',\n    body: `<p style=\"margin:0 0 16px;\">Hi ${esc(d.owner_name)}, this is the last reminder: <strong>${esc(d.title)}</strong> comes down on ${esc(d.expires_on)}.</p>\n           ${memories}\n           <p style=\"margin:0;\">Archiving keeps the same link alive permanently. After tomorrow you can still archive it, but the link will have been dark in the meantime.</p>`,\n    cta: 'Keep it permanently', href: archiveCta,\n  },\n  archive_offer: {\n    subject: 'Keep ' + (d.title || 'your invitation') + ' forever',\n    heading: 'Keep it forever',\n    body: `<p style=\"margin:0 0 16px;\">Hi ${esc(d.owner_name)}, it has been about a month since ${esc(d.event_date)}. Here is what ${esc(d.title)} did:</p>\n           ${memories}\n           <p style=\"margin:0 0 14px;\">${Number(d.blessings) > 0\n             ? '<strong>' + d.blessings + ' people</strong> left you a message on it. Those are worth keeping.'\n             : 'Everything is still there \\u2014 the photos, the story, the guest list.'}</p>\n           <p style=\"margin:0;\">Archiving keeps the same link working permanently, on the same URL you already shared.</p>`,\n    cta: 'Archive my invitation', href: archiveCta,\n  },\n};\n\nconst step = steps[d.kind];\nreturn { json: {\n  dedupe_key: d.dedupe_key,\n  to: d.owner_email,\n  stored: {\n    event_id: d.event_id, slug: d.slug, title: d.title, kind: d.kind,\n    expires_on: d.expires_on, days_to_expiry: d.days_to_expiry,\n    total_views: d.total_views, blessings: d.blessings, dedupe_key: d.dedupe_key,\n    subject: step.subject,\n    html: shell(step.heading, step.body, step.cta, step.href,\n      `Your invitation: <a href=\"${url}\" style=\"color:#8a7d7a;\">${esc(d.slug)}</a> \\u00b7 <a href=\"${dash}\" style=\"color:#8a7d7a;\">dashboard</a> \\u00b7 <a href=\"${unsub('reminder')}\" style=\"color:#8a7d7a;\">unsubscribe</a>`),\n    text: step.heading + '\\n\\n' + d.title + '\\nExpires ' + d.expires_on + '\\n'\n      + d.total_views + ' views, ' + d.rsvp_yes + ' attended, ' + d.blessings + ' blessings\\n\\n'\n      + step.cta + ': ' + step.href,\n    unsubscribe: unsub('reminder'),\n  },\n} };"
       },
       "id": "n0118",
       "name": "Render email",
@@ -143,7 +143,7 @@
           "conditions": [
             {
               "id": "c0122",
-              "leftValue": "={{ $env.AMANTRIKA_DRY_RUN }}",
+              "leftValue": "={{ $('Config').first().json.AMANTRIKA_DRY_RUN }}",
               "rightValue": "true",
               "operator": {
                 "type": "string",
@@ -204,7 +204,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({\n  from: $env.AMANTRIKA_EMAIL_FROM,\n  to: [ $json.recipient ],\n  subject: $json.payload.subject,\n  html: $json.payload.html,\n  text: $json.payload.text,\n  headers: $json.payload.unsubscribe\n    ? { 'List-Unsubscribe': '<' + $json.payload.unsubscribe + '>',\n        'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click' }\n    : {}\n}) }}",
+        "jsonBody": "={{ JSON.stringify({\n  from: $('Config').first().json.AMANTRIKA_EMAIL_FROM,\n  to: [ $json.recipient ],\n  subject: $json.payload.subject,\n  html: $json.payload.html,\n  text: $json.payload.text,\n  headers: $json.payload.unsubscribe\n    ? { 'List-Unsubscribe': '<' + $json.payload.unsubscribe + '>',\n        'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click' }\n    : {}\n}) }}",
         "options": {}
       },
       "id": "n0125",
@@ -272,6 +272,73 @@
         }
       },
       "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "cfg-0",
+              "name": "AMANTRIKA_SITE_URL",
+              "value": "https://amantrika.com",
+              "type": "string"
+            },
+            {
+              "id": "cfg-1",
+              "name": "AMANTRIKA_EMAIL_FROM",
+              "value": "Amantrika <onboarding@resend.dev>",
+              "type": "string"
+            },
+            {
+              "id": "cfg-2",
+              "name": "AMANTRIKA_OWNER_EMAIL",
+              "value": "theamantrika@gmail.com",
+              "type": "string"
+            },
+            {
+              "id": "cfg-3",
+              "name": "AMANTRIKA_DRY_RUN",
+              "value": "true",
+              "type": "string"
+            },
+            {
+              "id": "cfg-4",
+              "name": "AMANTRIKA_WA_PHONE_NUMBER_ID",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "cfg-5",
+              "name": "AMANTRIKA_OWNER_WHATSAPP",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "cfg-6",
+              "name": "AMANTRIKA_WA_TEMPLATE",
+              "value": "amantrika_ops_alert",
+              "type": "string"
+            },
+            {
+              "id": "cfg-7",
+              "name": "AMANTRIKA_UNSUBSCRIBE_MAILBOX",
+              "value": "unsubscribe@amantrika.com",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      },
+      "id": "config-08",
+      "name": "Config",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -290,
+        0
+      ],
+      "notes": "Edit these here. AMANTRIKA_DRY_RUN=true means nothing is sent."
     }
   ],
   "connections": {
@@ -279,7 +346,7 @@
       "main": [
         [
           {
-            "node": "Find expiring invitations",
+            "node": "Config",
             "type": "main",
             "index": 0
           }
@@ -360,6 +427,17 @@
         [
           {
             "node": "Mark failed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config": {
+      "main": [
+        [
+          {
+            "node": "Find expiring invitations",
             "type": "main",
             "index": 0
           }
