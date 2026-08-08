@@ -37,8 +37,14 @@ stops and reports the line, and nothing is half-applied.
 | Migration | What it creates |
 | --- | --- |
 | `..._core_schema.sql` | Tables, enums, the signup trigger, the commission trigger, seed plans |
-| `..._rls.sql` | Row-level security for host / agent / admin, plus public read of published invites |
-| `..._storage_and_rpc.sql` | The `event-assets` bucket and the analytics functions |
+| `..._row_level_security.sql` | RLS for host / agent / admin, plus public read of published invites |
+| `..._storage_and_analytics.sql` | The `event-assets` bucket and the analytics functions |
+
+The `2026...` prefix is the **version**, and it is what the remote's
+`schema_migrations` table records. The label after it is free text and can be
+renamed at will. Never change a prefix on a migration that has already been
+applied — the CLI would treat it as new and re-run it against objects that
+already exist.
 
 ### Auth settings
 
