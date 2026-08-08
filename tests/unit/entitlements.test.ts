@@ -40,4 +40,25 @@ describe("entitlementsFor", () => {
     expect(entitlementsFor("premium").customDomain).toBe(true);
     expect(entitlementsFor("free").blessingWall).toBe(false);
   });
+
+  it("withholds replies from the free plan and grants them to every paid one", () => {
+    // The free tier is a card: readable, shareable, and not a tool. Collecting
+    // replies is the first thing behind the plan, so it is worth asserting
+    // rather than trusting the table above to stay right.
+    expect(entitlementsFor("free").rsvp).toBe(false);
+    expect(entitlementsFor("free").blessingWall).toBe(false);
+
+    for (const code of ["classic", "premium"]) {
+      expect(entitlementsFor(code).rsvp, `${code} should collect RSVPs`).toBe(true);
+      expect(entitlementsFor(code).blessingWall, `${code} should collect messages`).toBe(true);
+    }
+  });
+
+  it("withholds replies on an unrecognised plan", () => {
+    // Same fail-closed rule as the watermark: a half-applied migration must not
+    // hand out a paid feature.
+    for (const value of ["enterprise", "", null, undefined]) {
+      expect(entitlementsFor(value as string | null | undefined).rsvp).toBe(false);
+    }
+  });
 });

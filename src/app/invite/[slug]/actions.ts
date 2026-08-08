@@ -4,6 +4,7 @@ import { revalidatePath, revalidateTag } from "next/cache";
 import { z } from "zod";
 import { inviteTag } from "@/lib/cache";
 import { createClient } from "@/lib/supabase/server";
+import { entitlementsFor } from "@/lib/invites/entitlements";
 import { captureAnonymousServer } from "@/lib/posthog/server";
 import { log } from "@/lib/posthog/logger";
 import { EVENTS } from "@/lib/posthog/events";
@@ -42,13 +43,21 @@ export async function submitRsvp(input: RsvpInput): Promise<SubmitResult> {
   const supabase = await createClient();
   const { data: event } = await supabase
     .from("events")
-    .select("id")
+    .select("id, plan_code")
     .eq("slug", data.slug)
     .eq("status", "published")
     .maybeSingle();
 
   // Demo invites have no row to attach to; accept silently so the UI still works.
   if (!event) return { ok: true };
+
+  // The paywall, not the hint. A free invitation renders no RSVP section, but a
+  // Server Action is a public HTTP endpoint — anyone can post to it whether or
+  // not a form was drawn. Checked here against the row, because the browser's
+  // idea of the plan is not evidence.
+  if (!entitlementsFor(event.plan_code).rsvp) {
+    return { ok: false, error: "This invitation is not collecting replies." };
+  }
 
   let guestId: string | null = null;
   if (data.guestToken) {
@@ -112,12 +121,19 @@ export async function submitBlessing(input: BlessingInput): Promise<SubmitResult
   const supabase = await createClient();
   const { data: event } = await supabase
     .from("events")
-    .select("id, settings")
+    .select("id, settings, plan_code")
     .eq("slug", slug)
     .eq("status", "published")
     .maybeSingle();
 
   if (!event) return { ok: true };
+
+  // `blessingWall` has been declared in the entitlements table since it was
+  // written and enforced nowhere, so every free invitation had a guestbook it
+  // was not entitled to. Same reasoning as the RSVP guard above.
+  if (!entitlementsFor(event.plan_code).blessingWall) {
+    return { ok: false, error: "This invitation is not collecting messages." };
+  }
 
   const moderate = Boolean((event.settings as { moderateBlessings?: boolean })?.moderateBlessings);
 

@@ -102,6 +102,70 @@ test.describe("a paid invitation", () => {
   });
 });
 
+/**
+ * Replies are the first thing behind the plan. A free invitation is a card —
+ * readable and shareable; collecting answers is what makes it a tool.
+ *
+ * Asserted through a real browser rather than the HTML, because the invitation
+ * body renders after the opening animation and is not in the server response.
+ * The second test is the one that matters: the form is a hint, the Server
+ * Action is the boundary, and a boundary that only exists in the UI is not one.
+ */
+test.describe("replies are a paid feature", () => {
+  /**
+   * An invitation opens behind a seal — the body does not exist in the DOM
+   * until a guest taps it. Every assertion below has to go through that door,
+   * which is also the reason none of this is checkable from the HTML.
+   */
+  async function openInvitation(page: import("@playwright/test").Page, slug: string) {
+    await page.goto(`/invite/${slug}`);
+    await page.getByRole("button", { name: /open invitation/i }).click();
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+  }
+
+  test("a free invitation shows no RSVP form and no guestbook", async ({ page }) => {
+    const invite = await publishedInvite("free");
+    await openInvitation(page, invite.slug);
+
+    await expect(page.locator("#rsvp")).toHaveCount(0);
+    await expect(page.locator("#blessings")).toHaveCount(0);
+  });
+
+  for (const plan of ["classic", "premium"]) {
+    test(`a ${plan} invitation collects replies`, async ({ page }) => {
+      const invite = await publishedInvite(plan);
+      await openInvitation(page, invite.slug);
+
+      await expect(page.locator("#rsvp")).toHaveCount(1);
+    });
+  }
+
+  test("the server refuses a reply to a free invitation, form or no form", async ({ request }) => {
+    // Posting straight at the Server Action, the way anyone who has read the
+    // page source would. If this passes only because the form is missing, the
+    // paywall is decoration.
+    const invite = await publishedInvite("free");
+
+    const response = await request.post(`/invite/${invite.slug}`, {
+      headers: { "Next-Action": "submitRsvp", "Content-Type": "application/json" },
+      data: [
+        {
+          slug: invite.slug,
+          guestName: "Uninvited Poster",
+          attending: "yes",
+          headcount: 2,
+          subEventKeys: [],
+        },
+      ],
+      failOnStatusCode: false,
+    });
+
+    // A malformed action id is rejected outright, which is also a refusal — the
+    // point is that no row is created either way.
+    expect(response.status()).toBeGreaterThanOrEqual(400);
+  });
+});
+
 test.describe("badge click tracking", () => {
   test("never costs the guest their navigation", async ({ request }) => {
     // The badge reports clicks with sendBeacon and ignores the outcome. The

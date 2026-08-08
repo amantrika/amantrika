@@ -3,8 +3,23 @@
 import { LayoutSection, ThemedHeroVariant } from "@/design-system/components";
 import { hostLine, type InviteView } from "@/lib/invites/invite";
 import { monogramInitials } from "@/lib/invites/invite";
-import { resolveSectionStyle, type Theme } from "@/themes";
+import { resolveSectionStyle, type SectionId, type Theme } from "@/themes";
+import { entitlementsFor, type Entitlements } from "@/lib/invites/entitlements";
 import { renderSection, type SectionContext } from "./sections";
+
+/**
+ * Sections a plan can withhold, and the entitlement that decides. Anything not
+ * listed here is part of every invitation — the free tier is a card that can be
+ * read and shared, and what it lacks is the machinery for replying.
+ *
+ * The theme still *declares* these sections in its layout; they are filtered
+ * out at render. That way a theme never has to know what a plan costs, which is
+ * the rule that keeps `theme.layout` about structure and nothing else.
+ */
+const GATED_SECTIONS: Partial<Record<SectionId, keyof Entitlements>> = {
+  rsvp: "rsvp",
+  blessings: "blessingWall",
+};
 
 /**
  * The invitation itself — hero plus sections, laid out by the theme.
@@ -31,6 +46,13 @@ export function InviteBody({
   onBlessing: SectionContext["onBlessing"];
 }) {
   const layout = theme.layout;
+  // Derived from the invitation rather than passed in, so no caller can render
+  // a preview that promises a feature the plan does not include.
+  const entitlements = entitlementsFor(invite.planCode);
+  const order = layout.order.filter((id) => {
+    const flag = GATED_SECTIONS[id];
+    return !flag || entitlements[flag];
+  });
   const names = hostLine(invite.hosts);
   const initials = monogramInitials(invite.hosts);
   const hero = invite.photos[0];
@@ -66,7 +88,7 @@ export function InviteBody({
         photoAlt={hero?.caption ?? (names ? `${names} — photograph` : "Photograph")}
       />
 
-      {layout.order.map((id, index) => {
+      {order.map((id, index) => {
         const style = resolveSectionStyle(layout, id);
         const rendered = renderSection(id, { ...base, align: style.align });
         if (!rendered) return null;

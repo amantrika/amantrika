@@ -39,6 +39,18 @@ export type Entitlements = {
   maxSubEvents: number | null;
   maxGuestLinks: number | null;
 
+  /**
+   * Whether guests may reply. A free invitation is a card: it can be read and
+   * shared, and that is all. Collecting replies is the first thing that makes
+   * it a tool rather than a picture, which is why it is the first thing behind
+   * the plan.
+   *
+   * Enforced in two places on purpose — the section is not rendered, *and*
+   * `submitRsvp` refuses. The paywall is server-side (CLAUDE.md §2.2); a
+   * missing form is a hint, not a boundary.
+   */
+  rsvp: boolean;
+
   blessingWall: boolean;
   analytics: boolean;
   customDomain: boolean;
@@ -56,6 +68,7 @@ const PLANS: Record<PlanCode, Omit<Entitlements, "planCode">> = {
     structuredData: false,
     maxSubEvents: 1,
     maxGuestLinks: 0,
+    rsvp: false,
     blessingWall: false,
     analytics: false,
     customDomain: false,
@@ -67,6 +80,7 @@ const PLANS: Record<PlanCode, Omit<Entitlements, "planCode">> = {
     structuredData: true,
     maxSubEvents: 6,
     maxGuestLinks: 200,
+    rsvp: true,
     blessingWall: true,
     analytics: true,
     customDomain: false,
@@ -78,6 +92,7 @@ const PLANS: Record<PlanCode, Omit<Entitlements, "planCode">> = {
     structuredData: true,
     maxSubEvents: null,
     maxGuestLinks: null,
+    rsvp: true,
     blessingWall: true,
     analytics: true,
     customDomain: true,
