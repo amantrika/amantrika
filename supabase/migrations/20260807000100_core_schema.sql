@@ -120,8 +120,9 @@ create table guests (
   meal          text,
   invited_keys  text[] not null default '{}',
   status        rsvp_status not null default 'pending',
-  -- Per-guest personalised link: /invite/<slug>?g=<token>
-  invite_token  text not null default encode(gen_random_bytes(9), 'base64'),
+  -- Per-guest personalised link: /invite/<slug>?t=<token>. Hex, not base64 —
+  -- base64 emits '+' and '/', which would need escaping in a query string.
+  invite_token  text not null default encode(gen_random_bytes(9), 'hex'),
   created_at    timestamptz not null default now(),
   unique (event_id, invite_token)
 );
@@ -319,8 +320,12 @@ set search_path = public
 as $$
 declare
   agent_rate numeric(5,4);
+  was_paid   boolean;
 begin
-  if new.status = 'paid' and coalesce(old.status, 'pending') <> 'paid' and new.agent_id is not null then
+  -- OLD is unassigned on INSERT, so it must never be dereferenced there.
+  was_paid := tg_op = 'UPDATE' and old.status = 'paid';
+
+  if new.status = 'paid' and not was_paid and new.agent_id is not null then
     select commission_rate into agent_rate from agents where id = new.agent_id;
     if agent_rate is not null then
       insert into commissions (order_id, agent_id, rate, amount_inr)

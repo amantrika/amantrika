@@ -1,22 +1,33 @@
 # Deploying Amantrika
 
-Vercel and Supabase are connected by hand rather than through the Vercel
-Marketplace integration, so the two accounts can stay under separate emails.
+Amantrika uses **its own dedicated Supabase and Vercel accounts**, separate from
+any personal ones. They are connected by hand — copying keys into environment
+variables — rather than through the Vercel Marketplace Supabase integration,
+which would tie the two accounts' billing together.
+
+Repository: `github.com/imswarnil/amantrika` (private).
 
 ---
 
 ## 1 · Supabase
 
-Create a project at [supabase.com/dashboard](https://supabase.com/dashboard).
-Region `ap-south-1` (Mumbai) is the right default for an Indian audience.
+The CLI may still be signed into a different account. Switch first:
+
+```bash
+supabase logout
+supabase login                       # sign in as the Amantrika account
+supabase projects list               # confirm you see the Amantrika project
+```
 
 Then link this repo and push the schema:
 
 ```bash
-supabase login                       # opens a browser
 supabase link --project-ref <YOUR_PROJECT_REF>
 supabase db push                     # runs everything in supabase/migrations/
 ```
+
+`db push` is the first time this SQL runs anywhere — if a statement fails it
+stops and reports the line, and nothing is half-applied.
 
 `db push` applies three migrations, in order:
 
@@ -34,8 +45,11 @@ In **Authentication → URL Configuration**:
 - Redirect URLs: add `https://amantrika.imswarnil.com/auth/callback`
   and `http://localhost:3000/auth/callback`
 
-Email confirmation is on by default. The signup form handles both cases —
-it shows a "check your email" notice when no session comes back.
+**Keep email confirmation on** (the Supabase default, under
+**Authentication → Providers → Email**). The signup form already handles it:
+when no session comes back it shows a "check `you@example.com` for a
+confirmation link" notice, and `/auth/callback` exchanges the emailed code for a
+session and routes the user to the dashboard their role belongs to.
 
 ### Make yourself an admin
 
@@ -77,8 +91,17 @@ browser.
 
 ## 3 · Vercel
 
+As with Supabase, the CLI may be signed into a personal account. Switch first:
+
 ```bash
-vercel login
+vercel logout
+vercel login                         # sign in as the Amantrika account
+vercel whoami                        # confirm
+```
+
+Then:
+
+```bash
 vercel link                          # creates the project
 vercel env add NEXT_PUBLIC_SUPABASE_URL production
 vercel env add NEXT_PUBLIC_SUPABASE_ANON_KEY production
@@ -89,6 +112,10 @@ vercel --prod
 
 Repeat the `env add` calls for `preview` and `development` if you want branch
 deploys to work against the same database.
+
+Alternatively, connect the GitHub repo from the Vercel dashboard so every push
+to `main` deploys automatically. The Amantrika Vercel account will need access
+granted to `imswarnil/amantrika` during the GitHub app install.
 
 ### Custom domain
 
