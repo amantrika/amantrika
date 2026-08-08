@@ -2,6 +2,7 @@
 
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
+import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { requireProfile } from "@/lib/auth";
 import { siteUrl } from "@/lib/env";
@@ -62,7 +63,7 @@ export async function simulatePayment(input: {
 
   let response: Response;
   try {
-    response = await fetch(`${siteUrl}/api/payments/webhook`, {
+    response = await fetch(`${await selfOrigin()}/api/payments/webhook`, {
       method: "POST",
       headers: mockWebhookHeaders(id, timestamp, raw),
       body: raw,
@@ -83,6 +84,24 @@ export async function simulatePayment(input: {
   }
 
   return { ok: true };
+}
+
+/**
+ * The origin this request actually arrived on — not `NEXT_PUBLIC_SITE_URL`.
+ *
+ * The mock has to call the server it is running on. Using the configured site
+ * URL meant a test server on :3100 posted its signed webhook to :3000, which is
+ * whatever else happens to be running — a second dev server, or nothing. It
+ * appeared to work only because that other server shared this database, so the
+ * assertions passed while the request under test went somewhere else entirely.
+ */
+async function selfOrigin(): Promise<string> {
+  const headerList = await headers();
+  const host = headerList.get("x-forwarded-host") ?? headerList.get("host");
+  if (!host) return siteUrl;
+
+  const proto = headerList.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https");
+  return `${proto}://${host}`;
 }
 
 /**

@@ -206,6 +206,13 @@ Go strings, and one bad row broke the Admin API for the whole project. Repaired
 in `20260808130223`, and the seed now writes `''`. This also unblocked deleting
 the demo accounts.
 
+**The mock checkout was posting its webhook to the wrong server.**
+`simulatePayment` built the URL from `NEXT_PUBLIC_SITE_URL`, so a test server on
+:3100 posted to :3000 — whatever else happened to be running. It looked fine for
+days because that other server shared this database, so the assertions passed
+while the request under test went elsewhere. It now derives the origin from the
+incoming request headers. Fixed 8 Aug 2026.
+
 **A live OpenRouter key reached `.env.example` twice.** Removed in `7eb3a94`,
 then written back an hour later by a concurrent `git add -A`. That file is
 tracked and the repo has a GitHub remote. It has been moved to `.env.local`
