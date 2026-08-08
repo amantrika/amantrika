@@ -136,7 +136,15 @@ export function MissionStatement({
       <span className="mx-auto inline-flex size-16 items-center justify-center rounded-full border border-ornate bg-accent/12 text-primary">
         <Icon className="size-8" />
       </span>
-      <p className="mt-6 type-display-lg leading-tight text-primary">{children}</p>
+      {/* A div, not a p. MDX wraps the sentence an author writes between the
+          tags in a paragraph of its own, and a <p> inside a <p> is invalid
+          HTML — the browser closes the outer one early, so the server markup
+          and the client tree disagree and hydration fails.
+          `.type-inherit-prose` makes that paragraph inherit this element's
+          type instead of carrying its own. */}
+      <div className="type-inherit-prose mt-6 type-display-lg leading-tight text-primary">
+        {children}
+      </div>
       {attribution && <p className="mt-4 type-overline">{attribution}</p>}
       <span
         aria-hidden

@@ -568,6 +568,21 @@ body {
 /* Stack rhythm inside a section — the second axis of "dense vs. airy". */
 .block-stack > * + * { margin-top: var(--space-block-gap); }
 
+/* A block that sets its own type, wrapping prose MDX has already put in a
+   paragraph. The paragraph has to exist — MDX makes one out of any text between
+   two blank lines, and it cannot be told not to — so the block cannot also be a
+   <p> without nesting them, which is invalid and breaks hydration. Instead the
+   block is a <div> and the paragraph inside it inherits everything, leaving the
+   utilities on the wrapper in charge. */
+.type-inherit-prose > p {
+  margin: 0;
+  font: inherit;
+  color: inherit;
+  line-height: inherit;
+  letter-spacing: inherit;
+}
+.type-inherit-prose > p + p { margin-top: 0.5em; }
+
 /* ============ ORNAMENT UTILITIES ============ */
 
 /* Double-line gold gradient border — the signature "ornate-border" token */

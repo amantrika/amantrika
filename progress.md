@@ -316,6 +316,13 @@ safe. Give each agent its own worktree, or run them one at a time.
   variables because a favicon or an `<img>` inherits no CSS from the page, and
   the favicon is drawn heavier on purpose — the real mark's weight disappears at
   16px. Change the mark, change all four.
+- **An MDX block that styles its own text cannot be a `<p>`.** MDX wraps the
+  text an author writes between two blank lines in a paragraph of its own, and
+  it cannot be told not to. A `<p>` inside a `<p>` is invalid — the browser
+  closes the outer one early, the server markup and the client tree disagree,
+  and hydration fails. Render the block as a `<div>` and add
+  `.type-inherit-prose` (`src/app/globals.css`) so the inner paragraph inherits
+  the wrapper's type instead of carrying its own.
 - **Never pass a function as a prop to a client component.** Formatters cross the
   boundary as a named string, not a callback.
 - **`NEXT_DIST_DIR` isolates a second Next process.** Two `next dev`/`next build`
