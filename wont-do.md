@@ -18,34 +18,14 @@ One Next.js app, one Supabase project, one deployment. Every lifecycle job —
 nudges, expiry, archive offers — is a Vercel Cron hitting a route. If something
 here ever seems to need a worker, the design is wrong, not the constraint.
 
-> **⚠️ Contested — needs a decision.** Commit `eb274f7` added an n8n automation
-> side-car running ten lifecycle and ops workflows. Its case: n8n is an
-> operations layer rather than a product service, reads Supabase directly,
-> writes only to its own `automation` schema, never changes product state, and
-> the product still works if it is down. That is a coherent argument, but it is
-> a second deployment, and CLAUDE.md §2.1 says to stop and re-read the line
-> rather than propose one. **Either amend CLAUDE.md §2.1 to describe the
-> exception explicitly, or move the ten workflows to Vercel Cron routes.**
-> Leaving the rule and the repo disagreeing is the one option that is definitely
-> wrong.
-
-### Self-hosted email (own SMTP / Postfix)
-Genuinely third-party-free, and genuinely worse. Vercel is serverless with
-outbound port 25 blocked, so it would mean a separate VPS, a dedicated clean IP,
-PTR/rDNS, SPF, DKIM, DMARC, bounce and complaint handling, and weeks of IP
-warm-up — with Gmail and Outlook spam-foldering new senders by default. Our mail
-is payment receipts and "your invitation is live" links; if those land in spam,
-hosts think the product broke. We use Resend, behind `sendEmail()`, so swapping
-provider is ~30 lines in one file.
-
-### A watermark on the free tier, at all
-Built once (tiled marks, per-request nonces, selector-resistant) and then
-deleted in favour of a corner "Made with Amantrika" badge. A watermark defaces a
-family's invitation to punish them for not paying, which makes guests resent the
-mark instead of following it — and following it is the only organic acquisition
-loop the product has. What the free tier is denied is **reach**, not beauty: no
-OG image, no `Event` structured data, no indexing. Those are enforced server-side
-off `events.plan_code` and covered by `tests/e2e/badge.spec.ts`.
+**Decided 8 Aug 2026.** An n8n side-car (`eb274f7`) tested this rule and the rule
+held. The workflows were well built and the argument — an operations layer that
+never writes product state — was coherent, but it meant a second email path
+outside `sendEmail()`, 56KB of logic invisible to typecheck and the test suite,
+and a second deployment to host, upgrade and monitor for a one-developer
+product. The scheduler now lives in `src/app/api/cron/[job]`. The valuable half
+— the `automation` schema and the candidate SQL — was kept and moved into the
+app. See `n8n/README.md` for what remains to port.
 
 ### Client-side entitlement checks of any kind
 Entitlements resolve on the server from `events.plan_code`, which only the
@@ -102,13 +82,14 @@ test-mode key: test and live are separate businesses with separate catalogues.
 **Trigger:** business verification with Dodo completes and a live key exists;
 then set `DODO_ENVIRONMENT=live_mode` and re-run `npm run test:e2e`.
 
-### React Email templates and the nudge sequence
-`sendEmail()` sends real mail today, with hand-written HTML and a plain-text
-twin for the one message that exists (the payment receipt). The template system,
-the `invite_nudges` ledger, the 72-hour email with a rendered preview, and
-one-click unsubscribe are all still to build. **Trigger:**
-`amantrika.imswarnil.com` is verified in Resend — until then no lifecycle email
-can reach a real customer anyway.
+### React Email templates, and nine of the ten lifecycle emails
+The substrate is in: `src/lib/notifications/` claims before sending, one-click
+unsubscribe is live and honoured immediately (`/api/unsubscribe`), and the
+abandoned-draft sequence is ported. The other ten workflows listed in
+`n8n/README.md` are not, and the HTML is a hand-written layout helper rather than
+React Email components — same output contract, no new dependency, one file to
+replace. **Trigger for the rest:** `amantrika.imswarnil.com` is verified in
+Resend, because until then no lifecycle email can reach a real customer anyway.
 
 ### Status branching beyond draft/published
 The spec has draft, preview, published, expired and archived. We have draft and
@@ -151,6 +132,9 @@ the single cheapest thing on this page to get wrong. Confirm it.
 - **`ALLOW_MOCK_PAYMENTS` is not covered by a test.** The e2e suite sets it to
   reach the mock checkout, so the guard that hides it in production is asserted
   by reading the code, not by running it.
+- **The notification ledger is never pruned.** `automation.notifications` is
+  append-only by design, and e2e runs add rows to it. They hold no addresses,
+  only hashes, so this is untidy rather than unsafe.
 - **`auth.admin.listUsers()` errors on the Supabase project**
   ("Database error finding users count"). Test teardown works around it by
   finding users through `profiles`. Root cause unknown.

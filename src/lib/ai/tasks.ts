@@ -41,6 +41,12 @@ export interface AiTask<TInput, TOutput> {
    * task where it is true so the answer is public.
    */
   handlesGuestContent: boolean;
+  /**
+   * What this task accepts. Validated before anything is sent, so a caller
+   * cannot widen what leaves the building by passing an extra field — which
+   * matters most for the tasks flagged above.
+   */
+  inputSchema: z.ZodType<TInput>;
   outputSchema: z.ZodType<TOutput>;
   system: string;
   /** Builds the user turn. Keep the input minimal — everything here is sent. */
@@ -75,6 +81,19 @@ export async function runTask<TInput, TOutput>(
   input: TInput,
   options: { signal?: AbortSignal } = {}
 ): Promise<TaskResult<TOutput>> {
+  // Validate before spending a token. A malformed input would otherwise be
+  // discovered by the model, expensively and vaguely.
+  const checked = task.inputSchema.safeParse(input);
+  if (!checked.success) {
+    return {
+      ok: false,
+      error: `Input for ${task.id} is invalid: ${checked.error.issues
+        .map((i) => i.path.join(".") || "(root)")
+        .join(", ")}`,
+    };
+  }
+  const safeInput = checked.data;
+
   const jsonSchema = { name: task.id.replace(/-/g, "_"), schema: toStrictJsonSchema(task.outputSchema) };
 
   for (let attempt = 0; attempt < 2; attempt++) {
@@ -87,7 +106,7 @@ export async function runTask<TInput, TOutput>(
       signal: options.signal,
       messages: [
         { role: "system", content: task.system },
-        { role: "user", content: task.buildUser(input) },
+        { role: "user", content: task.buildUser(safeInput) },
       ],
     });
 
@@ -154,6 +173,9 @@ export const moderateBlessingTask: AiTask<
   maxOutputTokens: 200,
   temperature: 0,
   handlesGuestContent: true,
+  // Only the message. Deliberately not the author's name: screening does not
+  // need to know who wrote it, and a third party does not need a guest list.
+  inputSchema: z.object({ message: z.string().min(1).max(2000) }),
   outputSchema: z.object({
     verdict: z.enum(["allow", "review", "block"]),
     /** One short sentence a human moderator can act on. */
@@ -194,6 +216,13 @@ export const suggestWordingTask: AiTask<
   maxOutputTokens: 700,
   temperature: 0.7,
   handlesGuestContent: false,
+  inputSchema: z.object({
+    occasion: z.string().min(1).max(60),
+    hostNames: z.array(z.string().min(1).max(80)).min(1).max(6),
+    tradition: z.string().min(1).max(40),
+    city: z.string().max(80),
+    tone: z.enum(["traditional", "warm", "modern"]),
+  }),
   outputSchema: z.object({
     options: z
       .array(
@@ -253,3 +282,30 @@ export const allTasks: AiTaskSummary[] = [
   summarise(moderateBlessingTask),
   summarise(suggestWordingTask),
 ];
+
+/**
+ * Lookup by id, for the dev playground at `/api/ai/try`.
+ *
+ * Application code should import the task it wants directly and keep its
+ * types — this exists so a *name* can be turned into a runnable task, which is
+ * only ever what a debugging tool needs.
+ */
+export type RunnableTask = {
+  summary: AiTaskSummary;
+  run: (provider: AiProvider, input: unknown) => Promise<TaskResult<unknown>>;
+};
+
+function runnable<I, O>(task: AiTask<I, O>): RunnableTask {
+  return {
+    summary: summarise(task),
+    // `input` is unknown by design: `runTask` validates it against the task's
+    // own `inputSchema` before anything is sent, so the cast is checked a line
+    // later rather than trusted.
+    run: (provider, input) => runTask(provider, task, input as I),
+  };
+}
+
+export const runnableTasks: Record<string, RunnableTask> = {
+  [moderateBlessingTask.id]: runnable(moderateBlessingTask),
+  [suggestWordingTask.id]: runnable(suggestWordingTask),
+};

@@ -156,9 +156,45 @@ The health check answers two questions:
   model".
 
 `/api/ai/health` is guarded two ways — a signed-in `admin` profile, or
-`Authorization: Bearer $CRON_SECRET`. Anyone else gets a **404**, not a 401: an
+`Authorization: Bearer $CRON_SECRET` (the same token `/api/cron/*` uses, checked
+by the same constant-time helper). Anyone else gets a **404**, not a 401: an
 unauthenticated visitor should not learn the route exists. The response names
 models, tasks and latency, and never the key or any part of it.
+
+### Running an actual task
+
+A credential check proves the key works. It does not prove a *task* works — the
+prompt can be wrong, the output schema can disagree with the prompt, and a model
+can refuse. `ai:try` exercises the whole path: input validation, the strict JSON
+schema, the call, parsing, and output validation.
+
+```
+npm run dev                                        # in one terminal
+npm run ai:try                                     # lists the tasks
+npm run ai:try -- suggest-invitation-wording       # runs it with sample input
+npm run ai:try -- moderate-blessing '{"message":"Congratulations!"}'
+```
+
+```
+Running suggest-invitation-wording via http://localhost:3000/api/ai/try
+
+Model      openai/gpt-5.6-terra  (balanced tier)
+Took       2841ms
+Cost       ~$0.000714
+
+Validated output
+{ "options": [ { "wording": "…", "note": "…" } ] }
+
+✔ Task ran and its output matched the schema.
+```
+
+This spends real tokens — fractions of a cent per run, since each task caps its
+own output, but not nothing.
+
+Behind it is `POST /api/ai/try`, same guard as the health route. It can only run
+tasks in the registry, with input each task validates itself. There is
+deliberately **no free-text prompt field**: an open relay to a paid model behind
+a shared secret is a liability, not a feature.
 
 ---
 
@@ -188,9 +224,11 @@ To change one without deploying, set `AI_MODEL_FAST` / `AI_MODEL_BALANCED` /
 ### Define a task
 
 A task bundles everything that makes one call reproducible — tier, token
-ceiling, prompt, and a Zod schema for the output. The schema is sent to the
+ceiling, prompt, and a Zod schema on each side. The output schema is sent to the
 model as a strict JSON Schema *and* used to validate the reply, so a caller
-receives a typed object or an error, never a string to guess at.
+receives a typed object or an error, never a string to guess at. The input
+schema is checked before anything is sent, which is what stops a caller
+widening what leaves the building by passing an extra field.
 
 ```ts
 export const suggestHashtagTask: AiTask<
@@ -202,6 +240,7 @@ export const suggestHashtagTask: AiTask<
   maxOutputTokens: 150,
   temperature: 0.8,
   handlesGuestContent: false,
+  inputSchema: z.object({ names: z.array(z.string().max(80)).min(1).max(4) }),
   outputSchema: z.object({ hashtags: z.array(z.string().max(40)).min(3).max(6) }),
   system: "You suggest wedding hashtags for Indian couples. No spaces, no emoji.",
   buildUser: ({ names }) => `Names: ${names.join(" and ")}`,
@@ -264,8 +303,10 @@ Before wiring up anything with `handlesGuestContent: true`:
   third-party AI provider for safety screening" is a sentence a host is entitled
   to read before their relatives write anything.
 - Never send the author's name alongside the message. `moderateBlessingTask`
-  takes only `{ message }` for exactly this reason, and a unit test pins the
-  built prompt so nobody widens it casually.
+  accepts only `{ message }` for exactly this reason — and because that is its
+  `inputSchema`, a caller who passes `authorName` and `authorPhone` has them
+  silently dropped rather than forwarded. A unit test asserts that, using a
+  phone number, so the protection cannot rot unnoticed.
 
 Logging follows the same rule: `openrouter.ts` logs the task label, tier, model,
 token counts, cost and duration — never a prompt, never a completion.

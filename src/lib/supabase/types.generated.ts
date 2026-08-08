@@ -430,6 +430,92 @@ export type Database = {
           },
         ]
       }
+      feature_requests: {
+        Row: {
+          author_id: string | null
+          body: string | null
+          created_at: string
+          decided_at: string | null
+          id: string
+          status: Database["public"]["Enums"]["feature_status"]
+          status_note: string | null
+          title: string
+          updated_at: string
+          vote_count: number
+        }
+        Insert: {
+          author_id?: string | null
+          body?: string | null
+          created_at?: string
+          decided_at?: string | null
+          id?: string
+          status?: Database["public"]["Enums"]["feature_status"]
+          status_note?: string | null
+          title: string
+          updated_at?: string
+          vote_count?: number
+        }
+        Update: {
+          author_id?: string | null
+          body?: string | null
+          created_at?: string
+          decided_at?: string | null
+          id?: string
+          status?: Database["public"]["Enums"]["feature_status"]
+          status_note?: string | null
+          title?: string
+          updated_at?: string
+          vote_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feature_requests_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      feature_votes: {
+        Row: {
+          created_at: string
+          id: number
+          profile_id: string | null
+          request_id: string
+          voter_hash: string
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          profile_id?: string | null
+          request_id: string
+          voter_hash: string
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          profile_id?: string | null
+          request_id?: string
+          voter_hash?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feature_votes_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "feature_votes_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "feature_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       guests: {
         Row: {
           created_at: string
@@ -908,7 +994,28 @@ export type Database = {
         Returns: Database["public"]["Enums"]["user_role"]
       }
       can_manage_event: { Args: { target: string }; Returns: boolean }
+      cast_feature_vote: {
+        Args: { p_request_id: string; p_voter_hash: string }
+        Returns: number
+      }
       clean_demo_data: { Args: never; Returns: undefined }
+      cron_stale_draft_nudges: {
+        Args: never
+        Returns: {
+          completion_score: number
+          days_until_event: number
+          dedupe_key: string
+          event_date: string
+          event_id: string
+          hours_idle: number
+          kind: string
+          next_step: string
+          owner_email: string
+          owner_name: string
+          slug: string
+          title: string
+        }[]
+      }
       event_is_public: { Args: { target: string }; Returns: boolean }
       event_stats: { Args: { p_event_id: string }; Returns: Json }
       event_views_by_day: {
@@ -919,11 +1026,48 @@ export type Database = {
           views: number
         }[]
       }
+      feature_leaderboard: {
+        Args: { p_limit?: number }
+        Returns: {
+          name: string
+          profile_id: string
+          requests: number
+          votes_cast: number
+          votes_received: number
+        }[]
+      }
       generate_showcase_clone: {
         Args: { p_source_id: string; p_tags?: string[] }
         Returns: string
       }
       is_admin: { Args: never; Returns: boolean }
+      my_feature_votes: { Args: { p_voter_hash: string }; Returns: string[] }
+      notification_claim: {
+        Args: {
+          p_channel: string
+          p_dedupe_key: string
+          p_email: string
+          p_kind: string
+          p_payload?: Json
+          p_subject_id: string
+          p_subject_type: string
+          p_workflow: string
+        }
+        Returns: string
+      }
+      notification_mark: {
+        Args: {
+          p_error?: string
+          p_id: string
+          p_payload?: Json
+          p_status: string
+        }
+        Returns: undefined
+      }
+      notification_optout: {
+        Args: { p_email: string; p_scope?: string }
+        Returns: undefined
+      }
       record_badge_click: {
         Args: {
           p_country?: string
@@ -964,6 +1108,7 @@ export type Database = {
         | "graduation"
         | "corporate"
         | "other"
+      feature_status: "open" | "planned" | "building" | "shipped" | "declined"
       order_status: "pending" | "paid" | "failed" | "refunded"
       rsvp_status: "yes" | "no" | "maybe" | "pending"
       user_role: "host" | "agent" | "admin"
@@ -1114,6 +1259,7 @@ export const Constants = {
         "corporate",
         "other",
       ],
+      feature_status: ["open", "planned", "building", "shipped", "declined"],
       order_status: ["pending", "paid", "failed", "refunded"],
       rsvp_status: ["yes", "no", "maybe", "pending"],
       user_role: ["host", "agent", "admin"],

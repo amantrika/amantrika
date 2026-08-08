@@ -22,6 +22,13 @@ file in the same commit.
 One Next.js app, one Supabase project, one deployment. If you ever find yourself proposing a second
 service, stop and re-read this line.
 
+**This was tested once and the rule held.** An n8n side-car with ten lifecycle workflows was built
+(`eb274f7`) and retired (8 Aug 2026). The argument for it was reasonable — an operations layer that
+never writes product state — and it still lost, because it meant a second email path outside
+`sendEmail()`, 56KB of logic invisible to typecheck and the test suite, and a second deployment to
+operate for a one-developer product. **Scheduled work goes in `src/app/api/cron/[job]`,** guarded by
+`CRON_SECRET`, scheduled in `vercel.json`. See `n8n/README.md` for the port status.
+
 ---
 
 ## 2. Operating rules — non-negotiable

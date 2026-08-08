@@ -125,7 +125,7 @@ describe("runTask", () => {
       hostNames: ["Meera", "Rohan"],
       tradition: "hindu",
       city: "Udaipur",
-      tone: "warm",
+      tone: "warm" as const,
     });
 
     const call = provider.calls[0];
@@ -143,6 +143,37 @@ describe("runTask", () => {
 
     const user = provider.calls[0].messages.find((m) => m.role === "user");
     expect(user?.content).toBe("Message:\nCongratulations!");
+  });
+});
+
+describe("input validation", () => {
+  it("rejects invalid input before spending a token", async () => {
+    const provider = stubProvider([ok('{"verdict":"allow","reason":"fine"}')]);
+
+    // Empty message: caught by the task's own inputSchema.
+    const result = await runTask(provider, moderateBlessingTask, { message: "" });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toMatch(/invalid/i);
+    // The point of validating first: the provider was never called.
+    expect(provider.calls).toHaveLength(0);
+  });
+
+  it("strips fields the task did not ask for, so nothing leaks by accident", async () => {
+    const provider = stubProvider([ok('{"verdict":"allow","reason":"fine"}')]);
+
+    await runTask(provider, moderateBlessingTask, {
+      message: "Congratulations!",
+      // A caller passing the author along — exactly what must not reach a
+      // third party. Zod's default object parsing drops it.
+      authorName: "Priya Sharma",
+      authorPhone: "+919876543210",
+    } as { message: string });
+
+    const user = provider.calls[0].messages.find((m) => m.role === "user");
+    expect(user?.content).toBe("Message:\nCongratulations!");
+    expect(user?.content).not.toContain("Priya");
+    expect(user?.content).not.toContain("9876543210");
   });
 });
 

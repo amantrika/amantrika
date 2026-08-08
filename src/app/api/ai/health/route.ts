@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
-import { timingSafeEqual } from "node:crypto";
-import { getProfile } from "@/lib/auth";
 import { aiProviderName, getAiProvider, allTasks, configuredModels } from "@/lib/ai";
+import { isAiOperator } from "../guard";
 
 /**
  * "Is the AI connection working?" — answered without a shell.
@@ -18,29 +17,8 @@ import { aiProviderName, getAiProvider, allTasks, configuredModels } from "@/lib
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-function bearerMatchesCronSecret(request: Request): boolean {
-  const expected = process.env.CRON_SECRET;
-  if (!expected) return false;
-
-  const header = request.headers.get("authorization") ?? "";
-  const presented = header.startsWith("Bearer ") ? header.slice(7) : "";
-  if (!presented) return false;
-
-  const a = Buffer.from(presented);
-  const b = Buffer.from(expected);
-  // timingSafeEqual throws on a length mismatch, which would itself leak length.
-  if (a.length !== b.length) return false;
-  return timingSafeEqual(a, b);
-}
-
-async function isAuthorised(request: Request): Promise<boolean> {
-  if (bearerMatchesCronSecret(request)) return true;
-  const profile = await getProfile();
-  return profile?.role === "admin";
-}
-
 export async function GET(request: Request) {
-  if (!(await isAuthorised(request))) {
+  if (!(await isAiOperator(request))) {
     return new NextResponse(null, { status: 404 });
   }
 
