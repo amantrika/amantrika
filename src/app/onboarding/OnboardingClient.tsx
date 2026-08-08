@@ -241,6 +241,22 @@ export function OnboardingClient({ plans, isAgent }: { plans: PlanRow[]; isAgent
 
   useEffect(() => () => { if (slugTimer.current) clearTimeout(slugTimer.current); }, []);
 
+  /**
+   * Check the suggested link as soon as the step is reached.
+   *
+   * The field is pre-filled from the couple's names, and availability was only
+   * checked on change or blur — so a host who was happy with the suggestion
+   * never triggered a check, and "Continue" stayed disabled with no explanation
+   * beyond "Pick a link to continue." A dead end on the one step nobody has a
+   * reason to edit.
+   */
+  useEffect(() => {
+    if (step === STEP.link) verifySlug(liveSlug);
+    // Arriving at the step is the trigger; re-verifying on every keystroke is
+    // already handled by the field's own onChange.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step]);
+
   /* ---------- presets ---------- */
   function addPresetEvents() {
     const preset = subEventPresets[draft.eventType] ?? [];

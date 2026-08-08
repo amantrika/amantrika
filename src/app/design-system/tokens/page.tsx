@@ -8,6 +8,7 @@ import { space } from "@/design-system/tokens/spacing";
 import { motifs } from "@/design-system/motifs";
 import { presets } from "@/design-system/motion/presets";
 import { durations, easings } from "@/design-system/tokens/motion";
+import { contentWidths, rhythms, surfaces, zLayers } from "@/design-system/tokens/layout";
 import { Button, Card, useToast, WaxSeal } from "@/design-system/components";
 import { DsSection } from "../shell";
 
@@ -230,6 +231,82 @@ export default function TokensPage() {
               <span className="h-4 rounded-sm bg-accent/60" style={{ width: px }} />
             </div>
           ))}
+        </div>
+      </DsSection>
+
+      <DsSection
+        title="Layout"
+        lead="The structural vocabulary a theme composes with: column widths, vertical rhythm, section grounds and the stacking order."
+      >
+        <div className="grid gap-6 lg:grid-cols-2">
+          <div className="rounded-card border border-ornate/40 bg-surface p-6">
+            <p className="type-overline mb-4">Content widths</p>
+            <div className="flex flex-col gap-3">
+              {Object.entries(contentWidths).map(([name, token]) => (
+                <div key={name}>
+                  <div className="flex items-baseline justify-between gap-3">
+                    <span className="type-caption font-mono font-semibold text-primary">{name}</span>
+                    <span className="type-caption">{token.note}</span>
+                  </div>
+                  <span
+                    className="mt-1 block h-3 rounded-sm bg-accent/50"
+                    style={{ maxWidth: token.css === "none" ? "100%" : token.css, width: "100%" }}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="rounded-card border border-ornate/40 bg-surface p-6">
+            <p className="type-overline mb-4">Rhythm</p>
+            <p className="mb-4 type-caption">
+              One multiplier drives both the gap between sections and the gap between blocks inside
+              one, so a theme is consistently dense or airy rather than only at the top level.
+            </p>
+            <dl className="grid grid-cols-[auto_auto_1fr] gap-x-4 gap-y-2">
+              {Object.entries(rhythms).map(([name, r]) => (
+                <div key={name} className="contents">
+                  <dt className="type-caption font-mono font-semibold text-primary">{name}</dt>
+                  <dd className="type-caption font-mono">×{r.scale}</dd>
+                  <dd className="type-caption">{r.note}</dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+
+          <div className="lg:col-span-2">
+            <p className="type-overline mb-3">Section surfaces</p>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {Object.entries(surfaces).map(([name, s]) => (
+                <div
+                  key={name}
+                  data-surface={name}
+                  className="rounded-card border border-ornate/40 p-5"
+                >
+                  <p className="font-mono text-sm font-semibold text-primary">{name}</p>
+                  <p className="mt-1 type-caption">{s.note}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="lg:col-span-2 rounded-card border border-ornate/40 bg-surface p-6">
+            <p className="type-overline mb-3">Stacking order</p>
+            <p className="mb-4 type-caption">
+              Named so no component invents a z-index. Anything that would need to sit above{" "}
+              <code className="font-mono">toast</code> belongs to the browser, not to us.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {Object.keys(zLayers).map((name) => (
+                <span
+                  key={name}
+                  className="rounded-pill border border-ornate/50 px-3 py-1 font-mono text-sm"
+                >
+                  {name}
+                </span>
+              ))}
+            </div>
+          </div>
         </div>
       </DsSection>
 

@@ -38,7 +38,11 @@ service, stop and re-read this line.
    Never compute a price in a component.
 5. **Never branch on a hardcoded theme ID.** Behaviour comes from theme *capabilities*. Writing
    `themeId === 'royal-maroon'` in app code is forbidden — add a capability flag instead. This was
-   the single worst piece of debt in the previous codebase.
+   the single worst piece of debt in the previous codebase. **Structure is a capability too:** a
+   theme's section list, order, hero variant, per-section background and spacing live in
+   `theme.layout` (`src/themes/layout.ts`) and are rendered by `LayoutSection` +
+   `ThemedHeroVariant`. If a theme needs to look different, it needs a field there, not an `if`.
+   `tests/e2e/theme-layout.spec.ts` asserts this against the registry.
 6. **Guests get no direct table grants.** Public reads go through `get_public_invite()`. Writes go
    through `submit_rsvp()` and `submit_wish()`. All `security definer`. Anon has SELECT on nothing.
 7. **The service-role key never leaves Route Handlers and `scripts/`.** Never in a Client Component,
@@ -142,8 +146,8 @@ src/app/              route groups; see §1
   (marketing)/        blog, content pages, public shell (header, footer, Organization JSON-LD)
   md/[...slug]/       markdown twins of every public page (see §4)
   llms.txt/, llms-full.txt/
-src/design-system/    tokens, motifs, patterns, borders, 77+ documented components
-src/themes/           theme registry (8 themes today)
+src/design-system/    tokens, motifs, patterns, borders, 80+ documented components
+src/themes/           theme registry + layout model (12 themes today)
 src/lib/              supabase clients, env, pricing, payments, i18n
   content/            MDX loader, frontmatter schemas, authoring components, renderer
   seo/                typed JSON-LD builders, <JsonLd>, pageMetadata()
@@ -161,7 +165,7 @@ structured data. The block vocabulary available to posts (`<Callout>`, `<Steps>`
 `<Comparison>`, `<ThemePreview>`, `<CTA>`, `<Figure>`) lives in `src/lib/content/mdx-components.tsx`
 — extend that file rather than writing layout inside a post.
 
-**The design system is an asset, not scaffolding.** It has 8 themes, per-theme tokens (fonts,
+**The design system is an asset, not scaffolding.** It has 12 themes, per-theme tokens (fonts,
 borders, textures, opening animations, rhythm), 32 custom icons, 10 background patterns, and a live
 docs site at `/design-system`. Build on it. Do not introduce a component library, and do not
 rebuild a component that already exists there — check `/design-system/components` first.

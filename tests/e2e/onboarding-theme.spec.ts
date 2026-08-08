@@ -89,15 +89,15 @@ test.describe("choosing a theme at the end of onboarding", () => {
   test("the preview cannot submit an RSVP", async ({ page }) => {
     await reachThemeStep(page, ["Sneha", "Karan"]);
 
-    // Royal Maroon renders an RSVP section; inside the preview it must refuse.
+    // The preview renders the real RSVP form, so it is genuinely clickable —
+    // and must refuse rather than quietly writing a row against a draft.
     const rsvp = page.locator("[data-theme] section#rsvp");
-    if (await rsvp.count()) {
-      await rsvp.scrollIntoViewIfNeeded();
-      const submit = rsvp.getByRole("button", { name: /Send|RSVP|Submit/i }).first();
-      if (await submit.count()) {
-        await submit.click();
-        await expect(page.getByText(/This is a preview/i)).toBeVisible();
-      }
-    }
+    await expect(rsvp).toBeVisible();
+
+    const submit = rsvp.getByRole("button", { name: "Send RSVP" });
+    await submit.scrollIntoViewIfNeeded();
+    await submit.click();
+
+    await expect(page.getByText(/This is a preview/i)).toBeVisible();
   });
 });

@@ -41,7 +41,7 @@ not by the UI.
 Try a personalized, themed invite:
 `/invite/swarnil-weds-prachi?g=Rahul%20%26%20Family&theme=nikah-emerald`
 
-In dev, every page has a floating **🎨 Theme** button (bottom-right) to flip all 8 themes live.
+In dev, every page has a floating **🎨 Theme** button (bottom-right) to flip all 12 themes live.
 
 ## Scripts
 

@@ -15,8 +15,13 @@ export default function ThemesPage() {
       <p className="type-overline">Theme engine</p>
       <h1 className="mb-4 mt-1 type-display-lg text-primary">Themes</h1>
       <p className="mb-10 max-w-2xl type-body-lg text-muted">
-        Eight complete themes. Each overrides only the semantic tokens and brings its own motifs,
-        petals, event vocabulary, meal options and greeting script — never just a recolor.
+        {themes.length} complete themes. Each overrides only the semantic tokens and brings its own
+        motifs, petals, event vocabulary, meal options and greeting script — and its own{" "}
+        <Link href="/design-system/components/layout-section" className="text-primary underline underline-offset-4">
+          layout
+        </Link>
+        : which sections appear, in what order, on what ground, at what spacing. Two themes render
+        the same invitation as two different documents, never as one document recoloured.
       </p>
 
       <DsSection title="Gallery" lead="Apply a theme to this whole site, or preview it on a live invite.">
@@ -53,6 +58,19 @@ export default function ThemesPage() {
                   <DividerMotif className="size-6" />
                   <span className="type-caption">{t.eventVocabulary.join(" · ")}</span>
                 </div>
+
+                {/* The structural half of the theme — the part a palette strip
+                    cannot show, and the reason two themes differ at all. */}
+                <dl className="mt-4 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 border-t border-ornate/25 pt-4 type-caption">
+                  <dt className="font-semibold text-primary">Opening</dt>
+                  <dd>{t.layout.hero.replace(/-/g, " ")}</dd>
+                  <dt className="font-semibold text-primary">Rhythm</dt>
+                  <dd>
+                    {t.layout.rhythm} · {t.layout.contentWidth} column · {t.layout.ornament} ornament
+                  </dd>
+                  <dt className="font-semibold text-primary">Sections</dt>
+                  <dd>{t.layout.order.join(" → ")}</dd>
+                </dl>
 
                 <div className="mt-5 flex gap-2">
                   <Button size="sm" variant={isActive ? "primary" : "secondary"} onClick={() => setThemeId(t.id)}>
