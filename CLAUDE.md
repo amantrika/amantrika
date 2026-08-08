@@ -262,6 +262,11 @@ Which file to update:
 | Pricing, payments, plans, the paywall | `05-money-and-entitlements.md` |
 | Added, moved or removed a module | `06-file-map.md` |
 | Commands, env vars, tests, deploy | `07-how-to-run-it.md` |
+| Added a service, changed setup or deployment | `12-project-setup.md` |
+
+`08`–`12` teach general concepts (React, JavaScript, databases, APIs, services)
+using this repo as the worked example. They need updating only when a repo
+example they cite stops being true — not on every product change.
 
 Always append to `CHANGELOG.md`, newest first, using the template at its foot.
 
@@ -278,3 +283,19 @@ Both get updated; they answer different questions.
 Write it the way the rest of this repo comments itself: state the reasoning, not
 the mechanics. A reader can see what the code does — tell them why it is like
 that, and what breaks if it isn't.
+
+## The three documents, and which to update
+
+Read `PROJECT-GRAPH.md` first in a new session. It holds the product's shape —
+actors, entities, the rules that must not be broken, and the hard-won facts that
+are not guessable from the code.
+
+| File | Holds | Update when |
+| --- | --- | --- |
+| `PROJECT-GRAPH.md` | What the product *is* and its invariants | The shape changes — new entity, actor, or rule. Not for ordinary features. |
+| `ARCHITECTURE.md` | Where code lives and why | A boundary moves, or a new module appears |
+| `progress.md` | Done / pending / known issues | **Every commit that changes either** |
+
+If you discover something that cost you more than ten minutes and is not
+guessable from reading the code, it belongs in `PROJECT-GRAPH.md` §11. That
+section exists so the next session does not pay the same cost twice.
