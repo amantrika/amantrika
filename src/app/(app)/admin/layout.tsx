@@ -17,7 +17,7 @@ export const metadata: Metadata = {
  * writing anything even if this check were bypassed.
  */
 export default async function AdminLayout({ children }: { children: ReactNode }) {
-  const profile = await requireRole(["admin"], "/admin");
+  const profile = await requireRole(["admin"], "/admin", "/dashboard");
 
   const supabase = await createClient();
   const { count } = await supabase

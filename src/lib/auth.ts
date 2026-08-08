@@ -27,12 +27,22 @@ export async function requireProfile(next = "/dashboard"): Promise<Profile> {
 }
 
 /**
- * Redirects to the caller's own dashboard when their role isn't allowed —
- * a signed-in host hitting /admin lands somewhere useful rather than a 403.
+ * Requires one of `roles`, redirecting rather than showing a 403 — a signed-in
+ * person who took a wrong turn should land somewhere useful, not at a wall.
+ *
+ * `fallback` overrides where they land. Without it they go to whichever home
+ * their own role implies, which is right for most cases but wrong for the admin
+ * area: an agent bounced from /admin to /agent looks like the app refusing to
+ * explain itself. Passing "/dashboard" sends every non-admin to the one page
+ * every role has.
  */
-export async function requireRole(roles: UserRole[], next = "/dashboard"): Promise<Profile> {
+export async function requireRole(
+  roles: UserRole[],
+  next = "/dashboard",
+  fallback?: string
+): Promise<Profile> {
   const profile = await requireProfile(next);
-  if (!roles.includes(profile.role)) redirect(homeFor(profile.role));
+  if (!roles.includes(profile.role)) redirect(fallback ?? homeFor(profile.role));
   return profile;
 }
 

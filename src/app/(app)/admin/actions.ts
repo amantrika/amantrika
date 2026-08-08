@@ -22,7 +22,7 @@ const uuid = z.string().uuid();
  * hidden is not authorisation; RLS is the real boundary and this is the second.
  */
 async function assertAdmin() {
-  return requireRole(["admin"], "/admin");
+  return requireRole(["admin"], "/admin", "/dashboard");
 }
 
 /* ------------------------------------------------------------------ people */

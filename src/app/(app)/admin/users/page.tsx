@@ -3,7 +3,7 @@ import { requireRole } from "@/lib/auth";
 import { UsersTable, type UserRowData } from "./UsersTable";
 
 export default async function AdminUsersPage() {
-  const me = await requireRole(["admin"], "/admin/users");
+  const me = await requireRole(["admin"], "/admin/users", "/dashboard");
   const supabase = await createClient();
 
   const { data: profiles } = await supabase
