@@ -1,10 +1,14 @@
 import "server-only";
-import { createClient } from "@/lib/supabase/server";
+import { createPublicClient } from "@/lib/supabase/server";
 import type { FeatureRequest, LeaderboardRow } from "./types";
 
-/** The board, ranked by votes. Public — no session required. */
+/**
+ * The board, ranked by votes. Public — no session required, and session-less by
+ * necessity: both of these run inside `getCachedFeatureBoard`'s
+ * `unstable_cache`, where reading `cookies()` is a hard error in Next 15.
+ */
 export async function listFeatureRequests(): Promise<FeatureRequest[]> {
-  const supabase = await createClient();
+  const supabase = createPublicClient();
   const { data } = await supabase
     .from("feature_requests")
     .select("id, title, body, status, status_note, vote_count, created_at, profiles(full_name)")
@@ -27,7 +31,7 @@ export async function listFeatureRequests(): Promise<FeatureRequest[]> {
 }
 
 export async function featureLeaderboard(): Promise<LeaderboardRow[]> {
-  const supabase = await createClient();
+  const supabase = createPublicClient();
   const { data } = await supabase.rpc("feature_leaderboard", { p_limit: 20 });
   return ((data ?? []) as {
     profile_id: string;

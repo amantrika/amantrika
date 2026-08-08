@@ -218,6 +218,18 @@ another identity is rejected by Vercel on Hobby, which fails the deploy.
 
 ## ⚠️ Known issues
 
+**`/invite/[slug]` and `/roadmap` were returning 500 in production — fixed
+8 Aug 2026.** Caching those reads (`993c788`) left them on `createClient()`,
+which reads cookies, inside `unstable_cache`, which forbids it. Next throws
+rather than degrading, so the product's single most important route was down on
+the live site and nobody knew. `getPublishedInvite()`, `listFeatureRequests()`
+and `featureLeaderboard()` now use `createPublicClient()`. The convention was
+already written down below; the call sites simply never followed it.
+
+Worth sitting with: `tests/e2e/invite.spec.ts` asserts a 200 on that route and
+would have caught this immediately. The suite was not run before the caching
+commit shipped. Nothing about the code prevented this — only the habit.
+
 **Branch divergence.** Production is deployed from **`n8n-automation-layer`**,
 not `main`. `main` is behind by several sessions of work. Not merged yet because
 the other agent has uncommitted changes in flight, and sweeping a half-finished

@@ -1,5 +1,5 @@
 import "server-only";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createPublicClient } from "@/lib/supabase/server";
 import { toInviteView, type InviteView } from "@/lib/invites/invite";
 import { demoInvite, isDemoSlug } from "@/lib/invites/demo";
 import type {
@@ -20,7 +20,12 @@ import type {
  * on a fresh database.
  */
 export async function getPublishedInvite(slug: string): Promise<InviteView | null> {
-  const supabase = await createClient();
+  // Session-less on purpose. This runs inside `getCachedInvite`'s
+  // `unstable_cache`, and Next throws outright if a cached function touches
+  // `cookies()` — which is what `createClient()` does. The read is the same for
+  // every guest and only ever returns published rows, so anon RLS is the right
+  // grant anyway.
+  const supabase = createPublicClient();
 
   const { data: event } = await supabase
     .from("events")
