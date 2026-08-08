@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { AuthShell } from "../AuthShell";
 import { LoginForm } from "./LoginForm";
+import { AuthDivider, GoogleButton } from "../GoogleButton";
 import { getProfile, homeFor } from "@/lib/auth";
 
 export const metadata: Metadata = {
@@ -33,6 +34,8 @@ export default async function LoginPage({
         </>
       }
     >
+      <GoogleButton next={next} label="Sign in with Google" />
+      <AuthDivider />
       <LoginForm next={next && next.startsWith("/") ? next : ""} />
     </AuthShell>
   );

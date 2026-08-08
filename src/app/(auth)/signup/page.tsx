@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { AuthShell } from "../AuthShell";
 import { SignUpForm } from "./SignUpForm";
+import { AuthDivider, GoogleButton } from "../GoogleButton";
 import { getProfile, homeFor } from "@/lib/auth";
 
 export const metadata: Metadata = {
@@ -33,6 +34,8 @@ export default async function SignUpPage({
         </>
       }
     >
+      <GoogleButton label="Sign up with Google" />
+      <AuthDivider />
       <SignUpForm
         referralCode={ref ?? ""}
         initialRole={as === "agent" ? "agent" : "host"}

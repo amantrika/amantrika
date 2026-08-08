@@ -104,6 +104,8 @@ Copy `.env.example` to `.env.local` and fill in the values from
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | `anon` public key | yes |
 | `SUPABASE_SERVICE_ROLE_KEY` | `service_role` key | **no — never commit** |
 | `NEXT_PUBLIC_SITE_URL` | your public origin | yes |
+| `NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN` | PostHog → Project settings | yes (publishable) |
+| `NEXT_PUBLIC_POSTHOG_HOST` | `https://us.i.posthog.com` | yes |
 
 `NEXT_PUBLIC_SITE_URL` matters in production: invite links, guest links and
 OAuth redirects are all built from it, and `VERCEL_URL` is not readable in the
@@ -153,7 +155,46 @@ amantrika   CNAME   cname.vercel-dns.com.
 
 ---
 
-## 4 · What is still a stub
+## 4 · Analytics
+
+Three separate things, deliberately:
+
+| Layer | What it answers | Where it lives |
+| --- | --- | --- |
+| **Vercel Analytics** | Traffic and Core Web Vitals for the site | `<Analytics/>` in the root layout |
+| **PostHog** | Product behaviour — funnels, drop-off, retention | `src/lib/posthog/` |
+| **`page_views` table** | "How many people opened *my* invite" | Shown on each couple's dashboard |
+
+The `page_views` table stays the source of truth for what a host sees, because
+it must be complete and is theirs, not ours.
+
+**Browser events are proxied.** `next.config.ts` rewrites `/ingest/*` to PostHog,
+so requests come from our own domain — content blockers block `*.posthog.com`
+outright and would silently delete a large share of the data. If you change
+`posthogProxyPath` in `src/lib/env.ts`, change the rewrite to match.
+
+**Events are defined in one place**, `src/lib/posthog/events.ts`. Add new ones
+there rather than passing string literals, so names can't drift.
+
+**Privacy rule.** Properties describe behaviour, never people. Guest names,
+emails, phone numbers, blessing text and RSVP messages stay in Postgres — we
+send counts, enums, booleans, ids, and at most an email *domain*. Guest-side
+events use `captureAnonymousServer`, which sets `$process_person_profile: false`
+so we don't create a PostHog person for every wedding guest. Autocapture and
+input recording are off for the same reason.
+
+**Server logs** go to PostHog over OTLP from `src/instrumentation.ts`. Use
+`log.info` / `log.warn` / `log.error` from `src/lib/posthog/logger.ts` rather than
+bare `console.*` for anything worth searching later. Note that
+`experimental.instrumentationHook` is *not* set: `instrumentation.ts` is stable in
+Next 15 and the flag is rejected as unknown.
+
+Analytics is optional everywhere — with no `NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN`,
+every capture call becomes a no-op instead of throwing.
+
+---
+
+## 5 · What is still a stub
 
 **Payments.** `provider` is `'dummy'` on every order and checkout always
 succeeds. Every plan is unlocked on purpose while the product is in preview.

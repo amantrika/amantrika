@@ -6,6 +6,9 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { homeFor } from "@/lib/auth";
 import { siteUrl } from "@/lib/env";
+import { captureServer, emailDomain } from "@/lib/posthog/server";
+import { log } from "@/lib/posthog/logger";
+import { EVENTS } from "@/lib/posthog/events";
 
 export interface AuthState {
   error?: string;
@@ -59,6 +62,10 @@ export async function signIn(_prev: AuthState, formData: FormData): Promise<Auth
     .eq("id", user!.id)
     .single();
 
+  await captureServer(user!.id, EVENTS.signin_completed, {
+    role: profile?.role ?? "host",
+  });
+
   revalidatePath("/", "layout");
   redirect(next && next.startsWith("/") ? next : homeFor(profile?.role ?? "host"));
 }
@@ -94,7 +101,21 @@ export async function signUp(_prev: AuthState, formData: FormData): Promise<Auth
     },
   });
 
-  if (error) return { error: error.message };
+  if (error) {
+    log.warn("signup failed", { role, reason: error.message });
+    return { error: error.message };
+  }
+
+  if (data.user) {
+    // Only the email *domain* — the address itself never leaves Postgres.
+    await captureServer(data.user.id, EVENTS.signup_completed, {
+      role,
+      email_domain: emailDomain(email),
+      has_referral: Boolean(referralCode),
+      is_agency: Boolean(agencyName),
+      awaiting_confirmation: !data.session,
+    });
+  }
 
   // No session means the project requires email confirmation.
   if (!data.session) {
@@ -105,8 +126,50 @@ export async function signUp(_prev: AuthState, formData: FormData): Promise<Auth
   redirect(homeFor(role));
 }
 
+/**
+ * Starts the Google OAuth handshake.
+ *
+ * Supabase returns the URL to send the browser to; the round trip comes back to
+ * `/auth/callback`, which exchanges the code for a session. `handle_new_user`
+ * then creates the profile exactly as for an email signup — including promoting
+ * an allowlisted address straight to admin — so a Google signup and an email
+ * signup converge on the same row.
+ *
+ * `next` is validated as a relative path so this can't be turned into an open
+ * redirect by a crafted link.
+ */
+export async function signInWithGoogle(next?: string): Promise<AuthState> {
+  const supabase = await createClient();
+  const safeNext = next && next.startsWith("/") && !next.startsWith("//") ? next : "";
+
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: "google",
+    options: {
+      redirectTo: `${siteUrl}/auth/callback${safeNext ? `?next=${encodeURIComponent(safeNext)}` : ""}`,
+      queryParams: {
+        // Ask for a refresh token, and let people pick which Google account.
+        access_type: "offline",
+        prompt: "select_account",
+      },
+    },
+  });
+
+  if (error || !data?.url) {
+    log.warn("google oauth could not start", { reason: error?.message });
+    return { error: "Couldn't start Google sign-in. Please try again." };
+  }
+
+  redirect(data.url);
+}
+
 export async function signOut(): Promise<void> {
   const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (user) await captureServer(user.id, EVENTS.signed_out);
+
   await supabase.auth.signOut();
   revalidatePath("/", "layout");
   redirect("/");

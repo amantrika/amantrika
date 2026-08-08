@@ -194,6 +194,20 @@ minimum_password_length = 8
 # are: `letters_digits`, `lower_upper_letters_digits`, `lower_upper_letters_digits_symbols`
 password_requirements = ""
 
+# Google sign-in is configured in the Supabase dashboard, NOT here, and this
+# block is deliberately left commented out.
+#
+# `supabase config push` sends the whole local [auth] tree. If this block were
+# live with `env(GOOGLE_CLIENT_ID)` unset — which it is on any machine that
+# hasn't exported it — a push would overwrite the working dashboard credentials
+# with empty strings and silently break Google sign-in for everyone. The same
+# mechanism already turned email confirmation off once.
+#
+# [auth.external.google]
+# enabled = true
+# client_id = "env(GOOGLE_CLIENT_ID)"
+# secret = "env(GOOGLE_CLIENT_SECRET)"
+
 # Configure passkey sign-ins.
 # [auth.passkey]
 # enabled = false

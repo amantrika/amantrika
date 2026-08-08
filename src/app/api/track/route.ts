@@ -2,6 +2,9 @@ import { createHash } from "node:crypto";
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { env } from "@/lib/env";
+import { captureAnonymousServer } from "@/lib/posthog/server";
+import { log } from "@/lib/posthog/logger";
+import { EVENTS } from "@/lib/posthog/events";
 import type { Database } from "@/lib/supabase/types";
 
 /**
@@ -37,14 +40,28 @@ export async function POST(request: NextRequest) {
     auth: { persistSession: false },
   });
 
+  const hash = visitorHash(request);
+  const country = request.headers.get("x-vercel-ip-country") ?? undefined;
+
   const { error } = await supabase.rpc("record_page_view", {
     p_slug: body.slug,
-    p_visitor_hash: visitorHash(request),
+    p_visitor_hash: hash,
     p_referrer: body.referrer || undefined,
     // Vercel injects these at the edge; absent locally.
-    p_country: request.headers.get("x-vercel-ip-country") ?? undefined,
+    p_country: country,
     p_city: request.headers.get("x-vercel-ip-city") ?? undefined,
     p_guest_token: body.guestToken || undefined,
+  });
+
+  if (error) log.warn("record_page_view failed", { slug: body.slug, reason: error.message });
+
+  // Mirrored into PostHog so guest reach shows up in funnels alongside everything
+  // else. Keyed by the same rotating daily hash, so it is not linkable across days.
+  await captureAnonymousServer(hash, EVENTS.invite_opened, {
+    slug: body.slug,
+    country,
+    personalised_link: Boolean(body.guestToken),
+    has_referrer: Boolean(body.referrer),
   });
 
   // Analytics must never break the invite — swallow failures.

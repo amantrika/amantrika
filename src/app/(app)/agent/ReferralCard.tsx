@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { Copy } from "lucide-react";
 import { Button, Card } from "@/design-system/components";
+import { capture } from "@/lib/posthog/client";
+import { EVENTS } from "@/lib/posthog/events";
 
 /** Referral link an agent shares so signups are credited to them. */
 export function ReferralCard({
@@ -41,6 +43,7 @@ export function ReferralCard({
           onClick={() => {
             navigator.clipboard?.writeText(signupUrl);
             setCopied(true);
+            capture(EVENTS.agent_referral_copied, { commission_rate: commissionRate });
             setTimeout(() => setCopied(false), 2000);
           }}
         >

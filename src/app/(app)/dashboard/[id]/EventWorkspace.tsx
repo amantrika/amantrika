@@ -7,6 +7,8 @@ import {
   Textarea, PhotoUploader, type UploadedAsset,
 } from "@/design-system/components";
 import { assetUrl } from "@/lib/invite";
+import { capture } from "@/lib/posthog/client";
+import { EVENTS } from "@/lib/posthog/events";
 import type {
   AssetRow, BlessingRow, EventRow, EventStats, GuestRow, RsvpRow, SubEventRow, ViewsByDay,
 } from "@/lib/supabase/types";
@@ -149,6 +151,7 @@ function Overview({
             onClick={() => {
               navigator.clipboard?.writeText(inviteUrl);
               setCopied(true);
+              capture(EVENTS.invite_link_copied, { event_id: event.id, surface: "dashboard" });
               setTimeout(() => setCopied(false), 2000);
             }}
           >
@@ -279,11 +282,12 @@ function GuestsTab({
               </td>
               <td className="px-4 py-3">
                 <button
-                  onClick={() =>
+                  onClick={() => {
                     navigator.clipboard?.writeText(
                       `${inviteUrl}?g=${encodeURIComponent(g.name)}&t=${g.invite_token}`
-                    )
-                  }
+                    );
+                    capture(EVENTS.guest_link_copied, { event_id: event.id });
+                  }}
                   className="inline-flex items-center gap-1 text-sm font-semibold text-primary hover:underline cursor-pointer"
                 >
                   <Copy className="size-3.5" /> Copy

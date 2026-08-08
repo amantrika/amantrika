@@ -1,138 +1,127 @@
-import type { Metadata } from "next";
 import Link from "next/link";
-import { DashboardShell } from "../DashboardShell";
-import { requireRole, roleLabels } from "@/lib/auth";
+import { Button, Card, Stat } from "@/design-system/components";
+import { TrendChart } from "./Charts";
+import { AdminSection } from "./AdminShell";
 import { createClient } from "@/lib/supabase/server";
-import { eventTypeLabels } from "@/lib/invite";
-import { Badge, Button, Card, Stat, Table } from "@/design-system/components";
-import type { CommissionRow, EventRow, OrderRow, Profile } from "@/lib/supabase/types";
+import type { AdminDailyPoint, AdminOverview } from "@/lib/supabase/types";
 
-export const metadata: Metadata = {
-  title: "Platform · Amantrika",
-  robots: { index: false },
-};
+const inr = (n: number) => `₹${n.toLocaleString("en-IN")}`;
+const compact = (n: number) => (n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n));
 
-const inr = (amount: number) => `₹${amount.toLocaleString("en-IN")}`;
-
-/**
- * Platform-wide view. Every query below runs as the signed-in admin — the
- * "admins ..." RLS policies are what widen the result set, not a service key.
- */
-export default async function AdminPage() {
-  const profile = await requireRole(["admin"], "/admin");
+export default async function AdminOverviewPage() {
   const supabase = await createClient();
 
-  const [profilesResult, eventsResult, ordersResult, commissionsResult] = await Promise.all([
-    supabase.from("profiles").select("*").order("created_at", { ascending: false }).limit(100),
-    supabase.from("events").select("*").order("created_at", { ascending: false }).limit(100),
-    supabase.from("orders").select("*").order("created_at", { ascending: false }).limit(100),
-    supabase.from("commissions").select("*").order("created_at", { ascending: false }).limit(100),
+  const [{ data: overview }, { data: series }] = await Promise.all([
+    supabase.rpc("admin_overview"),
+    supabase.rpc("admin_daily_series", { p_days: 30 }),
   ]);
 
-  const profiles = (profilesResult.data ?? []) as Profile[];
-  const events = (eventsResult.data ?? []) as EventRow[];
-  const orders = (ordersResult.data ?? []) as OrderRow[];
-  const commissions = (commissionsResult.data ?? []) as CommissionRow[];
+  const stats = (overview as AdminOverview) ?? null;
+  const daily = (series as AdminDailyPoint[]) ?? [];
 
-  const paidOrders = orders.filter((o) => o.status === "paid");
-  const revenue = paidOrders.reduce((sum, o) => sum + o.amount_inr, 0);
-  const owed = commissions
-    .filter((c) => c.status === "accrued" || c.status === "payable")
-    .reduce((sum, c) => sum + c.amount_inr, 0);
+  if (!stats) {
+    return (
+      <Card className="p-10 text-center">
+        <p className="type-body text-muted">Couldn&apos;t load platform metrics.</p>
+      </Card>
+    );
+  }
 
   return (
-    <DashboardShell
-      profile={profile}
-      title="Platform"
-      subtitle="Everything happening across Amantrika."
-    >
-      <div className="flex flex-col gap-8">
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <Stat label="Accounts" value={profiles.length} />
-          <Stat label="Invitations" value={events.length} />
-          <Stat label="Gross revenue" value={inr(revenue)} />
-          <Stat label="Commission owed" value={inr(owed)} />
+    <div>
+      {/* Things needing a decision come first — a dashboard should surface work,
+          not just numbers. */}
+      {(stats.agents_pending > 0 || stats.showcase_eligible > 0) && (
+        <div className="mb-8 grid gap-4 sm:grid-cols-2">
+          {stats.agents_pending > 0 && (
+            <Card variant="ornate" className="flex items-center justify-between gap-4 p-5">
+              <div>
+                <p className="type-overline">Needs review</p>
+                <p className="mt-1 type-body">
+                  <strong>{stats.agents_pending}</strong> partner application
+                  {stats.agents_pending === 1 ? "" : "s"} waiting
+                </p>
+              </div>
+              <Link href="/admin/partners">
+                <Button size="sm">Review</Button>
+              </Link>
+            </Card>
+          )}
+          {stats.showcase_eligible > 0 && (
+            <Card variant="ornate" className="flex items-center justify-between gap-4 p-5">
+              <div>
+                <p className="type-overline">Ready to curate</p>
+                <p className="mt-1 type-body">
+                  <strong>{stats.showcase_eligible}</strong> consenting invitation
+                  {stats.showcase_eligible === 1 ? "" : "s"}
+                </p>
+              </div>
+              <Link href="/admin/showcase">
+                <Button size="sm" variant="secondary">
+                  Curate
+                </Button>
+              </Link>
+            </Card>
+          )}
         </div>
+      )}
 
-        <section>
-          <h2 className="mb-3 type-h2 text-primary">Invitations</h2>
-          {events.length === 0 ? (
-            <Card className="p-8 text-center">
-              <p className="type-caption italic">No invitations created yet.</p>
-            </Card>
-          ) : (
-            <Table headers={["Title", "Occasion", "Status", "Link", "Created", ""]}>
-              {events.map((event) => (
-                <tr key={event.id}>
-                  <td className="px-4 py-3 font-semibold">{event.title}</td>
-                  <td className="px-4 py-3">{eventTypeLabels[event.event_type]}</td>
-                  <td className="px-4 py-3">
-                    <Badge tone={event.status === "published" ? "success" : "accent"}>
-                      {event.status}
-                    </Badge>
-                  </td>
-                  <td className="px-4 py-3 font-mono type-caption">/invite/{event.slug}</td>
-                  <td className="px-4 py-3 type-caption">
-                    {new Date(event.created_at).toLocaleDateString("en-IN")}
-                  </td>
-                  <td className="px-4 py-3">
-                    <Link href={`/dashboard/${event.id}`}>
-                      <Button size="sm" variant="ghost">Open</Button>
-                    </Link>
-                  </td>
-                </tr>
-              ))}
-            </Table>
-          )}
-        </section>
-
-        <section>
-          <h2 className="mb-3 type-h2 text-primary">Accounts</h2>
-          <Table headers={["Name", "Email", "Role", "Joined"]}>
-            {profiles.map((p) => (
-              <tr key={p.id}>
-                <td className="px-4 py-3 font-semibold">{p.full_name ?? "—"}</td>
-                <td className="px-4 py-3 type-caption">{p.email}</td>
-                <td className="px-4 py-3">
-                  <Badge tone={p.role === "admin" ? "primary" : p.role === "agent" ? "accent" : "neutral"}>
-                    {roleLabels[p.role]}
-                  </Badge>
-                </td>
-                <td className="px-4 py-3 type-caption">
-                  {new Date(p.created_at).toLocaleDateString("en-IN")}
-                </td>
-              </tr>
-            ))}
-          </Table>
-        </section>
-
-        <section>
-          <h2 className="mb-3 type-h2 text-primary">Orders</h2>
-          {orders.length === 0 ? (
-            <Card className="p-8 text-center">
-              <p className="type-caption italic">No orders yet.</p>
-            </Card>
-          ) : (
-            <Table headers={["Date", "Plan", "Amount", "Provider", "Status"]}>
-              {orders.map((o) => (
-                <tr key={o.id}>
-                  <td className="px-4 py-3 type-caption">
-                    {new Date(o.created_at).toLocaleDateString("en-IN")}
-                  </td>
-                  <td className="px-4 py-3 font-semibold">{o.plan_code}</td>
-                  <td className="px-4 py-3">{inr(o.amount_inr)}</td>
-                  <td className="px-4 py-3 type-caption">{o.provider}</td>
-                  <td className="px-4 py-3">
-                    <Badge tone={o.status === "paid" ? "success" : o.status === "failed" ? "error" : "accent"}>
-                      {o.status}
-                    </Badge>
-                  </td>
-                </tr>
-              ))}
-            </Table>
-          )}
-        </section>
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <Stat label="Revenue (all time)" value={inr(stats.revenue_inr)} />
+        <Stat label="Revenue (30 days)" value={inr(stats.revenue_30d_inr)} />
+        <Stat label="Commission owed" value={inr(stats.commission_owed_inr)} />
+        <Stat label="Paid orders" value={stats.orders_paid} />
       </div>
-    </DashboardShell>
+
+      <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <Stat label="Accounts" value={stats.profiles_total} />
+        <Stat label="Invitations" value={stats.events_total} />
+        <Stat label="Published" value={stats.events_published} />
+        <Stat label="Invite views" value={compact(stats.views_total)} />
+      </div>
+
+      <div className="mt-8 flex flex-col gap-6">
+        {/* Revenue and activity are separate charts on separate scales.
+            Never a dual axis: two y-scales make any crossing point meaningless. */}
+        <TrendChart
+          title="Revenue · last 30 days"
+          caption={`${inr(stats.revenue_30d_inr)} in the last 30 days`}
+          data={daily}
+          series={[{ key: "revenue_inr", label: "Revenue" }]}
+          format="inrCompact"
+        />
+
+        <TrendChart
+          title="Signups & new invitations · last 30 days"
+          caption={`${stats.profiles_7d} new accounts and ${stats.events_7d} new invitations in the last 7 days`}
+          data={daily}
+          series={[
+            { key: "signups", label: "Signups" },
+            { key: "invites", label: "Invitations" },
+          ]}
+        />
+
+        <TrendChart
+          title="Invite views · last 30 days"
+          caption="Every guest opening any published invitation"
+          data={daily}
+          series={[{ key: "views", label: "Views" }]}
+          format="compact"
+        />
+      </div>
+
+      <AdminSection title="At a glance" description="The rest of the platform in numbers.">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <Stat label="Hosts" value={stats.hosts} />
+          <Stat label="Partners" value={stats.agents_total} />
+          <Stat label="Drafts in progress" value={stats.events_draft} />
+          <Stat label="Showcase live" value={stats.showcase_live} />
+          <Stat label="Guests invited" value={stats.guests_total} />
+          <Stat label="RSVPs received" value={stats.rsvps_total} />
+          <Stat label="New accounts (7d)" value={stats.profiles_7d} />
+          <Stat label="New invitations (7d)" value={stats.events_7d} />
+        </div>
+      </AdminSection>
+    </div>
   );
 }

@@ -12,8 +12,10 @@ import {
   Select, Stepper, Textarea, TimePicker, WaxSeal, type UploadedAsset,
 } from "@/design-system/components";
 import { eventTypeLabels, subEventPresets } from "@/lib/invite";
+import { capture } from "@/lib/posthog/client";
+import { EVENTS } from "@/lib/posthog/events";
 import type { EventType, PlanRow } from "@/lib/supabase/types";
-import { checkSlug, publishEvent, saveDraft } from "./actions";
+import { checkSlug, saveDraft, startCheckout } from "./actions";
 
 const STEPS = ["Occasion", "Region", "Theme", "Details", "Link", "Photos", "Publish"];
 
@@ -55,6 +57,9 @@ interface Draft {
   hashtag: string;
   subEvents: DraftSubEvent[];
   slug: string;
+  /** Consent to be featured in /showcase. Off unless explicitly ticked. */
+  showcaseConsent: boolean;
+  showcaseAnonymise: boolean;
 }
 
 const DRAFT_KEY = "amantrika:onboarding-draft";
@@ -74,6 +79,8 @@ const emptyDraft: Draft = {
   hashtag: "",
   subEvents: [],
   slug: "",
+  showcaseConsent: false,
+  showcaseAnonymise: true,
 };
 
 function slugify(parts: string[]): string {
@@ -107,17 +114,37 @@ export function OnboardingClient({ plans, isAgent }: { plans: PlanRow[]; isAgent
   const [publishedSlug, setPublishedSlug] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [planCode, setPlanCode] = useState(plans[0]?.code ?? "free");
+  const selectedPlan = plans.find((p) => p.code === planCode) ?? null;
+  // Display only. The price that is actually charged is computed server-side in
+  // src/lib/pricing.ts and never read back from the browser.
+  const isFreePlan = (selectedPlan?.price_inr ?? 0) === 0;
   const { setThemeId } = useTheme();
 
   // Local persistence covers a refresh before the first server save.
   useEffect(() => {
+    let resumed = false;
     try {
       const saved = window.localStorage.getItem(DRAFT_KEY);
-      if (saved) setDraft({ ...emptyDraft, ...(JSON.parse(saved) as Partial<Draft>) });
+      if (saved) {
+        setDraft({ ...emptyDraft, ...(JSON.parse(saved) as Partial<Draft>) });
+        resumed = true;
+      }
     } catch {
       // Corrupt draft: start fresh rather than trapping the user on a broken form.
     }
-  }, []);
+    capture(EVENTS.onboarding_started, { resumed_draft: resumed, is_agent: isAgent });
+  }, [isAgent]);
+
+  // One event per step reached — this is the drop-off funnel.
+  useEffect(() => {
+    capture(EVENTS.onboarding_step_viewed, {
+      step_index: step,
+      step_name: STEPS[step],
+      event_type: draft.eventType,
+    });
+    // Only the step number should re-fire this, not every keystroke in the form.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step]);
 
   const patch = useCallback((p: Partial<Draft>) => {
     setDraft((d) => {
@@ -175,6 +202,11 @@ export function OnboardingClient({ plans, isAgent }: { plans: PlanRow[]; isAgent
         }
         setSlugState(result.data?.available ? "ok" : "taken");
         setSlugMessage(result.data?.available ? "" : "Someone already has that link.");
+        // Slug length only — never the slug itself, which contains real names.
+        capture(EVENTS.invite_slug_checked, {
+          available: Boolean(result.data?.available),
+          slug_length: value.length,
+        });
       }, 450);
     },
     [eventId]
@@ -221,6 +253,8 @@ export function OnboardingClient({ plans, isAgent }: { plans: PlanRow[]; isAgent
       mainDate: draft.mainDate || undefined,
       city: draft.city || undefined,
       story: draft.story || undefined,
+      showcaseConsent: draft.showcaseConsent,
+      showcaseAnonymise: draft.showcaseAnonymise,
       subEvents: draft.subEvents
         .filter((s) => s.name.trim())
         .map((s) => ({
@@ -250,19 +284,29 @@ export function OnboardingClient({ plans, isAgent }: { plans: PlanRow[]; isAgent
     }
     setPublishing(true);
     setError(null);
-    const result = await publishEvent({ eventId, planCode });
-    setPublishing(false);
+    const result = await startCheckout({ eventId, planCode });
 
     if (!result.ok || !result.data) {
+      setPublishing(false);
       setError(result.error ?? "Couldn't publish your invitation.");
       return;
     }
+
     try {
       window.localStorage.removeItem(DRAFT_KEY);
     } catch {
       // Nothing to clean up.
     }
-    setPublishedSlug(result.data.slug);
+
+    if (result.data.kind === "published") {
+      setPublishing(false);
+      setPublishedSlug(result.data.slug);
+      return;
+    }
+
+    // Leaving for the processor. Stay in the loading state — the invitation is
+    // not published yet and won't be until the webhook says the money arrived.
+    window.location.href = result.data.checkoutUrl;
   }
 
   /* ---------- navigation ---------- */
@@ -337,7 +381,10 @@ export function OnboardingClient({ plans, isAgent }: { plans: PlanRow[]; isAgent
               {occasions.map((value) => (
                 <button
                   key={value}
-                  onClick={() => patch({ eventType: value, subEvents: [] })}
+                  onClick={() => {
+                    patch({ eventType: value, subEvents: [] });
+                    capture(EVENTS.onboarding_occasion_chosen, { event_type: value });
+                  }}
                   className={`rounded-card border p-5 text-center transition-all cursor-pointer ${
                     draft.eventType === value
                       ? "ornate-border bg-accent/8 shadow-gold-glow"
@@ -402,7 +449,13 @@ export function OnboardingClient({ plans, isAgent }: { plans: PlanRow[]; isAgent
                 return (
                   <button
                     key={t.id}
-                    onClick={() => setPreviewTheme(t.id)}
+                    onClick={() => {
+                      setPreviewTheme(t.id);
+                      capture(EVENTS.onboarding_theme_previewed, {
+                        theme_id: t.id,
+                        religion_tag: t.religionTag,
+                      });
+                    }}
                     className={`rounded-card border p-5 text-left transition-all cursor-pointer ${
                       active ? "ornate-border shadow-gold-glow" : "border-ornate/40 hover:border-ornate"
                     }`}
@@ -463,7 +516,17 @@ export function OnboardingClient({ plans, isAgent }: { plans: PlanRow[]; isAgent
                     </div>
                     <div className="mt-4 flex justify-end gap-2">
                       <Button variant="ghost" onClick={() => setPreviewTheme(null)}>Keep browsing</Button>
-                      <Button onClick={() => { patch({ themeId: t.id }); setPreviewTheme(null); }}>
+                      <Button
+                        onClick={() => {
+                          patch({ themeId: t.id });
+                          setPreviewTheme(null);
+                          capture(EVENTS.onboarding_theme_chosen, {
+                            theme_id: t.id,
+                            religion_tag: t.religionTag,
+                            event_type: draft.eventType,
+                          });
+                        }}
+                      >
                         Choose this theme
                       </Button>
                     </div>
@@ -674,6 +737,53 @@ export function OnboardingClient({ plans, isAgent }: { plans: PlanRow[]; isAgent
                 Confirm your link first — we need somewhere to file these.
               </p>
             )}
+
+            <Divider variant="motif" motif="marigold" className="my-8" />
+
+            {/*
+              Consent lives here, after the host has seen exactly which photos
+              they added — asking before they know what they'd be sharing would
+              not be informed consent. Unticked by default, never pre-ticked.
+            */}
+            <fieldset>
+              <legend className="type-h2 text-primary">Showcase (optional)</legend>
+              <label className="mt-4 flex cursor-pointer items-start gap-3">
+                <input
+                  type="checkbox"
+                  checked={draft.showcaseConsent}
+                  onChange={(e) => patch({ showcaseConsent: e.target.checked })}
+                  className="mt-1 size-4 shrink-0 accent-[var(--color-primary)]"
+                />
+                <span className="type-body text-muted">
+                  Can we feature your invitation in our public gallery? We&apos;ll create a copy
+                  with your address, phone numbers, and payment details removed. You can withdraw
+                  this at any time.
+                </span>
+              </label>
+
+              {draft.showcaseConsent && (
+                <label className="mt-4 flex cursor-pointer items-start gap-3 border-l-2 border-ornate/40 pl-4">
+                  <input
+                    type="checkbox"
+                    checked={draft.showcaseAnonymise}
+                    onChange={(e) => patch({ showcaseAnonymise: e.target.checked })}
+                    className="mt-1 size-4 shrink-0 accent-[var(--color-primary)]"
+                  />
+                  <span className="type-body text-muted">
+                    Use first names only. Leave this ticked if you&apos;d rather your surnames
+                    weren&apos;t shown.
+                  </span>
+                </label>
+              )}
+
+              <p className="mt-4 type-caption">
+                Ticking this makes your invitation <em>eligible</em> — we still review before
+                anything is published, and we never link to your real invitation.{" "}
+                <Link href="/showcase" target="_blank" className="text-primary underline underline-offset-4">
+                  See the gallery
+                </Link>
+              </p>
+            </fieldset>
           </Card>
         )}
 
@@ -684,7 +794,13 @@ export function OnboardingClient({ plans, isAgent }: { plans: PlanRow[]; isAgent
               {plans.map((plan) => (
                 <button
                   key={plan.code}
-                  onClick={() => setPlanCode(plan.code)}
+                  onClick={() => {
+                    setPlanCode(plan.code);
+                    capture(EVENTS.plan_selected, {
+                      plan: plan.code,
+                      amount_inr: plan.price_inr,
+                    });
+                  }}
                   className={`rounded-card border p-6 text-left transition-all cursor-pointer ${
                     planCode === plan.code
                       ? "ornate-border bg-accent/8 shadow-gold-glow"
@@ -708,14 +824,22 @@ export function OnboardingClient({ plans, isAgent }: { plans: PlanRow[]; isAgent
             </div>
 
             <Card className="h-fit p-8">
-              <p className="type-overline mb-4">Payment (demo)</p>
-              <div className="flex flex-col gap-4 opacity-60">
-                <Input label="Card number" disabled placeholder="4242 4242 4242 4242" />
-                <div className="grid grid-cols-2 gap-4">
-                  <Input label="Expiry" disabled placeholder="12/29" />
-                  <Input label="CVV" disabled placeholder="•••" />
-                </div>
-              </div>
+              <p className="type-overline mb-4">Order summary</p>
+              {selectedPlan && (
+                <dl className="flex flex-col gap-3">
+                  <div className="flex items-baseline justify-between">
+                    <dt className="text-sm">{selectedPlan.name}</dt>
+                    <dd className="font-display text-2xl font-semibold text-primary">
+                      {selectedPlan.price_inr === 0
+                        ? "Free"
+                        : `₹${selectedPlan.price_inr.toLocaleString("en-IN")}`}
+                    </dd>
+                  </div>
+                  {selectedPlan.description && (
+                    <p className="type-caption">{selectedPlan.description}</p>
+                  )}
+                </dl>
+              )}
               <Button
                 size="lg"
                 loading={publishing}
@@ -723,10 +847,18 @@ export function OnboardingClient({ plans, isAgent }: { plans: PlanRow[]; isAgent
                 className="mt-6 w-full"
                 variant="celebration"
               >
-                {publishing ? "Blessing your card…" : "Pay & publish"}
+                {isFreePlan
+                  ? publishing
+                    ? "Publishing…"
+                    : "Publish invitation"
+                  : publishing
+                    ? "Opening checkout…"
+                    : "Continue to payment"}
               </Button>
               <p className="mt-3 text-center type-caption">
-                No money moves yet — the dummy gateway always succeeds, and every plan is unlocked.
+                {isFreePlan
+                  ? "Your invitation publishes straight away, with a small Amantrika watermark."
+                  : "You'll pay on our processor's secure page. Your invitation goes live the moment the payment is confirmed."}
               </p>
             </Card>
           </div>

@@ -13,6 +13,7 @@ import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { ThemeProvider } from "@/design-system/ThemeProvider";
 import { DevThemeSwitcher } from "@/design-system/DevThemeSwitcher";
+import { PostHogProvider } from "@/lib/posthog/Provider";
 import { siteUrl } from "@/lib/env";
 import "./globals.css";
 
@@ -100,13 +101,19 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" data-theme="royal-maroon" className={`${fontVars} h-full antialiased`}>
       <body className="min-h-full flex flex-col">
-        <ThemeProvider>
-          {children}
-          <DevThemeSwitcher />
-        </ThemeProvider>
+        {/* PostHog is the product-analytics layer: funnels, retention, and the
+            behaviour behind each event. It sits outside ThemeProvider so a theme
+            re-render never remounts the tracker. */}
+        <PostHogProvider>
+          <ThemeProvider>
+            {children}
+            <DevThemeSwitcher />
+          </ThemeProvider>
+        </PostHogProvider>
         {/* Vercel's own analytics: aggregate traffic and Core Web Vitals for the
-            whole site. Distinct from our per-invite view counts in `page_views`,
-            which are what a couple sees on their dashboard. */}
+            whole site. Distinct both from PostHog and from our per-invite view
+            counts in `page_views`, which are what a couple sees on their
+            dashboard. */}
         <Analytics />
         <SpeedInsights />
       </body>

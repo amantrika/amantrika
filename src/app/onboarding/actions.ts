@@ -1,9 +1,17 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 import { z } from "zod";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient, createClient } from "@/lib/supabase/server";
 import { requireProfile } from "@/lib/auth";
+import { getPaymentProvider } from "@/lib/payments";
+import { computePrice } from "@/lib/pricing";
+import { siteUrl } from "@/lib/env";
+import { captureServer } from "@/lib/posthog/server";
+import { log } from "@/lib/posthog/logger";
+import { EVENTS } from "@/lib/posthog/events";
+import { SHOWCASE_CONSENT_TEXT } from "@/lib/consent";
 import type { EventType } from "@/lib/supabase/types";
 
 export interface ActionResult<T = undefined> {
@@ -74,7 +82,12 @@ const draftSchema = z.object({
   subEvents: z.array(subEventSchema).max(30),
   /** Set by an agent creating this on a client's behalf. */
   clientEmail: z.string().email().optional(),
+  // Consent, default off. Only ever set from an explicit tick by the host.
+  showcaseConsent: z.boolean().default(false),
+  showcaseAnonymise: z.boolean().default(true),
 });
+
+
 
 export type DraftInput = z.input<typeof draftSchema>;
 
@@ -108,6 +121,10 @@ export async function saveDraft(input: DraftInput): Promise<ActionResult<{ event
     main_datetime: toTimestamp(d.mainDate),
     city: d.city || null,
     story: d.story || null,
+    permissions: {
+      showcase_consent: d.showcaseConsent,
+      showcase_anonymise: d.showcaseAnonymise,
+    },
   };
 
   let eventId = d.eventId;
@@ -134,6 +151,18 @@ export async function saveDraft(input: DraftInput): Promise<ActionResult<{ event
   }
 
   await replaceSubEvents(eventId, d.subEvents);
+  await recordConsentIfChanged(eventId, profile.id, d.showcaseConsent, d.showcaseAnonymise);
+
+  await captureServer(profile.id, EVENTS.invite_draft_saved, {
+    event_id: eventId,
+    event_type: d.eventType,
+    theme_id: d.themeId,
+    host_count: d.hosts.length,
+    sub_event_count: d.subEvents.length,
+    has_story: Boolean(d.story),
+    is_first_save: !d.eventId,
+    created_by_agent: profile.role === "agent",
+  });
 
   revalidatePath("/dashboard");
   return { ok: true, data: { eventId } };
@@ -160,6 +189,65 @@ async function replaceSubEvents(eventId: string, subEvents: z.infer<typeof subEv
   );
 }
 
+/**
+ * Appends to the consent audit trail, but only when the answer actually changed
+ * — otherwise every autosave would write a row and the history would be noise.
+ *
+ * `showcase_consents` is append-only by design: a withdrawal is a new row saying
+ * `granted = false`, never an edit to the row that granted it.
+ */
+async function recordConsentIfChanged(
+  eventId: string,
+  profileId: string,
+  granted: boolean,
+  anonymise: boolean
+) {
+  const supabase = await createClient();
+
+  const { data: latest } = await supabase
+    .from("showcase_consents")
+    .select("granted, anonymise")
+    .eq("event_id", eventId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (latest && latest.granted === granted && latest.anonymise === anonymise) return;
+  // Nothing to record if they never turned it on and still haven't.
+  if (!latest && !granted) return;
+
+  const headerList = await headers();
+
+  const { error } = await supabase.from("showcase_consents").insert({
+    event_id: eventId,
+    profile_id: profileId,
+    granted,
+    anonymise,
+    consent_text: SHOWCASE_CONSENT_TEXT,
+    // Deliberately recorded: consent evidence is the one place an IP is warranted.
+    ip_address:
+      headerList.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+      headerList.get("x-real-ip") ??
+      null,
+    user_agent: headerList.get("user-agent")?.slice(0, 400) ?? null,
+  });
+
+  if (error) log.warn("consent audit write failed", { event_id: eventId, reason: error.message });
+
+  // Withdrawal must take the public clone down immediately, not on a cron.
+  if (!granted) {
+    const { error: withdrawError } = await supabase.rpc("withdraw_showcase", {
+      p_source_id: eventId,
+    });
+    if (withdrawError) {
+      log.error("showcase withdrawal failed", {
+        event_id: eventId,
+        reason: withdrawError.message,
+      });
+    }
+  }
+}
+
 /** Dates arrive as YYYY-MM-DD from the picker; store them as a timestamp. */
 function toTimestamp(value?: string | null): string | null {
   if (!value) return null;
@@ -168,29 +256,43 @@ function toTimestamp(value?: string | null): string | null {
   return Number.isNaN(date.getTime()) ? null : date.toISOString();
 }
 
-const publishSchema = z.object({
+const checkoutSchema = z.object({
   eventId: z.string().uuid(),
   planCode: z.string().min(1).max(40),
 });
 
 /**
- * Records a dummy order, marks it paid (which accrues the agent commission via
- * trigger) and publishes the invite. Every plan is enabled while payments are
- * stubbed — swapping `provider` to a real gateway is the only change needed.
+ * A free plan publishes here and now; a paid plan gets a checkout URL and
+ * nothing else. Which one happened is the caller's only branch.
  */
-export async function publishEvent(input: {
+export type CheckoutStart =
+  | { kind: "published"; slug: string }
+  | { kind: "checkout"; checkoutUrl: string };
+
+/**
+ * Opens a checkout. Deliberately does **not** publish.
+ *
+ * The previous version of this action inserted an order and marked it paid in
+ * the same breath, which meant any signed-in browser could publish for free by
+ * calling it. Now the amount comes from `computePrice()` on the server, the
+ * order is written under the service role (the client has no insert grant), and
+ * only a signature-verified webhook may ever set `status = 'paid'`.
+ */
+export async function startCheckout(input: {
   eventId: string;
   planCode: string;
-}): Promise<ActionResult<{ slug: string }>> {
-  const parsed = publishSchema.safeParse(input);
+}): Promise<ActionResult<CheckoutStart>> {
+  const parsed = checkoutSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Something's off with that request." };
 
   const profile = await requireProfile("/onboarding");
   const supabase = await createClient();
 
+  // Read under the caller's own grants, so RLS proves they own this invitation
+  // before anything is written under the service role.
   const { data: event } = await supabase
     .from("events")
-    .select("id, slug, agent_id, owner_id")
+    .select("id, slug, agent_id, owner_id, main_datetime")
     .eq("id", parsed.data.eventId)
     .maybeSingle();
 
@@ -198,48 +300,118 @@ export async function publishEvent(input: {
 
   const { data: plan } = await supabase
     .from("plans")
-    .select("code, price_inr")
+    .select("code, name, price_inr, dodo_product_id")
     .eq("code", parsed.data.planCode)
     .maybeSingle();
 
   if (!plan) return { ok: false, error: "That plan isn't available." };
 
-  const { data: order, error: orderError } = await supabase
+  const price = computePrice({
+    plan,
+    eventDate: event.main_datetime ? new Date(event.main_datetime) : null,
+  });
+
+  // Free plans never reach a processor: there is nothing to collect, so the
+  // invitation publishes immediately (watermarked, per the plan's own features).
+  if (price.final_price_inr === 0) {
+    const { error: publishError } = await supabase
+      .from("events")
+      .update({ status: "published", published_at: new Date().toISOString() })
+      .eq("id", event.id);
+
+    if (publishError) {
+      log.error("free invite could not be published", {
+        event_id: event.id,
+        reason: publishError.message,
+      });
+      return { ok: false, error: "Couldn't publish your invitation." };
+    }
+
+    await captureServer(profile.id, EVENTS.invite_published, {
+      event_id: event.id,
+      slug: event.slug,
+      plan: plan.code,
+      via_agent: Boolean(event.agent_id),
+    });
+
+    revalidatePath("/dashboard");
+    revalidatePath(`/invite/${event.slug}`);
+    return { ok: true, data: { kind: "published", slug: event.slug } };
+  }
+
+  // The processor needs somewhere to send the receipt, and so do we.
+  if (!profile.email) {
+    return { ok: false, error: "Add an email address to your account before paying." };
+  }
+
+  const provider = getPaymentProvider();
+  const admin = createAdminClient();
+
+  const { data: order, error: orderError } = await admin
     .from("orders")
     .insert({
       event_id: event.id,
       buyer_id: profile.id,
       agent_id: event.agent_id,
       plan_code: plan.code,
-      amount_inr: plan.price_inr,
+      amount_inr: price.final_price_inr,
+      currency: "INR",
       status: "pending",
-      provider: "dummy",
+      provider: provider.name,
     })
     .select("id")
     .single();
 
-  if (orderError || !order) return { ok: false, error: "Couldn't start checkout." };
+  if (orderError || !order) {
+    log.error("checkout could not create order", {
+      event_id: event.id,
+      plan: plan.code,
+      reason: orderError?.message,
+    });
+    return { ok: false, error: "Couldn't start checkout." };
+  }
 
-  // The dummy gateway always succeeds.
-  const { error: payError } = await supabase
+  let checkout;
+  try {
+    checkout = await provider.createCheckout({
+      order: {
+        id: order.id,
+        amount_inr: price.final_price_inr,
+        currency: "INR",
+        plan_code: plan.code,
+        plan_name: plan.name,
+        provider_product_id: plan.dodo_product_id,
+      },
+      customer: { email: profile.email, name: profile.full_name ?? "Amantrika host" },
+      successUrl: `${siteUrl}/dashboard/${event.id}?paid=1`,
+      cancelUrl: `${siteUrl}/dashboard/${event.id}`,
+    });
+  } catch (cause) {
+    const reason = cause instanceof Error ? cause.message : String(cause);
+    log.error("provider refused to open checkout", {
+      order_id: order.id,
+      provider: provider.name,
+      reason,
+    });
+    await admin
+      .from("orders")
+      .update({ status: "failed", failure_reason: reason.slice(0, 500) })
+      .eq("id", order.id);
+    return { ok: false, error: "Couldn't reach the payment provider. Please try again." };
+  }
+
+  await admin
     .from("orders")
-    .update({
-      status: "paid",
-      paid_at: new Date().toISOString(),
-      provider_ref: `dummy_${order.id.slice(0, 8)}`,
-    })
+    .update({ provider_session_id: checkout.providerOrderId })
     .eq("id", order.id);
 
-  if (payError) return { ok: false, error: "Payment couldn't be confirmed." };
+  await captureServer(profile.id, EVENTS.checkout_started, {
+    event_id: event.id,
+    order_id: order.id,
+    plan: plan.code,
+    amount_inr: price.final_price_inr,
+    provider: provider.name,
+  });
 
-  const { error: publishError } = await supabase
-    .from("events")
-    .update({ status: "published", published_at: new Date().toISOString() })
-    .eq("id", event.id);
-
-  if (publishError) return { ok: false, error: "Couldn't publish your invitation." };
-
-  revalidatePath("/dashboard");
-  revalidatePath(`/invite/${event.slug}`);
-  return { ok: true, data: { slug: event.slug } };
+  return { ok: true, data: { kind: "checkout", checkoutUrl: checkout.checkoutUrl } };
 }

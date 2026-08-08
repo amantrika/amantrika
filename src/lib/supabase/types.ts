@@ -26,6 +26,7 @@ export type RsvpStatus = Enums["rsvp_status"];
 export type OrderStatus = Enums["order_status"];
 export type CommissionStatus = Enums["commission_status"];
 export type AssetKind = Enums["asset_kind"];
+export type AgentStatus = Enums["agent_status"];
 
 /* ------------------------------------------------- shapes behind the jsonb */
 
@@ -45,6 +46,24 @@ export type Hotel = {
   name: string;
   distance: string;
   phone: string;
+};
+
+/** Host consent flags. Separate from EventSettings: consent is withdrawable and audited. */
+export type EventPermissions = {
+  showcase_consent?: boolean;
+  showcase_anonymise?: boolean;
+};
+
+export type ShowcaseConsentRow = {
+  id: string;
+  event_id: string;
+  profile_id: string | null;
+  granted: boolean;
+  anonymise: boolean;
+  consent_text: string;
+  ip_address: string | null;
+  user_agent: string | null;
+  created_at: string;
 };
 
 export type EventSettings = {
@@ -75,6 +94,35 @@ export type AgentStats = {
   unpaid_inr: number;
 };
 
+export type AdminOverview = {
+  profiles_total: number;
+  profiles_7d: number;
+  hosts: number;
+  agents_total: number;
+  agents_pending: number;
+  events_total: number;
+  events_published: number;
+  events_draft: number;
+  events_7d: number;
+  revenue_inr: number;
+  revenue_30d_inr: number;
+  orders_paid: number;
+  commission_owed_inr: number;
+  showcase_live: number;
+  showcase_eligible: number;
+  guests_total: number;
+  rsvps_total: number;
+  views_total: number;
+};
+
+export type AdminDailyPoint = {
+  day: string;
+  signups: number;
+  invites: number;
+  revenue_inr: number;
+  views: number;
+};
+
 export type ViewsByDay = {
   day: string;
   views: number;
@@ -93,6 +141,7 @@ type EventJson = {
   story_moments: StoryMoment[];
   hotels: Hotel[];
   settings: EventSettings;
+  permissions: EventPermissions;
 };
 
 type EventsTable = Replace<
@@ -121,6 +170,7 @@ type RefinedFunctions = Replace<
   {
     event_stats: Replace<Functions["event_stats"], { Returns: EventStats }>;
     agent_stats: Replace<Functions["agent_stats"], { Returns: AgentStats }>;
+    admin_overview: Replace<Functions["admin_overview"], { Returns: AdminOverview }>;
   }
 >;
 
@@ -153,3 +203,5 @@ export type AssetRow = Row<"assets">;
 export type PlanRow = Row<"plans">;
 export type OrderRow = Row<"orders">;
 export type CommissionRow = Row<"commissions">;
+export type ShowcaseConsent = Row<"showcase_consents">;
+export type AdminAllowlistRow = Row<"admin_allowlist">;

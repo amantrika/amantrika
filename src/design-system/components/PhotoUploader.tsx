@@ -5,6 +5,8 @@ import { ImagePlus, Trash2, Upload } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { ASSET_BUCKET, assetUrl } from "@/lib/invite";
 import { deleteAsset, registerAsset } from "@/lib/asset-actions";
+import { capture } from "@/lib/posthog/client";
+import { EVENTS } from "@/lib/posthog/events";
 import { Button } from "./Button";
 
 export interface UploadedAsset {
@@ -55,6 +57,11 @@ export function PhotoUploader({
     setBusy(true);
     setError(null);
     setProgress({ done: 0, total: files.length });
+    capture(EVENTS.asset_upload_started, {
+      event_id: eventId,
+      file_count: files.length,
+      total_kb: Math.round(files.reduce((sum, f) => sum + f.size, 0) / 1024),
+    });
 
     const supabase = createClient();
     const added: UploadedAsset[] = [];
@@ -68,6 +75,12 @@ export function PhotoUploader({
         .upload(storagePath, file, { cacheControl: "31536000", upsert: false });
 
       if (uploadError) {
+        capture(EVENTS.asset_upload_failed, {
+          event_id: eventId,
+          stage: "storage",
+          size_kb: Math.round(file.size / 1024),
+          mime_type: file.type,
+        });
         setError(`Couldn't upload ${file.name}. ${uploadError.message}`);
         break;
       }
@@ -86,6 +99,12 @@ export function PhotoUploader({
       if (!result.ok || !result.assetId) {
         // Roll back the orphaned object so Storage doesn't drift from the table.
         await supabase.storage.from(ASSET_BUCKET).remove([storagePath]);
+        capture(EVENTS.asset_upload_failed, {
+          event_id: eventId,
+          stage: "register",
+          size_kb: Math.round(file.size / 1024),
+          mime_type: file.type,
+        });
         setError(result.error ?? `Couldn't save ${file.name}.`);
         break;
       }

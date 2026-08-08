@@ -32,8 +32,14 @@ and narrower spec. `project-overview.md` supersedes it. The honest summary:
   grants.
 - Onboarding's payment step is a fake UI, not a provider interface with a signed webhook.
 
+**Built since this plan was written (8 Aug 2026)**
+The content layer: MDX blog with validated frontmatter, pagination, category and tag listings,
+sidebar and table of contents, related posts, RSS; MDX content pages; the typed JSON-LD suite;
+sitemap and robots; and the LLM surface (`/llms.txt`, `/llms-full.txt`, `.md` twins of every public
+page). Seven posts and three content pages are live. See §B rows 45–51.
+
 **Not built at all**
-Marketing site · blog · showcase · pricing page · legal pages · server-side watermark and paywall ·
+Showcase · pricing page · legal pages · server-side watermark and paywall ·
 pricing engine and entitlements · real orders · multi-language content, routing, and fonts · guest
 list and personalised tokens · nudge/expiry/archive crons · transactional email · the SEO suite
 (JSON-LD, hreflang, OG images, RSS) · the LLM suite (`llms.txt`, markdown twins) · tests of any kind.
@@ -121,13 +127,14 @@ status today, and the phase that delivers it.
 
 | # | System | Spec | Today | Phase |
 |---|---|---|---|---|
-| 45 | Marketing pages, statically rendered | §1, §19 | landing only | 5 |
-| 46 | MDX blog, Zod-validated frontmatter, custom components, TOC, related posts | §19.1 | missing | 5 |
-| 47 | JSON-LD builders, every schema, validated in Rich Results | §19.2 | none | 5 |
-| 48 | Sitemap · robots · canonicals · hreflang · RSS · OG images | §19.3 | stub sitemap/robots | 5 |
-| 49 | Content taxonomy + keyword scaffold (incl. per-language) | §19.4 | missing | 5 |
-| 50 | Migrate old copy; restore "Our Story"; drop fake testimonials; fix the 6 known bugs | §19.5 | missing | 5 |
-| 51 | **LLM discoverability: `llms.txt`, markdown twins, answer-shaped copy** | CLAUDE.md §4 | missing | 5 |
+| 45 | Marketing pages, statically rendered | §1, §19 | ✅ shell, about, how-it-works, contact | done |
+| 46 | MDX blog, Zod-validated frontmatter, custom components, TOC, related posts, pagination | §19.1 | ✅ 7 posts live | done |
+| 47 | JSON-LD builders, every schema, validated in Rich Results | §19.2 | ✅ built; **Rich Results check outstanding** | 5 |
+| 48 | Sitemap · robots · canonicals · RSS · OG images | §19.3 | ✅ except OG images; hreflang waits on i18n | 5 |
+| 49 | Content taxonomy + keyword scaffold (incl. per-language) | §19.4 | ✅ 5 categories, tags; per-language pending | 6 |
+| 50 | Migrate old copy; restore "Our Story"; drop fake testimonials; fix the 6 known bugs | §19.5 | "Our Story" restored on `/about`; **legal pages not migrated** | 5 |
+| 51 | **LLM discoverability: `llms.txt`, markdown twins, answer-shaped copy** | CLAUDE.md §4 | ✅ `/llms.txt`, `/llms-full.txt`, `.md` twins | done |
+| 51a | Pricing page with real numbers | §14, §25.1 | missing — blocked on the pricing decision | 4 |
 | 52 | Showcase: consent, sanitised clone, admin curation | §10.1 | missing | 6 |
 
 ### Languages

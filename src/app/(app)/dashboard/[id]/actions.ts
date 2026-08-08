@@ -3,6 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { requireProfile } from "@/lib/auth";
+import { captureServer } from "@/lib/posthog/server";
+import { log } from "@/lib/posthog/logger";
+import { EVENTS } from "@/lib/posthog/events";
 import type { EventSettings, EventStatus } from "@/lib/supabase/types";
 
 export interface Result {
@@ -31,6 +35,13 @@ export async function updateSettings(eventId: string, settings: EventSettings): 
     .eq("id", eventId);
 
   if (error) return { ok: false, error: "Couldn't save those settings." };
+
+  const profile = await requireProfile();
+  await captureServer(profile.id, EVENTS.invite_settings_changed, {
+    event_id: eventId,
+    // Which switches are now on, so we can see which features hosts actually keep.
+    ...Object.fromEntries(Object.entries(settings).map(([k, v]) => [`setting_${k}`, v])),
+  });
 
   revalidatePath(`/dashboard/${eventId}`);
   revalidatePath(`/invite/${current.slug}`);
@@ -62,7 +73,18 @@ export async function setEventStatus(eventId: string, status: EventStatus): Prom
     })
     .eq("id", eventId);
 
-  if (error) return { ok: false, error: "Couldn't change the status." };
+  if (error) {
+    log.error("event status change failed", { event_id: eventId, status, reason: error.message });
+    return { ok: false, error: "Couldn't change the status." };
+  }
+
+  const profile = await requireProfile();
+  await captureServer(profile.id, EVENTS.invite_status_changed, {
+    event_id: eventId,
+    status,
+    // Taking a live invite offline is a churn signal worth isolating.
+    was_published: Boolean(current.published_at),
+  });
 
   revalidatePath(`/dashboard/${eventId}`);
   revalidatePath(`/invite/${current.slug}`);
@@ -100,6 +122,15 @@ export async function addGuest(input: z.input<typeof guestSchema>): Promise<Resu
   });
 
   if (error) return { ok: false, error: "Couldn't add that guest." };
+
+  const profile = await requireProfile();
+  // No name, phone or email — just the shape of the guest list.
+  await captureServer(profile.id, EVENTS.guest_added, {
+    event_id: g.eventId,
+    headcount: g.headcount,
+    has_phone: Boolean(g.phone),
+    invited_to_count: g.invitedKeys.length,
+  });
 
   revalidatePath(`/dashboard/${g.eventId}`);
   return { ok: true };
@@ -140,7 +171,23 @@ export async function importGuests(eventId: string, raw: string): Promise<Result
 
   const supabase = await createClient();
   const { error } = await supabase.from("guests").insert(rows);
-  if (error) return { ok: false, error: "Couldn't import that list." };
+  if (error) {
+    log.error("guest import failed", {
+      event_id: eventId,
+      row_count: rows.length,
+      reason: error.message,
+    });
+    return { ok: false, error: "Couldn't import that list." };
+  }
+
+  const profile = await requireProfile();
+  await captureServer(profile.id, EVENTS.guests_imported, {
+    event_id: eventId,
+    guest_count: rows.length,
+    total_headcount: rows.reduce((sum, r) => sum + r.headcount, 0),
+    // 500 is the import cap; hitting it means the list was truncated.
+    hit_cap: rows.length === 500,
+  });
 
   revalidatePath(`/dashboard/${eventId}`);
   return { ok: true, added: rows.length };
@@ -160,6 +207,12 @@ export async function setBlessingApproval(
     .eq("id", blessingId);
 
   if (error) return { ok: false, error: "Couldn't update that blessing." };
+
+  const profile = await requireProfile();
+  await captureServer(profile.id, EVENTS.blessing_moderated, {
+    event_id: eventId,
+    approved,
+  });
 
   revalidatePath(`/dashboard/${eventId}`);
   return { ok: true };

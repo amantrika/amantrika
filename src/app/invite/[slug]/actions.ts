@@ -3,6 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { captureAnonymousServer } from "@/lib/posthog/server";
+import { log } from "@/lib/posthog/logger";
+import { EVENTS } from "@/lib/posthog/events";
 
 export interface SubmitResult {
   ok: boolean;
@@ -68,7 +71,21 @@ export async function submitRsvp(input: RsvpInput): Promise<SubmitResult> {
     message: data.message ?? null,
   });
 
-  if (error) return { ok: false, error: "We couldn't record your response. Please try again." };
+  if (error) {
+    log.error("rsvp insert failed", { event_id: event.id, reason: error.message });
+    return { ok: false, error: "We couldn't record your response. Please try again." };
+  }
+
+  // Anonymous: guests have no account, and we deliberately don't create a
+  // person profile for each one. No name, meal preference or message is sent.
+  await captureAnonymousServer(event.id, EVENTS.rsvp_submitted, {
+    event_id: event.id,
+    attending: data.attending,
+    headcount: data.headcount,
+    sub_event_count: data.subEventKeys.length,
+    was_invited_personally: Boolean(guestId),
+    left_message: Boolean(data.message),
+  });
 
   revalidatePath(`/invite/${data.slug}`);
   return { ok: true };
@@ -108,7 +125,18 @@ export async function submitBlessing(input: BlessingInput): Promise<SubmitResult
     is_approved: !moderate,
   });
 
-  if (error) return { ok: false, error: "We couldn't post your blessing. Please try again." };
+  if (error) {
+    log.error("blessing insert failed", { event_id: event.id, reason: error.message });
+    return { ok: false, error: "We couldn't post your blessing. Please try again." };
+  }
+
+  // Length only — the blessing itself is private to the family.
+  await captureAnonymousServer(event.id, EVENTS.blessing_submitted, {
+    event_id: event.id,
+    held_for_moderation: moderate,
+    message_length: message.length,
+    named: Boolean(name),
+  });
 
   revalidatePath(`/invite/${slug}`);
   return {

@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
+import { homeFor } from "@/lib/roles";
 import type { Profile, UserRole } from "@/lib/supabase/types";
 
 /**
@@ -35,14 +36,8 @@ export async function requireRole(roles: UserRole[], next = "/dashboard"): Promi
   return profile;
 }
 
-export function homeFor(role: UserRole): string {
-  if (role === "admin") return "/admin";
-  if (role === "agent") return "/agent";
-  return "/dashboard";
-}
-
-export const roleLabels: Record<UserRole, string> = {
-  host: "Host",
-  agent: "Partner agent",
-  admin: "Administrator",
-};
+/**
+ * Re-exported so existing server-side imports keep working. The definitions live
+ * in `lib/roles.ts` because they must be importable from client components too.
+ */
+export { homeFor, roleLabels } from "@/lib/roles";

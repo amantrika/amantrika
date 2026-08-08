@@ -138,15 +138,28 @@ This repo uses a `src/` prefix. Wherever `project-overview.md` §5 writes `app/`
 `src/app/` and `src/lib/`.
 
 ```
-src/app/            route groups; see §1
-src/design-system/  tokens, motifs, patterns, borders, 77+ documented components
-src/themes/         theme registry (8 themes today)
-src/lib/            supabase clients, env, schemas, pricing, seo, i18n, payments
-src/data/           demo/seed fixtures — not production data
+src/app/              route groups; see §1
+  (marketing)/        blog, content pages, public shell (header, footer, Organization JSON-LD)
+  md/[...slug]/       markdown twins of every public page (see §4)
+  llms.txt/, llms-full.txt/
+src/design-system/    tokens, motifs, patterns, borders, 77+ documented components
+src/themes/           theme registry (8 themes today)
+src/lib/              supabase clients, env, pricing, payments, i18n
+  content/            MDX loader, frontmatter schemas, authoring components, renderer
+  seo/                typed JSON-LD builders, <JsonLd>, pageMetadata()
+src/data/             demo/seed fixtures — not production data
+content/blog/*.mdx    posts        content/pages/*.mdx   standalone pages
+content/authors.ts    author registry referenced by post frontmatter
 supabase/migrations/
-content/blog/       MDX posts
-docs/               architecture, data-model, content-schema, i18n, payments, seo, roadmap
+docs/                 architecture, data-model, content-schema, i18n, payments, seo, roadmap
 ```
+
+**Writing content:** add an `.mdx` file whose filename matches its `slug` frontmatter — the route,
+sitemap entry, RSS item, markdown twin and JSON-LD all follow automatically. Frontmatter is
+Zod-validated at read time, so a malformed post fails the build instead of shipping broken
+structured data. The block vocabulary available to posts (`<Callout>`, `<Steps>`, `<FAQ>`,
+`<Comparison>`, `<ThemePreview>`, `<CTA>`, `<Figure>`) lives in `src/lib/content/mdx-components.tsx`
+— extend that file rather than writing layout inside a post.
 
 **The design system is an asset, not scaffolding.** It has 8 themes, per-theme tokens (fonts,
 borders, textures, opening animations, rhythm), 32 custom icons, 10 background patterns, and a live
@@ -167,9 +180,9 @@ These gaps are real and are sequenced in `plan.md` Phase 0. Do not paper over th
 | `partners` with commission | `agents` with commission |
 | `content` JSONB validated by one Zod schema | typed columns + several loose JSONB fields |
 | `get_public_invite()` / `submit_rsvp()` security-definer RPCs | direct RLS reads |
-| Marketing site, blog, showcase, pricing | landing page only |
+| Marketing site, blog, showcase, pricing | blog + content pages + SEO/LLM suite shipped; showcase, pricing and legal pages missing |
 | Multi-language content model | single language |
-| Payments behind a provider interface | fake payment step in onboarding |
+| Payments behind a provider interface | done — `src/lib/payments/`, mock + Dodo, webhook is the only path to `paid` |
 | Server-side structural watermark | none |
 
 ---

@@ -39,39 +39,82 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_allowlist: {
+        Row: {
+          created_at: string
+          email: string
+          note: string | null
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          note?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          note?: string | null
+        }
+        Relationships: []
+      }
       agents: {
         Row: {
           agency_name: string | null
+          application_note: string | null
+          applied_at: string
           commission_rate: number
           created_at: string
           id: string
           is_active: boolean
           payout_upi: string | null
           referral_code: string
+          review_note: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: Database["public"]["Enums"]["agent_status"]
         }
         Insert: {
           agency_name?: string | null
+          application_note?: string | null
+          applied_at?: string
           commission_rate?: number
           created_at?: string
           id: string
           is_active?: boolean
           payout_upi?: string | null
           referral_code: string
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["agent_status"]
         }
         Update: {
           agency_name?: string | null
+          application_note?: string | null
+          applied_at?: string
           commission_rate?: number
           created_at?: string
           id?: string
           is_active?: boolean
           payout_upi?: string | null
           referral_code?: string
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["agent_status"]
         }
         Relationships: [
           {
             foreignKeyName: "agents_id_fkey"
             columns: ["id"]
             isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agents_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -234,10 +277,15 @@ export type Database = {
           hosts: Json
           hotels: Json
           id: string
+          is_showcased: boolean
           main_datetime: string | null
           owner_id: string
+          permissions: Json
           published_at: string | null
           settings: Json
+          showcase_source_id: string | null
+          showcase_tags: string[]
+          showcased_at: string | null
           slug: string
           status: Database["public"]["Enums"]["event_status"]
           story: string | null
@@ -257,10 +305,15 @@ export type Database = {
           hosts?: Json
           hotels?: Json
           id?: string
+          is_showcased?: boolean
           main_datetime?: string | null
           owner_id: string
+          permissions?: Json
           published_at?: string | null
           settings?: Json
+          showcase_source_id?: string | null
+          showcase_tags?: string[]
+          showcased_at?: string | null
           slug: string
           status?: Database["public"]["Enums"]["event_status"]
           story?: string | null
@@ -280,10 +333,15 @@ export type Database = {
           hosts?: Json
           hotels?: Json
           id?: string
+          is_showcased?: boolean
           main_datetime?: string | null
           owner_id?: string
+          permissions?: Json
           published_at?: string | null
           settings?: Json
+          showcase_source_id?: string | null
+          showcase_tags?: string[]
+          showcased_at?: string | null
           slug?: string
           status?: Database["public"]["Enums"]["event_status"]
           story?: string | null
@@ -313,6 +371,13 @@ export type Database = {
             columns: ["owner_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "events_showcase_source_id_fkey"
+            columns: ["showcase_source_id"]
+            isOneToOne: false
+            referencedRelation: "events"
             referencedColumns: ["id"]
           },
         ]
@@ -379,12 +444,16 @@ export type Database = {
           amount_inr: number
           buyer_id: string
           created_at: string
+          currency: string
           event_id: string
+          failure_reason: string | null
           id: string
           paid_at: string | null
           plan_code: string
           provider: string
+          provider_payment_id: string | null
           provider_ref: string | null
+          provider_session_id: string | null
           status: Database["public"]["Enums"]["order_status"]
         }
         Insert: {
@@ -392,12 +461,16 @@ export type Database = {
           amount_inr: number
           buyer_id: string
           created_at?: string
+          currency?: string
           event_id: string
+          failure_reason?: string | null
           id?: string
           paid_at?: string | null
           plan_code: string
           provider?: string
+          provider_payment_id?: string | null
           provider_ref?: string | null
+          provider_session_id?: string | null
           status?: Database["public"]["Enums"]["order_status"]
         }
         Update: {
@@ -405,12 +478,16 @@ export type Database = {
           amount_inr?: number
           buyer_id?: string
           created_at?: string
+          currency?: string
           event_id?: string
+          failure_reason?: string | null
           id?: string
           paid_at?: string | null
           plan_code?: string
           provider?: string
+          provider_payment_id?: string | null
           provider_ref?: string | null
+          provider_session_id?: string | null
           status?: Database["public"]["Enums"]["order_status"]
         }
         Relationships: [
@@ -492,10 +569,46 @@ export type Database = {
           },
         ]
       }
+      payment_events: {
+        Row: {
+          event_id: string
+          event_type: string
+          order_id: string | null
+          payload: Json
+          provider: string
+          received_at: string
+        }
+        Insert: {
+          event_id: string
+          event_type: string
+          order_id?: string | null
+          payload: Json
+          provider: string
+          received_at?: string
+        }
+        Update: {
+          event_id?: string
+          event_type?: string
+          order_id?: string | null
+          payload?: Json
+          provider?: string
+          received_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_events_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       plans: {
         Row: {
           code: string
           description: string | null
+          dodo_product_id: string | null
           features: Json
           is_active: boolean
           name: string
@@ -505,6 +618,7 @@ export type Database = {
         Insert: {
           code: string
           description?: string | null
+          dodo_product_id?: string | null
           features?: Json
           is_active?: boolean
           name: string
@@ -514,6 +628,7 @@ export type Database = {
         Update: {
           code?: string
           description?: string | null
+          dodo_product_id?: string | null
           features?: Json
           is_active?: boolean
           name?: string
@@ -617,6 +732,57 @@ export type Database = {
           },
         ]
       }
+      showcase_consents: {
+        Row: {
+          anonymise: boolean
+          consent_text: string
+          created_at: string
+          event_id: string
+          granted: boolean
+          id: string
+          ip_address: unknown
+          profile_id: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          anonymise?: boolean
+          consent_text: string
+          created_at?: string
+          event_id: string
+          granted: boolean
+          id?: string
+          ip_address?: unknown
+          profile_id?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          anonymise?: boolean
+          consent_text?: string
+          created_at?: string
+          event_id?: string
+          granted?: boolean
+          id?: string
+          ip_address?: unknown
+          profile_id?: string | null
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "showcase_consents_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "showcase_consents_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sub_events: {
         Row: {
           address: string | null
@@ -675,12 +841,24 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_daily_series: {
+        Args: { p_days?: number }
+        Returns: {
+          day: string
+          invites: number
+          revenue_inr: number
+          signups: number
+          views: number
+        }[]
+      }
+      admin_overview: { Args: never; Returns: Json }
       agent_stats: { Args: { p_agent_id: string }; Returns: Json }
       auth_role: {
         Args: never
         Returns: Database["public"]["Enums"]["user_role"]
       }
       can_manage_event: { Args: { target: string }; Returns: boolean }
+      clean_demo_data: { Args: never; Returns: undefined }
       event_is_public: { Args: { target: string }; Returns: boolean }
       event_stats: { Args: { p_event_id: string }; Returns: Json }
       event_views_by_day: {
@@ -690,6 +868,10 @@ export type Database = {
           uniques: number
           views: number
         }[]
+      }
+      generate_showcase_clone: {
+        Args: { p_source_id: string; p_tags?: string[] }
+        Returns: string
       }
       is_admin: { Args: never; Returns: boolean }
       record_page_view: {
@@ -704,8 +886,10 @@ export type Database = {
         Returns: undefined
       }
       storage_event_id: { Args: { object_name: string }; Returns: string }
+      withdraw_showcase: { Args: { p_source_id: string }; Returns: undefined }
     }
     Enums: {
+      agent_status: "pending" | "approved" | "rejected" | "suspended"
       asset_kind: "photo" | "audio" | "video" | "logo" | "document"
       commission_status: "accrued" | "payable" | "paid" | "void"
       event_status: "draft" | "published" | "archived"
@@ -854,6 +1038,7 @@ export const Constants = {
   },
   public: {
     Enums: {
+      agent_status: ["pending", "approved", "rejected", "suspended"],
       asset_kind: ["photo", "audio", "video", "logo", "document"],
       commission_status: ["accrued", "payable", "paid", "void"],
       event_status: ["draft", "published", "archived"],

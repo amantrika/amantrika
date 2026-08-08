@@ -4,6 +4,10 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { ASSET_BUCKET } from "@/lib/invite";
+import { requireProfile } from "@/lib/auth";
+import { captureServer } from "@/lib/posthog/server";
+import { log } from "@/lib/posthog/logger";
+import { EVENTS } from "@/lib/posthog/events";
 import type { AssetKind } from "@/lib/supabase/types";
 
 export interface AssetResult {
@@ -62,7 +66,26 @@ export async function registerAsset(input: z.input<typeof registerSchema>): Prom
     .select("id")
     .single();
 
-  if (error || !data) return { ok: false, error: "Couldn't save that photo." };
+  if (error || !data) {
+    log.error("asset row insert failed", {
+      event_id: a.eventId,
+      kind: a.kind,
+      reason: error?.message,
+    });
+    return { ok: false, error: "Couldn't save that photo." };
+  }
+
+  const profile = await requireProfile();
+  // Filenames can carry real names, so only shape and size are recorded.
+  await captureServer(profile.id, EVENTS.asset_uploaded, {
+    event_id: a.eventId,
+    kind: a.kind,
+    mime_type: a.mimeType,
+    size_kb: a.sizeBytes ? Math.round(a.sizeBytes / 1024) : undefined,
+    width: a.width,
+    height: a.height,
+    asset_index: count ?? 0,
+  });
 
   revalidatePath("/dashboard");
   return { ok: true, assetId: data.id };

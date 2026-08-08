@@ -16,6 +16,8 @@ import { brideFamily, groomFamily } from "@/data/families";
 import { fadeUpStagger, staggerContainer } from "@/design-system/motion/presets";
 import type { Blessing } from "@/data/blessings";
 import { hostLine, monogramInitials, type InviteView } from "@/lib/invite";
+import { capture } from "@/lib/posthog/client";
+import { EVENTS } from "@/lib/posthog/events";
 import { submitBlessing, submitRsvp } from "./actions";
 
 /** Scroll-revealed section with ornate motif divider above it. */
@@ -100,7 +102,19 @@ export function InviteClient({
   const copyLink = () => {
     navigator.clipboard?.writeText(window.location.href.split("?")[0]);
     setCopied(true);
+    capture(EVENTS.invite_link_copied, { slug: invite.slug, surface: "invite_footer" });
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  /** The wax seal breaking — the moment a guest actually engages. */
+  const handleOpened = () => {
+    setOpened(true);
+    capture(EVENTS.invite_envelope_opened, {
+      slug: invite.slug,
+      event_type: invite.eventType,
+      theme_id: theme.id,
+      personalised: Boolean(guestName),
+    });
   };
 
   if (!opened) {
@@ -112,7 +126,7 @@ export function InviteClient({
             theme={theme}
             initials={initials}
             guestName={guestName ?? undefined}
-            onOpened={() => setOpened(true)}
+            onOpened={handleOpened}
           />
         </div>
       </div>
@@ -351,6 +365,7 @@ export function InviteClient({
             href={`https://wa.me/?text=${encodeURIComponent(`You're invited! ${names} — `)}`}
             target="_blank"
             rel="noreferrer"
+            onClick={() => capture(EVENTS.invite_shared, { slug: invite.slug, channel: "whatsapp" })}
             className="inline-flex items-center gap-2 rounded-pill border border-ornate/60 px-5 py-2 text-sm font-semibold text-primary hover:bg-accent/10"
           >
             <MessageCircle className="size-4" /> Share on WhatsApp

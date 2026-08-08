@@ -9,6 +9,15 @@ import { themes } from "@/themes";
 import { motifs } from "@/design-system/motifs";
 import { Badge, Button, Card, Divider, Envelope } from "@/design-system/components";
 import { fadeUpStagger, staggerContainer } from "@/design-system/motion/presets";
+import { SiteFooter, SiteHeader } from "@/components/site/SiteChrome";
+import {
+  HomeFaq,
+  LatestBlogs,
+  ReadyToCreate,
+  WhatWeOffer,
+  WhyChooseUs,
+  type HomePostSummary,
+} from "@/components/site/HomeSections";
 import { eventTypeLabels } from "@/lib/invite";
 import type { EventType, PlanRow } from "@/lib/supabase/types";
 
@@ -61,41 +70,20 @@ export function LandingClient({
   plans,
   signedIn,
   dashboardHref,
+  latestPosts = [],
+  faq = [],
 }: {
   plans: PlanRow[];
   signedIn: boolean;
   dashboardHref: string;
+  /** Newest blog posts, read from content/ by the server page. */
+  latestPosts?: HomePostSummary[];
+  /** Same items the page emits as FAQPage structured data. */
+  faq?: { q: string; a: string }[];
 }) {
   return (
     <div className="min-h-screen bg-bg">
-      {/* header */}
-      <header className="mx-auto flex max-w-6xl items-center justify-between px-4 py-5">
-        <span className="inline-flex flex-col leading-none">
-          <span className="font-display text-3xl font-semibold text-primary">Amantrika</span>
-          <svg aria-hidden viewBox="0 0 120 8" className="h-2 w-32 text-accent">
-            <path d="M2 5c20-4 40 3 60-1s40-3 56 0" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-          </svg>
-        </span>
-        <nav className="flex items-center gap-2 sm:gap-3">
-          <Link href="/design-system" className="hidden sm:block">
-            <Button variant="ghost" size="sm">Design system</Button>
-          </Link>
-          {signedIn ? (
-            <Link href={dashboardHref}>
-              <Button size="sm">Dashboard</Button>
-            </Link>
-          ) : (
-            <>
-              <Link href="/login">
-                <Button variant="ghost" size="sm">Sign in</Button>
-              </Link>
-              <Link href="/signup">
-                <Button size="sm">Create your invite</Button>
-              </Link>
-            </>
-          )}
-        </nav>
-      </header>
+      <SiteHeader signedIn={signedIn} dashboardHref={dashboardHref} />
 
       {/* hero */}
       <section className="mx-auto grid max-w-6xl items-center gap-12 px-4 pb-20 pt-10 lg:grid-cols-2 lg:pt-16">
@@ -104,25 +92,43 @@ export function LandingClient({
             Digital invitations for every celebration
           </motion.p>
           <motion.h1 variants={fadeUpStagger} custom={1} className="mt-3 type-display-xl text-primary">
-            One link.<br />Every blessing.
+            Your wedding countdown<br />starts from here
           </motion.h1>
           <motion.p variants={fadeUpStagger} custom={2} className="mt-5 max-w-md type-body-lg text-muted">
-            Animated invitation websites that open like a real card — wax seal, envelope and all.
-            Built for Indian weddings, and for every occasion after.
+            Join us in crafting the wedding invitation of your dreams. Animated invitation websites
+            that open like a real card — wax seal, envelope and all — built for Indian weddings and
+            every occasion after.
           </motion.p>
           <motion.div variants={fadeUpStagger} custom={3} className="mt-8 flex flex-wrap gap-3">
             <Link href={signedIn ? "/onboarding" : "/signup"}>
-              <Button size="lg" variant="celebration">Create your invitation</Button>
+              <Button size="lg" variant="celebration">Get started</Button>
             </Link>
-            <Link href="/invite/swarnil-weds-prachi">
-              <Button size="lg" variant="secondary">See a live invite</Button>
+            <Link href="/showcase">
+              <Button size="lg" variant="secondary">View theme previews</Button>
             </Link>
           </motion.div>
+          {/* Three plain facts, stated rather than implied — they are what a
+              reader (and a model summarising this page) actually needs. */}
+          <motion.ul
+            variants={fadeUpStagger}
+            custom={4}
+            className="mt-8 flex flex-wrap gap-x-6 gap-y-2 type-caption"
+          >
+            <li>One link, shared once</li>
+            <li aria-hidden>·</li>
+            <li>Free to build, pay when you publish</li>
+            <li aria-hidden>·</li>
+            <li>No app for your guests</li>
+          </motion.ul>
         </motion.div>
         <Envelope guestName="Dear Guest & Family" sealMonogram="अ" autoPlay />
       </section>
 
       <Divider variant="motif" motif="diya" className="mx-auto max-w-4xl px-4" />
+
+      <WhatWeOffer />
+
+      <WhyChooseUs />
 
       {/* occasions */}
       <section className="mx-auto max-w-6xl px-4 py-20">
@@ -224,7 +230,7 @@ export function LandingClient({
             {themes.map((t) => {
               const Motif = motifs[t.motifSet.divider];
               return (
-                <Link key={t.id} href={`/invite/swarnil-weds-prachi?theme=${t.id}`} className="group">
+                <Link key={t.id} href={`/showcase?theme=${t.id}`} className="group">
                   <Card className="overflow-hidden transition-shadow group-hover:shadow-gold-glow">
                     <div className="flex h-16">
                       {t.palette.map((hex) => (
@@ -315,24 +321,29 @@ export function LandingClient({
         </section>
       )}
 
-      {/* CTA + footer */}
-      <footer className="border-t border-ornate/40 bg-surface">
+      <ReadyToCreate signedIn={signedIn} />
+
+      <LatestBlogs posts={latestPosts} />
+
+      <HomeFaq items={faq} />
+
+      {/* closing CTA */}
+      <section className="border-t border-ornate/40 bg-surface">
         <div className="mx-auto flex max-w-6xl flex-col items-center gap-6 px-4 py-16 text-center">
           <h2 className="type-display-lg text-primary">Your story deserves a beautiful opening.</h2>
           <div className="flex flex-wrap justify-center gap-3">
             <Link href={signedIn ? "/onboarding" : "/signup"}>
               <Button size="lg" variant="celebration">Create your invitation</Button>
             </Link>
-            <Link href="/design-system">
-              <Button size="lg" variant="secondary">Explore the design system</Button>
+            <Link href="/showcase">
+              <Button size="lg" variant="secondary">Browse the showcase</Button>
             </Link>
           </div>
           <Divider variant="motif" motif="marigold" className="w-full max-w-md" />
-          <p className="type-caption">
-            Amantrika · Payments are in demo mode — no money moves yet.
-          </p>
         </div>
-      </footer>
+      </section>
+
+      <SiteFooter />
     </div>
   );
 }
