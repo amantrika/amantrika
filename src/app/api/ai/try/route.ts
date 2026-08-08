@@ -27,6 +27,18 @@ const bodySchema = z.object({
   input: z.unknown(),
 });
 
+/** The task list with each task's own sample input, so callers need not carry
+ *  their own copies and let them drift from the schemas. */
+export async function GET(request: Request) {
+  if (!(await isAiOperator(request))) {
+    return new NextResponse(null, { status: 404 });
+  }
+
+  return NextResponse.json({
+    tasks: Object.values(runnableTasks).map((entry) => entry.summary),
+  });
+}
+
 export async function POST(request: Request) {
   if (!(await isAiOperator(request))) {
     return new NextResponse(null, { status: 404 });

@@ -13,6 +13,7 @@ const sections = [
   { href: "/admin/showcase", label: "Showcase" },
   { href: "/admin/requests", label: "Requests" },
   { href: "/admin/plans", label: "Plans" },
+  { href: "/admin/ai", label: "AI" },
 ];
 
 /** Sub-navigation for the admin area, with a count badge on the queue that needs action. */

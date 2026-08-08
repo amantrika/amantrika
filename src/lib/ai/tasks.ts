@@ -47,6 +47,13 @@ export interface AiTask<TInput, TOutput> {
    * matters most for the tasks flagged above.
    */
   inputSchema: z.ZodType<TInput>;
+  /**
+   * A realistic example, used to prefill the admin console and the `ai:try`
+   * CLI. Kept next to the schema so the two cannot drift, and chosen to
+   * exercise the awkward cases — mixed scripts, non-Latin text — rather than
+   * the easy ones.
+   */
+  sampleInput: TInput;
   outputSchema: z.ZodType<TOutput>;
   system: string;
   /** Builds the user turn. Keep the input minimal — everything here is sent. */
@@ -176,6 +183,9 @@ export const moderateBlessingTask: AiTask<
   // Only the message. Deliberately not the author's name: screening does not
   // need to know who wrote it, and a third party does not need a guest list.
   inputSchema: z.object({ message: z.string().min(1).max(2000) }),
+  // Devanagari, Latin and a signature in one message — the shape most likely
+  // to be misread as "suspicious" by a model trained mostly on English.
+  sampleInput: { message: "बहुत बहुत बधाई! May you both always be this happy. — Nani" },
   outputSchema: z.object({
     verdict: z.enum(["allow", "review", "block"]),
     /** One short sentence a human moderator can act on. */
@@ -223,6 +233,13 @@ export const suggestWordingTask: AiTask<
     city: z.string().max(80),
     tone: z.enum(["traditional", "warm", "modern"]),
   }),
+  sampleInput: {
+    occasion: "wedding",
+    hostNames: ["Meera", "Rohan"],
+    tradition: "hindu",
+    city: "Udaipur",
+    tone: "warm" as const,
+  },
   outputSchema: z.object({
     options: z
       .array(
@@ -267,6 +284,8 @@ export interface AiTaskSummary {
   tier: ModelTier;
   maxOutputTokens: number;
   handlesGuestContent: boolean;
+  /** The task's own example, for prefilling a console or a CLI. */
+  sampleInput: unknown;
 }
 
 function summarise<I, O>(task: AiTask<I, O>): AiTaskSummary {
@@ -275,6 +294,7 @@ function summarise<I, O>(task: AiTask<I, O>): AiTaskSummary {
     tier: task.tier,
     maxOutputTokens: task.maxOutputTokens,
     handlesGuestContent: task.handlesGuestContent,
+    sampleInput: task.sampleInput,
   };
 }
 

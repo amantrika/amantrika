@@ -29,37 +29,51 @@ const dim = (s) => `\u001b[2m${s}\u001b[0m`;
 const green = (s) => `\u001b[32m${s}\u001b[0m`;
 const red = (s) => `\u001b[31m${s}\u001b[0m`;
 
-/** Sample input per task, so a first run needs no JSON typed by hand. */
-const samples = {
-  "moderate-blessing": {
-    message: "बहुत बहुत बधाई! May you both always be this happy. — Nani",
-  },
-  "suggest-invitation-wording": {
-    occasion: "wedding",
-    hostNames: ["Meera", "Rohan"],
-    tradition: "hindu",
-    city: "Udaipur",
-    tone: "warm",
-  },
-};
-
 if (!secret) {
   console.error(red("CRON_SECRET is not set."));
   console.error(dim("It guards /api/ai/try. Add it to .env.local."));
   process.exit(2);
 }
 
+const url = new URL("/api/ai/try", target).toString();
+const auth = { Authorization: `Bearer ${secret}` };
+
+/** The task list, with each task's own sample input. One source of truth: the
+ *  task definitions, not a copy in this script that would drift from them. */
+async function fetchTasks() {
+  let response;
+  try {
+    response = await fetch(url, { headers: auth, signal: AbortSignal.timeout(15_000) });
+  } catch (cause) {
+    console.error(red(`Could not reach ${url}`));
+    console.error(dim(String(cause?.message ?? cause)));
+    console.error(dim("Is the dev server running? `npm run dev`"));
+    process.exit(1);
+  }
+  if (response.status === 404) {
+    console.error(red("404 — the guard rejected this request."));
+    console.error(dim("Your CRON_SECRET does not match the one on that deployment."));
+    process.exit(1);
+  }
+  const body = await response.json().catch(() => null);
+  return body?.tasks ?? [];
+}
+
+const tasks = await fetchTasks();
 const task = process.argv[2];
 
 if (!task) {
   console.log(bold("Usage: npm run ai:try -- <task> [json-input]\n"));
-  console.log(bold("Tasks with built-in sample input:"));
-  for (const [id, sample] of Object.entries(samples)) {
-    console.log(`  ${id}`);
-    console.log(dim(`    ${JSON.stringify(sample)}`));
+  console.log(bold("Available tasks:"));
+  for (const t of tasks) {
+    const flag = t.handlesGuestContent ? " (sends guest content)" : "";
+    console.log(`  ${t.id}  ${dim(`${t.tier} tier${flag}`)}`);
+    console.log(dim(`    ${JSON.stringify(t.sampleInput)}`));
   }
   process.exit(0);
 }
+
+const definition = tasks.find((t) => t.id === task);
 
 let input;
 if (process.argv[3]) {
@@ -69,22 +83,22 @@ if (process.argv[3]) {
     console.error(red("The second argument must be valid JSON."));
     process.exit(2);
   }
-} else if (samples[task]) {
-  input = samples[task];
+} else if (definition) {
+  input = definition.sampleInput;
   console.log(dim(`Using sample input: ${JSON.stringify(input)}\n`));
 } else {
-  console.error(red(`No sample input for "${task}" — pass JSON as the second argument.`));
+  console.error(red(`Unknown task "${task}".`));
+  console.error(dim(`Available: ${tasks.map((t) => t.id).join(", ")}`));
   process.exit(2);
 }
 
-const url = new URL("/api/ai/try", target).toString();
 console.log(`${bold("Running")} ${task} ${dim(`via ${url}`)}\n`);
 
 let response;
 try {
   response = await fetch(url, {
     method: "POST",
-    headers: { Authorization: `Bearer ${secret}`, "Content-Type": "application/json" },
+    headers: { ...auth, "Content-Type": "application/json" },
     body: JSON.stringify({ task, input }),
     signal: AbortSignal.timeout(60_000),
   });

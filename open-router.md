@@ -161,7 +161,18 @@ by the same constant-time helper). Anyone else gets a **404**, not a 401: an
 unauthenticated visitor should not learn the route exists. The response names
 models, tasks and latency, and never the key or any part of it.
 
-### Running an actual task
+### In the site: `/admin/ai`
+
+Sign in as an admin and open **Platform → AI**. It shows the connection status,
+which model each tier resolves to and whether that model still exists, and a
+console for running any task with editable JSON input — model, latency, cost and
+the validated output.
+
+The console runs through a Server Action, so the browser never holds
+`CRON_SECRET`; the admin session is the credential. It is the same task registry
+the API route uses, behind a different door.
+
+### Running an actual task from a terminal
 
 A credential check proves the key works. It does not prove a *task* works — the
 prompt can be wrong, the output schema can disagree with the prompt, and a model
@@ -170,10 +181,14 @@ schema, the call, parsing, and output validation.
 
 ```
 npm run dev                                        # in one terminal
-npm run ai:try                                     # lists the tasks
+npm run ai:try                                     # lists tasks + their samples
 npm run ai:try -- suggest-invitation-wording       # runs it with sample input
 npm run ai:try -- moderate-blessing '{"message":"Congratulations!"}'
 ```
+
+The task list and its sample inputs come from the running server, not from a
+copy inside the script — sample input lives on the task definition next to its
+schema, so the two cannot drift.
 
 ```
 Running suggest-invitation-wording via http://localhost:3000/api/ai/try
