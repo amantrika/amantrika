@@ -2,21 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-
-/** The windows worth offering. Longer than 90 days stops being a trend. */
-export const RANGES = [
-  { days: 7, label: "7 days" },
-  { days: 30, label: "30 days" },
-  { days: 90, label: "90 days" },
-] as const;
-
-export const DEFAULT_RANGE = 30;
-
-/** Coerces `?days=` to one of the offered windows; anything else falls back. */
-export function parseRange(value: string | undefined): number {
-  const n = Number(value);
-  return RANGES.some((r) => r.days === n) ? n : DEFAULT_RANGE;
-}
+import { RANGES, parseRange } from "./range";
 
 /**
  * Date-range filter, as links rather than a client-side control.

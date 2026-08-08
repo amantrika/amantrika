@@ -137,15 +137,18 @@ another identity is rejected by Vercel on Hobby, which fails the deploy.
 - [ ] **Verify a Dodo test checkout end to end.** Env vars are set and the
       provider is `dodo`/`test_mode`, but no purchase has ever been completed.
       Needs a card flow nobody has driven yet.
-- [ ] **Register the Dodo webhook** in their dashboard. Without it a customer
-      pays and their invitation never publishes — the worst possible failure.
+- [x] ~~Register the Dodo webhook~~ — done. `ep_3HcBzEGYTTQrPTbhld6MCo9K0nI`,
+      enabled, pointing at `/api/payments/webhook`, filtered to
+      `payment.succeeded`, `payment.failed`, `refund.succeeded`. Created via the
+      API, verified present.
 - [ ] **Add `https://amantrika.imswarnil.com/auth/callback`** to the authorised
       redirect URIs in Google Cloud, or Google SSO fails on the live domain only.
 - [x] ~~Run `clean_demo_data()`~~ — done 8 Aug 2026.
-- [ ] **₹11,998 of test revenue still shows in admin.** Two paid orders remain,
-      one `mock` and one `dodo` test-mode, against the owner's own accounts.
-      Not demo seed data, so `clean_demo_data()` does not touch them. Delete
-      them by hand before anyone sees the dashboard as truth.
+- [x] ~~Clear test revenue~~ — done. All four test orders (mock and dodo
+      test-mode) and their ledger rows deleted; admin now reports ₹0. The two
+      invitations they published keep `plan_code = 'premium'`, deliberately:
+      they are the owner's own, and downgrading them would put a badge on links
+      that may already be shared.
 
 ### Product
 - [ ] Route-level loading states. `ShehnaiLoadingBlock` exists but only `Button`
@@ -156,9 +159,12 @@ another identity is rejected by Vercel on Hobby, which fails the deploy.
       `/roadmap`.
 
 ### Housekeeping
-- [ ] **`README.md` is stale** — claims payments are stubbed, says 8 themes
-      (there are 12), links `/invite/swarnil-weds-prachi` (no longer exists) and
-      sends people to `/design-system` (404 on any deployment).
+- [x] ~~`README.md` is stale~~ — rewritten. Payments, the paywall, the
+      scheduler and the test commands are described as they actually are, and
+      it now points at `progress.md` / `wont-do.md` / `plan.md`.
+      One correction to the old entry: `/invite/swarnil-weds-prachi` **does**
+      still work — it is one of three bundled invitations served with no
+      database row, and `tests/e2e/invite.spec.ts` now asserts all three.
 - [ ] **Port the remaining ten lifecycle workflows** — owner alerts, RSVP
       digests, publish confirmation, expiry warning, post-event wrap-up, guest
       reminders. `n8n/README.md` tracks them. Mechanical now the substrate

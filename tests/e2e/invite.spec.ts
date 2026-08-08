@@ -76,6 +76,21 @@ test.describe("a published invitation", () => {
   });
 });
 
+test.describe("the bundled showcase invitations", () => {
+  // `src/lib/demo.ts` serves three invitations with no database row behind them,
+  // so the marketing links keep working on a fresh database — and, as of the
+  // production demo-data cleanup, on a cleaned one. progress.md claimed this
+  // link was dead; it is not, and this test is why we can say so.
+  for (const slug of ["swarnil-weds-prachi", "ahmed-weds-fatima", "james-weds-emily"]) {
+    test(`/invite/${slug} renders without a database row`, async ({ page }) => {
+      const response = await page.goto(`/invite/${slug}`);
+
+      expect(response?.status()).toBe(200);
+      expect(await page.title()).not.toBe("");
+    });
+  }
+});
+
 test.describe("an unpublished invitation", () => {
   test("is not reachable by guessing its slug", async ({ page }) => {
     const host = await createTestHost();
