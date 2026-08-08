@@ -138,12 +138,21 @@ Worth thirty seconds in a real browser.
 
 ## 4. Needs a decision from you, not code
 
-**Themes table.** You asked for themes in the database. `src/themes/index.ts`
-currently holds TypeScript types, React motif components and per-theme layout
-objects — **none of which survive a database round trip**. The real question is
-what belongs in a table (name, palette, tags, active flag) versus what stays in
-code (components, layout). Guessing wrong means migrating back. Decide the split
-before anyone writes the migration.
+**Themes table — decided and built, 9 Aug 2026.** The split is: the `themes`
+table holds the *catalogue* (id, name, tier, tags, palette, `is_active`,
+`sort_order`), and `src/themes/index.ts` keeps everything that decides how a
+theme is drawn. Layout stayed in code because it is typed and asserted by
+`theme-layout.spec.ts`; in jsonb it would be neither, and a bad row would reach
+a guest's invitation instead of failing a build.
+
+Two things follow that are easy to get wrong later:
+
+- **Tier gates selection, never features.** What an invitation can *do* is its
+  plan, in `entitlements.ts`. A paying customer who picks a free theme keeps
+  everything they paid for.
+- **The catalogue and the registry can drift**, and drift is silent both ways.
+  `tests/unit/theme-catalogue.test.ts` is the guard. Add a theme to one, add it
+  to the other.
 
 **Testimonials.** This conflicts with `PROJECT-GRAPH.md` §5: the showcase
 publishes a *sanitised clone* and deliberately never identifies the family.

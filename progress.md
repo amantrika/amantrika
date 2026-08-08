@@ -92,6 +92,24 @@ another identity is rejected by Vercel on Hobby, which fails the deploy.
   `role = 'admin'` is impossible for any other address regardless of write path.
 
 ### The product
+- **Themes are a catalogue in Postgres** (`themes`), with a `free`/`premium`
+  tier. The table holds identity, tier, tags, palette, `is_active` and
+  `sort_order`; `src/themes/index.ts` still owns layout, motifs and everything
+  that draws. `events.theme_id` is a real FK (`on delete restrict` — withdraw a
+  theme with `is_active`, never a delete, or you break published invitations).
+  - **Tier gates which themes you can pick. It never gates features.**
+  - The two halves can drift silently in both directions;
+    `tests/unit/theme-catalogue.test.ts` is the only thing that catches it.
+  - Free set is one theme per faith, deliberately — charging a Muslim or Sikh
+    family for the only theme that fits their wedding would be an ugly way to
+    make money.
+- **RSVP and the guestbook are paid features.** `rsvp` and `blessingWall` are
+  false on `free`. Enforced in `InviteBody` (section not rendered) *and* in the
+  Server Actions (the actual boundary — a Server Action is a public endpoint).
+  `blessingWall` had existed unenforced since it was written.
+- Premium themes are **badged, not locked**, in the builder: theme is step 6 and
+  the plan is step 7, so locking there refuses a sale before it is offered. The
+  plan step disables publishing and `startCheckout` refuses server-side.
 - Onboarding writes real drafts; live slug availability; ceremony presets per
   occasion; photo upload straight to Supabase Storage.
 - Invite pages render from the database. RSVPs and blessings persist; blessings
