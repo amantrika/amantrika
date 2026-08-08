@@ -3,7 +3,8 @@
   "crons": [
     {
       "path": "/api/cron/abandoned-draft",
-      "schedule": "0 * * * *"
+      "//": "Daily at 09:00 UTC (14:30 IST). Hobby plans allow only one run per day — an hourly schedule is rejected at deploy time, not at runtime, so it fails the whole deployment. A nudge about an unfinished invitation is a daily-cadence thing anyway; hourly would be pestering.",
+      "schedule": "0 9 * * *"
     }
   ]
 }
