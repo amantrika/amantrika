@@ -5,12 +5,16 @@ import { getCachedShowcase, getCachedShowcaseTypes } from "@/lib/cache";
 import { eventTypeLabels } from "@/lib/invites/invite";
 import { getTheme } from "@/themes";
 import type { EventType } from "@/lib/supabase/types";
+import { pageMetadata } from "@/lib/seo/metadata";
 
-export const metadata: Metadata = {
+// Through pageMetadata, not hand-written, so the showcase gets the canonical
+// and the shared OG card every other public page has.
+export const metadata: Metadata = pageMetadata({
   title: "Showcase · Amantrika",
   description:
     "Real invitations made with Amantrika, shared with their hosts' permission. Every one is a privacy-safe copy — addresses, phone numbers and payment details removed.",
-};
+  path: "/showcase",
+});
 
 // Curation changes rarely; an hour-stale gallery is fine and keeps it cheap.
 export const revalidate = 3600;

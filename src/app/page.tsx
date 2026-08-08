@@ -41,8 +41,8 @@ export const metadata: Metadata = pageMetadata({
   description:
     "Create a wedding invitation website in minutes. Animated Indian themes, RSVPs, directions and a countdown — all at one link you share on WhatsApp.",
   path: "/",
-  image: "/assets/og-default.png",
-  imageAlt: "An ornate Indian wedding invitation card with a gold double border",
+  // No `image`: the shared default card is the brand lockup, which is exactly
+  // what the homepage should share as.
 });
 
 export default async function LandingPage() {
