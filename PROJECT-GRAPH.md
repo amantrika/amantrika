@@ -261,4 +261,16 @@ Hard-won facts. Each cost real time; none is guessable from the code.
   silently disabled email confirmation. Read the diff.
 - **Never renumber an applied migration.** Rename a late arrival forward instead.
 - **Two agents in one checkout corrupt each other's `.next`.** Build with
-  `NEXT_DIST_DIR=.next-claude`.
+  `NEXT_DIST_DIR=.next-claude`. The symptom is `Cannot find module for page: /x`
+  across several unrelated routes — it looks like broken code and is not.
+- **`assets.storage_path` is unique per *event*, not globally.** It was global
+  once, which meant a showcase clone could never copy a photograph: the clone
+  references the same stored object as its source, the insert hit a 23505, the
+  whole call rolled back, and curation surfaced as a button that did nothing.
+- **Diagnose RLS and `security definer` failures under the caller's session**,
+  not as postgres. As postgres `auth.uid()` is null, so an admin-only function
+  raises "only an administrator" and hides the real error underneath:
+  `set local role authenticated; set local request.jwt.claims = '{"sub":"<uuid>"}';`
+- **"Serializing big strings" is a warning, not an error.** It concerns
+  webpack's build cache, not the bundle. Silenced via
+  `infrastructureLogging.level`, which leaves compilation warnings intact.

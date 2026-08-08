@@ -48,6 +48,20 @@ const nextConfig: NextConfig = {
     if (!dev && config.cache && typeof config.cache === "object") {
       config.cache = { ...config.cache, compression: "gzip" };
     }
+
+    // Hides webpack's *infrastructure* chatter — cache and file-watching notices
+    // such as "Serializing big strings …" — while leaving compilation warnings
+    // and errors untouched. They travel through a different channel (stats), so
+    // a genuine problem in your code still surfaces.
+    //
+    // Worth doing because the notice is unactionable: it describes webpack's own
+    // build cache, not the shipped bundle, and the large strings causing it are
+    // the MDX content and the inlined icon set — both things we want.
+    config.infrastructureLogging = {
+      ...config.infrastructureLogging,
+      level: "error",
+    };
+
     return config;
   },
 };

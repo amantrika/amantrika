@@ -31,8 +31,12 @@ export default async function AdminLayout({ children }: { children: ReactNode })
       title="Platform"
       subtitle="Everything happening across Amantrika."
     >
-      <AdminNav pendingPartners={count ?? 0} />
-      {children}
+      {/* Sidebar beside the content on desktop; AdminNav renders itself as a
+          tab strip below `lg`, where a sidebar would eat the page. */}
+      <div className="lg:grid lg:grid-cols-[13rem_minmax(0,1fr)] lg:gap-10">
+        <AdminNav pendingPartners={count ?? 0} />
+        <div className="min-w-0">{children}</div>
+      </div>
     </DashboardShell>
   );
 }
