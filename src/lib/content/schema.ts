@@ -11,10 +11,29 @@ import { authorKeys } from "../../../content/authors";
  * rewards valid data.
  */
 
-const isoDate = z
-  .string()
-  .regex(/^\d{4}-\d{2}-\d{2}$/, "Use YYYY-MM-DD")
-  .refine((v) => !Number.isNaN(Date.parse(v)), "Not a real date");
+/**
+ * A YYYY-MM-DD date in frontmatter.
+ *
+ * The `preprocess` is not defensive padding — it is required. YAML has a native
+ * date type, so an unquoted `updatedAt: 2026-08-08` is parsed into a `Date`
+ * before Zod ever sees it, while a quoted `"2026-08-08"` stays a string. Both
+ * spellings are valid YAML and both are written by hand in this repo, and
+ * Keystatic's date field emits the unquoted form — which took five content
+ * pages down with "Invalid input" the first time a page was saved through the
+ * editor.
+ *
+ * Normalised in UTC deliberately. `toISOString()` on a Date built from a bare
+ * YAML date is midnight UTC, so slicing the first ten characters returns the
+ * day that was written. Going through the local timezone instead would shift
+ * the date by one for anyone west of Greenwich.
+ */
+const isoDate = z.preprocess(
+  (v) => (v instanceof Date ? v.toISOString().slice(0, 10) : v),
+  z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Use YYYY-MM-DD")
+    .refine((s) => !Number.isNaN(Date.parse(s)), "Not a real date")
+);
 
 /** Post categories. Adding one here is what makes /blog/category/<slug> exist. */
 export const categories = [
