@@ -18,6 +18,21 @@ payments have ever completed. That is the whole of the risk.
 
 ---
 
+## 0a. Push, before anything else
+
+**`/invite/[slug]` and `/roadmap` are returning 500 on the live site**, and the
+fix is committed but **not pushed** (`e6a76be`). Production deploys from
+`n8n-automation-layer`, so `git push` is the deploy. Do that first and then load
+an invitation to confirm — a READY deploy is not a rendering page.
+
+Cause, for the record: caching those reads left them calling `createClient()`
+inside `unstable_cache`, and Next throws rather than degrading when a cached
+function touches `cookies()`. `tests/e2e/invite.spec.ts` asserts a 200 on that
+route and would have caught it; the suite was not run before the caching commit
+shipped.
+
+---
+
 ## 0. Blocked on a human — do these first, or nothing else matters
 
 No agent can do these. They need dashboard access.
@@ -85,16 +100,19 @@ alone.
 
 ---
 
-## 3. Logo, favicon, navbar icons
+## 3. Logo, favicon, navbar icons — **done**
 
-Self-contained, visual, and asked for repeatedly. Nothing blocks it.
+Shipped in `cad30ca` (mark, favicon, apple-touch-icon, header) and `070a74a`
+(the default OG share card). The mark is a torana that also reads as an A; it
+lives in `src/design-system/brand/`, `public/brand/*.svg`, `src/app/icon.svg`
+and `src/app/apple-icon.tsx` — **four files that drift silently**, so change all
+four together.
 
-- Wordmark + icon. `src/design-system/icons/index.tsx` has 32 wedding icons
-  already — `shehnai`, `toran`, `mandap`, `lotus` are the plausible marks.
-- Favicon set + `apple-touch-icon` + OG image, wired in `src/app/layout.tsx`
-  metadata and replacing `src/app/favicon.ico`.
-- Icons beside nav items in `src/components/site/SiteChrome.tsx`. The admin
-  sidebar already does this — match it.
+One thing left, and it needs a browser: the header's scroll-reactive surface and
+the mobile drawer have never been watched by a human or an agent. The Chrome
+extension was not connected in either session. Open the site on a phone-width
+window and check the drawer's scrim, the scroll lock, and that the skip link
+lands on `#main`.
 
 ---
 
@@ -153,9 +171,15 @@ Full list of hard-won gotchas: `PROJECT-GRAPH.md` §11.
 
 ## Suggested order
 
-1. **Blockers §0** — you, in a dashboard. Everything else is decoration until
+1. **Push §0a** — the guest invitation is down in production and the fix is
+   sitting unpushed. Nothing else is worth doing first.
+2. **Blockers §0** — you, in a dashboard. Everything else is decoration until
    the money works.
-2. **Images §1** — largest user-visible win left.
-3. **Logo & icons §3** — visible, self-contained, no dependencies.
+3. **Images §1** — largest user-visible win left.
 4. **Donut §2** — small, once the palette is validated.
 5. **Decisions §4** — then build.
+
+And one habit, given how §0a happened: **run the e2e suite before committing
+anything that touches a data path.** `npm run test:e2e` against a running dev
+server via `E2E_BASE_URL=http://localhost:PORT` takes under two minutes and
+would have caught a production outage the day it was introduced.
