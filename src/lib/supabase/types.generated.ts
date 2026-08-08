@@ -889,6 +889,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_analytics: { Args: { p_days?: number }; Returns: Json }
       admin_badge_stats: { Args: { p_days?: number }; Returns: Json }
       admin_daily_series: {
         Args: { p_days?: number }

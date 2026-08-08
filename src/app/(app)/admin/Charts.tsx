@@ -276,3 +276,75 @@ export function TrendChart({
     </Card>
   );
 }
+
+/* ---------------------------------------------------------------- breakdowns */
+
+export interface BreakdownRow {
+  label: string;
+  count: number;
+  revenue_inr?: number;
+}
+
+/**
+ * Ranked horizontal bars for a categorical breakdown.
+ *
+ * One hue, varying only in length — this encodes *magnitude*, and magnitude is
+ * a sequential job. Giving each row its own colour would imply the categories
+ * are a palette when the only thing being compared is size, and would need a
+ * validated categorical set to stay colourblind-safe for no benefit.
+ *
+ * Bars are labelled with their value directly, so the chart is readable without
+ * an axis and stays legible if colour is unavailable entirely.
+ */
+export function BreakdownBars({
+  title,
+  caption,
+  rows,
+  format = "plain",
+  emptyLabel = "Nothing yet.",
+}: {
+  title: string;
+  caption?: string;
+  rows: BreakdownRow[];
+  format?: ValueFormat;
+  emptyLabel?: string;
+}) {
+  const max = Math.max(1, ...rows.map((r) => r.count));
+
+  return (
+    <Card className="p-6">
+      <p className="type-overline">{title}</p>
+      {caption && <p className="mt-1 type-caption">{caption}</p>}
+
+      {rows.length === 0 ? (
+        <p className="mt-6 text-center type-caption italic">{emptyLabel}</p>
+      ) : (
+        <ul className="mt-4 flex flex-col gap-3">
+          {rows.map((row) => (
+            <li key={row.label}>
+              <div className="flex items-baseline justify-between gap-3">
+                <span className="type-body capitalize">{row.label.replace(/_/g, " ")}</span>
+                <span className="type-caption font-semibold text-foreground">
+                  {row.revenue_inr !== undefined
+                    ? `${row.count} · ${formatValue(row.revenue_inr, "inr")}`
+                    : formatValue(row.count, format)}
+                </span>
+              </div>
+              {/* 2px gap between the bar and its track, so adjacent fills never
+                  read as one continuous block. */}
+              <div className="mt-1.5 h-2 w-full overflow-hidden rounded-pill bg-ornate/15">
+                <div
+                  className="h-full rounded-pill"
+                  style={{
+                    width: `${Math.max(2, (row.count / max) * 100)}%`,
+                    background: "var(--color-primary)",
+                  }}
+                />
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </Card>
+  );
+}

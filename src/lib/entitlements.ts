@@ -15,7 +15,12 @@ export type PlanCode = "free" | "classic" | "premium";
 export type Entitlements = {
   planCode: PlanCode;
 
-  /** Free invitations carry a structural watermark. See src/lib/watermark.ts. */
+  /**
+   * Free invitations carry the "Made with Amantrika" badge
+   * (src/components/invite/MadeWithBadge.tsx). The field keeps its name because
+   * it gates the whole free-tier treatment, not just the badge: what the free
+   * tier is really denied is reach — no OG image, no Event data, no indexing.
+   */
   watermarked: boolean;
 
   /**
@@ -97,6 +102,3 @@ export function entitlementsFor(planCode: string | null | undefined): Entitlemen
 export function isWatermarked(planCode: string | null | undefined): boolean {
   return entitlementsFor(planCode).watermarked;
 }
-
-/** Copy for the upgrade prompt shown on a watermarked invitation. */
-export const WATERMARK_NOTICE = "Preview — published with Amantrika";
