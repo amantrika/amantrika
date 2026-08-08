@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Badge, Button, Card } from "@/design-system/components";
 import { getCachedShowcase, getCachedShowcaseTypes } from "@/lib/cache";
-import { eventTypeLabels } from "@/lib/invite";
+import { eventTypeLabels } from "@/lib/invites/invite";
 import { getTheme } from "@/themes";
 import type { EventType } from "@/lib/supabase/types";
 

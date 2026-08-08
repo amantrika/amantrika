@@ -13,9 +13,9 @@ import {
   getRsvps,
   getSubEvents,
   getViewsByDay,
-} from "@/lib/queries";
+} from "@/lib/invites/queries";
 import { createClient } from "@/lib/supabase/server";
-import { eventTypeLabels } from "@/lib/invite";
+import { eventTypeLabels } from "@/lib/invites/invite";
 import { siteUrl } from "@/lib/env";
 import { Button } from "@/design-system/components";
 import type { BlessingRow } from "@/lib/supabase/types";

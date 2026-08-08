@@ -18,7 +18,7 @@ import {
   WhyChooseUs,
   type HomePostSummary,
 } from "@/components/site/HomeSections";
-import { eventTypeLabels } from "@/lib/invite";
+import { eventTypeLabels } from "@/lib/invites/invite";
 import type { EventType, PlanRow } from "@/lib/supabase/types";
 
 /** The build flow, mirroring the real onboarding steps. */

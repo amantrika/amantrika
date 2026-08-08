@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { InviteClient } from "./InviteClient";
-import { getBlessings, getPublishedInvite } from "@/lib/queries";
-import { hostLine } from "@/lib/invite";
+import { getBlessings, getPublishedInvite } from "@/lib/invites/queries";
+import { hostLine } from "@/lib/invites/invite";
 import { seedBlessings } from "@/data/blessings";
 import { siteUrl } from "@/lib/env";
-import { entitlementsFor } from "@/lib/entitlements";
+import { entitlementsFor } from "@/lib/invites/entitlements";
 import { MadeWithBadge } from "@/components/invite/MadeWithBadge";
 import { eventJsonLd, graph } from "@/lib/seo/jsonld";
 

@@ -1,8 +1,8 @@
 "use client";
 
 import { LayoutSection, ThemedHeroVariant } from "@/design-system/components";
-import { hostLine, type InviteView } from "@/lib/invite";
-import { monogramInitials } from "@/lib/invite";
+import { hostLine, type InviteView } from "@/lib/invites/invite";
+import { monogramInitials } from "@/lib/invites/invite";
 import { resolveSectionStyle, type Theme } from "@/themes";
 import { renderSection, type SectionContext } from "./sections";
 

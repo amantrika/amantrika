@@ -51,9 +51,8 @@ something must never cost a guest their navigation.
 | --- | --- |
 | `supabase/` | Three clients, and the database types |
 | `auth.ts`, `roles.ts` | Session, and role helpers |
-| `queries.ts`, `cache.ts` | Reads — uncached and cached respectively |
-| `invite.ts`, `demo.ts` | The invitation view model, and the bundled samples |
-| `showcase.ts` | The public gallery |
+| `cache.ts` | Cached public reads (see the split below) |
+| `invites/` | **The invitation domain** — view model, reads, samples, assets, entitlements, showcase |
 | `features/` | Feature requests and voting |
 | `payments/` | Payment providers behind one interface |
 | `content/` | MDX loading and rendering |
@@ -73,11 +72,11 @@ something must never cost a guest their navigation.
 `unstable_cache` — using it there makes every cached page 500. That is what
 `createPublicClient()` is for, and why `cache.ts` never calls the other one.
 
-### `queries.ts` vs `cache.ts`
+### `invites/queries.ts` vs `cache.ts`
 
 Not duplication. `cache.ts` holds reads that are **identical for every visitor**
 (pricing, the showcase gallery) and shares one result across everyone.
-`queries.ts` holds reads scoped to a person. Caching a per-user read behind a
+`invites/queries.ts` holds reads scoped to a person. Caching a per-user read behind a
 shared key is how one account ends up seeing another's data — so that boundary is
 a safety rule, not an optimisation.
 

@@ -11,7 +11,7 @@ import { Divider, MusicToggle, PetalRain, ThemedOpening } from "@/design-system/
 import type { Theme } from "@/themes";
 import type { Blessing } from "@/data/blessings";
 import { InviteBody } from "@/components/invite/InviteBody";
-import { hostLine, monogramInitials, type InviteView } from "@/lib/invite";
+import { hostLine, monogramInitials, type InviteView } from "@/lib/invites/invite";
 import { capture } from "@/lib/posthog/client";
 import { EVENTS } from "@/lib/posthog/events";
 import { submitBlessing, submitRsvp } from "./actions";

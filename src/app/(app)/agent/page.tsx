@@ -3,10 +3,10 @@ import Link from "next/link";
 import { DashboardShell, NewInviteButton } from "../DashboardShell";
 import { ReferralCard } from "./ReferralCard";
 import { requireRole } from "@/lib/auth";
-import { getAgentStats, listManagedEvents } from "@/lib/queries";
+import { getAgentStats, listManagedEvents } from "@/lib/invites/queries";
 import { createClient } from "@/lib/supabase/server";
 import { siteUrl } from "@/lib/env";
-import { eventTypeLabels } from "@/lib/invite";
+import { eventTypeLabels } from "@/lib/invites/invite";
 import { Badge, Button, Card, Stat, Table } from "@/design-system/components";
 import type { Agent, CommissionRow, Profile } from "@/lib/supabase/types";
 

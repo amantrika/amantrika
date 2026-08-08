@@ -1,5 +1,5 @@
 import { couples, type CoupleData } from "@/data/couples";
-import type { InviteView } from "@/lib/invite";
+import type { InviteView } from "@/lib/invites/invite";
 
 /**
  * The three bundled showcase invites. They are not database rows — they exist so

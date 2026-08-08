@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { entitlementsFor, isWatermarked } from "@/lib/entitlements";
+import { entitlementsFor, isWatermarked } from "@/lib/invites/entitlements";
 
 describe("entitlementsFor", () => {
   it("watermarks the free plan", () => {

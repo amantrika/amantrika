@@ -10,7 +10,7 @@ import {
   Button, Card, DatePicker, Divider, Input, PetalRain, PhotoUploader,
   Select, Stepper, Textarea, TimePicker, WaxSeal, type UploadedAsset,
 } from "@/design-system/components";
-import { eventTypeLabels, subEventPresets } from "@/lib/invite";
+import { eventTypeLabels, subEventPresets } from "@/lib/invites/invite";
 import { capture } from "@/lib/posthog/client";
 import { EVENTS } from "@/lib/posthog/events";
 import type { EventType, PlanRow } from "@/lib/supabase/types";

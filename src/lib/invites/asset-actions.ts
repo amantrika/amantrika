@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
-import { ASSET_BUCKET } from "@/lib/invite";
+import { ASSET_BUCKET } from "@/lib/invites/invite";
 import { requireProfile } from "@/lib/auth";
 import { captureServer } from "@/lib/posthog/server";
 import { log } from "@/lib/posthog/logger";

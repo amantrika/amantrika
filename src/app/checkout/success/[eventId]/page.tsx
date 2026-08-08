@@ -4,8 +4,8 @@ import { notFound } from "next/navigation";
 import { ArrowRight, Eye } from "lucide-react";
 import { Button, Card, Divider, PetalRain, WaxSeal } from "@/design-system/components";
 import { requireProfile } from "@/lib/auth";
-import { getManagedEvent } from "@/lib/queries";
-import { monogramInitials } from "@/lib/invite";
+import { getManagedEvent } from "@/lib/invites/queries";
+import { monogramInitials } from "@/lib/invites/invite";
 import { siteUrl } from "@/lib/env";
 import { CopyLinkButton } from "./CopyLinkButton";
 

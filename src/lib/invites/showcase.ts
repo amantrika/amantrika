@@ -1,6 +1,6 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
-import { toInviteView, type InviteView } from "@/lib/invite";
+import { toInviteView, type InviteView } from "@/lib/invites/invite";
 import type { AssetRow, EventRow, EventType, SubEventRow } from "@/lib/supabase/types";
 
 /**
@@ -56,7 +56,7 @@ export async function listShowcase(eventType?: EventType): Promise<ShowcaseItem[
     if (!coverByEvent.has(asset.event_id)) coverByEvent.set(asset.event_id, asset.storage_path);
   }
 
-  const { assetUrl } = await import("@/lib/invite");
+  const { assetUrl } = await import("@/lib/invites/invite");
 
   return rows.map((row) => ({
     slug: row.slug,

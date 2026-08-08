@@ -6,7 +6,7 @@ import {
   Badge, Button, Card, Divider, Input, Modal, Select, Sparkline, Stat, Switch, Table, Tabs,
   Textarea, PhotoUploader, type UploadedAsset,
 } from "@/design-system/components";
-import { assetUrl } from "@/lib/invite";
+import { assetUrl } from "@/lib/invites/invite";
 import { capture } from "@/lib/posthog/client";
 import { EVENTS } from "@/lib/posthog/events";
 import type {

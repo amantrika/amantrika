@@ -5,7 +5,7 @@ import { Check, Smartphone, Monitor } from "lucide-react";
 import { Button } from "@/design-system/components";
 import { motifs } from "@/design-system/motifs";
 import { InviteBody } from "@/components/invite/InviteBody";
-import { assetUrl, type InviteView } from "@/lib/invite";
+import { assetUrl, type InviteView } from "@/lib/invites/invite";
 import type { Theme } from "@/themes";
 import type { EventType } from "@/lib/supabase/types";
 import type { UploadedAsset } from "@/design-system/components";

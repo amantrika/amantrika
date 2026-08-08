@@ -1,7 +1,7 @@
 import "server-only";
 import { unstable_cache } from "next/cache";
 import { createPublicClient } from "@/lib/supabase/server";
-import { assetUrl } from "@/lib/invite";
+import { assetUrl } from "@/lib/invites/invite";
 import type { EventType, PlanRow } from "@/lib/supabase/types";
 
 /**

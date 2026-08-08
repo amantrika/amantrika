@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Badge, Button, Card, Input, Select, Table } from "@/design-system/components";
 import { AdminFeedback, AdminSection } from "../AdminShell";
 import { setInvitationStatus } from "../actions";
-import { eventTypeLabels } from "@/lib/invite";
+import { eventTypeLabels } from "@/lib/invites/invite";
 import type { EventStatus, EventType } from "@/lib/supabase/types";
 
 export interface InvitationRow {

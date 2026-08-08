@@ -3,8 +3,8 @@
 import { useRef, useState, useTransition } from "react";
 import { ImagePlus, Trash2, Upload } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { ASSET_BUCKET, assetUrl } from "@/lib/invite";
-import { deleteAsset, registerAsset } from "@/lib/asset-actions";
+import { ASSET_BUCKET, assetUrl } from "@/lib/invites/invite";
+import { deleteAsset, registerAsset } from "@/lib/invites/asset-actions";
 import { capture } from "@/lib/posthog/client";
 import { EVENTS } from "@/lib/posthog/events";
 import { Button } from "./Button";

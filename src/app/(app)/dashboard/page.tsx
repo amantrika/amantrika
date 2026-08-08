@@ -3,8 +3,8 @@ import Link from "next/link";
 import { ArrowRight, CalendarDays, Eye } from "lucide-react";
 import { DashboardShell, NewInviteButton } from "../DashboardShell";
 import { requireProfile } from "@/lib/auth";
-import { listManagedEvents } from "@/lib/queries";
-import { eventTypeLabels } from "@/lib/invite";
+import { listManagedEvents } from "@/lib/invites/queries";
+import { eventTypeLabels } from "@/lib/invites/invite";
 import { Badge, Button, Card } from "@/design-system/components";
 
 export const metadata: Metadata = {

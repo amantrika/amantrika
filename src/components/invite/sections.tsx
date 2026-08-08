@@ -10,7 +10,7 @@ import {
 import { fadeUpStagger } from "@/design-system/motion/presets";
 import { brideFamily, groomFamily } from "@/data/families";
 import type { Blessing } from "@/data/blessings";
-import { hostLine, type InviteView } from "@/lib/invite";
+import { hostLine, type InviteView } from "@/lib/invites/invite";
 import type { SectionId, Theme } from "@/themes";
 
 /**

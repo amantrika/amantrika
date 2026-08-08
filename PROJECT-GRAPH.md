@@ -242,6 +242,15 @@ invitations actually refer people — not just that referrals happen.
 
 ---
 
+## 10a. Layout note
+
+The invitation domain lives together under `src/lib/invites/` — view model,
+reads, bundled samples, assets, entitlements and the showcase. Everything else
+at `src/lib` root is cross-cutting (auth, env, cache, pricing, flags) and is
+imported by more than one domain, which is why it is not nested.
+
+---
+
 ## 11. Where the bodies are buried
 
 Hard-won facts. Each cost real time; none is guessable from the code.

@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ShieldCheck } from "lucide-react";
-import { getShowcaseInvite } from "@/lib/showcase";
-import { eventTypeLabels } from "@/lib/invite";
+import { getShowcaseInvite } from "@/lib/invites/showcase";
+import { eventTypeLabels } from "@/lib/invites/invite";
 import { InviteClient } from "@/app/invite/[slug]/InviteClient";
 
 type Params = Promise<{ slug: string }>;

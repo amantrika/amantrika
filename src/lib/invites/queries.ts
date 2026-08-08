@@ -1,7 +1,7 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
-import { toInviteView, type InviteView } from "@/lib/invite";
-import { demoInvite, isDemoSlug } from "@/lib/demo";
+import { toInviteView, type InviteView } from "@/lib/invites/invite";
+import { demoInvite, isDemoSlug } from "@/lib/invites/demo";
 import type {
   AgentStats,
   AssetRow,
