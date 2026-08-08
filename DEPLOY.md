@@ -5,7 +5,7 @@ any personal ones. They are connected by hand — copying keys into environment
 variables — rather than through the Vercel Marketplace Supabase integration,
 which would tie the two accounts' billing together.
 
-Repository: `github.com/amantrika/amantrika_web` (private).
+Repository: `github.com/amantrika/amantrika` (private).
 
 The Supabase project is `Amantrika`, ref `wzwzeoqaaronnuvfzvxf`, region
 `ap-southeast-1` (Singapore).
@@ -65,12 +65,17 @@ update profiles set role = 'admin' where email = 'you@example.com';
 
 ### Regenerate the TypeScript types
 
-`src/lib/supabase/types.ts` is hand-written to mirror the migrations. Once the
-project is linked, replace it with generated types:
+Run this after **every** migration:
 
 ```bash
-supabase gen types typescript --linked > src/lib/supabase/types.ts
+supabase gen types typescript --linked > src/lib/supabase/types.generated.ts
 ```
+
+`types.generated.ts` is the source of truth for column names and nullability.
+`types.ts` imports it and layers back the two things generation can't express:
+the real shapes behind the jsonb columns (`events.hosts`, `story_moments`,
+`hotels`, `settings`, `plans.features`) and the jsonb return types of the
+`event_stats` / `agent_stats` RPCs. Don't edit `types.generated.ts` by hand.
 
 ---
 
@@ -118,7 +123,7 @@ deploys to work against the same database.
 
 Alternatively, connect the GitHub repo from the Vercel dashboard so every push
 to `main` deploys automatically. The Amantrika Vercel account will need access
-granted to `amantrika/amantrika_web` during the GitHub app install.
+granted to `amantrika/amantrika` during the GitHub app install.
 
 ### Custom domain
 
