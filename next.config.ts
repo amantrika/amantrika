@@ -29,6 +29,27 @@ const nextConfig: NextConfig = {
 
   // PostHog's proxied endpoints respond to requests with a trailing slash.
   skipTrailingSlashRedirect: true,
+
+  /**
+   * Compresses webpack's filesystem cache.
+   *
+   * Context for the "Serializing big strings … impacts deserialization
+   * performance" notice you will still see: it concerns webpack's *build cache*,
+   * not the shipped bundle. Nothing a visitor loads is slower because of it. It
+   * appears because the MDX content and the inlined SVG icon set are large
+   * strings, which webpack stores as strings rather than Buffers when caching.
+   *
+   * Compression genuinely shrinks that cache, but does not remove the notice —
+   * it is emitted by webpack's infrastructure logger, which `ignoreWarnings`
+   * does not reach. Silencing it would mean lowering the log level and hiding
+   * real warnings with it, which is a bad trade for cosmetic quiet.
+   */
+  webpack: (config, { dev }) => {
+    if (!dev && config.cache && typeof config.cache === "object") {
+      config.cache = { ...config.cache, compression: "gzip" };
+    }
+    return config;
+  },
 };
 
 export default nextConfig;
