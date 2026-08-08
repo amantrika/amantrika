@@ -25,6 +25,11 @@ again.*
 
 ## Setup
 
+**Where does n8n actually run?** Not on Vercel — it needs a persistent process and its own database,
+and Vercel is serverless. See **[DEPLOYMENT.md](./DEPLOYMENT.md)** for hosting options, the full
+credential walkthrough, the WhatsApp template setup, and the bring-up order. It also covers the
+alternative of skipping n8n and using Vercel Cron instead.
+
 ### 1. Apply the migration
 
 ```bash
@@ -313,7 +318,9 @@ select * from automation.settings;
 
 ```
 n8n/
-  README.md          this file
+  README.md          this file — how the workflows work
+  DEPLOYMENT.md      where to run n8n, credentials, bring-up order
+  docker-compose.yml self-hosting on your own server
   .env.example       the n8n-side environment contract
   sql/               every query, with the reasoning in comments
     00-ledger-helpers.sql   claim / confirm / fail, and the runbook
