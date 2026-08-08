@@ -292,7 +292,7 @@ export async function startCheckout(input: {
   // before anything is written under the service role.
   const { data: event } = await supabase
     .from("events")
-    .select("id, slug, agent_id, owner_id, main_datetime")
+    .select("id, slug, agent_id, owner_id, main_datetime, theme_id")
     .eq("id", parsed.data.eventId)
     .maybeSingle();
 
@@ -305,6 +305,27 @@ export async function startCheckout(input: {
     .maybeSingle();
 
   if (!plan) return { ok: false, error: "That plan isn't available." };
+
+  /**
+   * A premium theme needs a paid plan. This is the boundary — the builder
+   * badges premium themes and warns at the plan step, but the theme is chosen
+   * *before* the plan, so the only place the two are both known is here.
+   *
+   * Read from the row rather than trusted from the request: the theme id is
+   * whatever was last saved to the draft, and this action is a public endpoint.
+   */
+  const { data: theme } = await supabase
+    .from("themes")
+    .select("tier, name")
+    .eq("id", event.theme_id)
+    .maybeSingle();
+
+  if (theme?.tier === "premium" && plan.price_inr === 0) {
+    return {
+      ok: false,
+      error: `${theme.name} is a premium theme. Choose a paid plan, or pick a free theme to publish at no cost.`,
+    };
+  }
 
   const price = computePrice({
     plan,

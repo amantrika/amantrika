@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Check, Smartphone, Monitor } from "lucide-react";
+import { Check, Lock, Smartphone, Monitor } from "lucide-react";
 import { Button } from "@/design-system/components";
 import { motifs } from "@/design-system/motifs";
 import { InviteBody } from "@/components/invite/InviteBody";
@@ -43,7 +43,14 @@ export interface ThemeDraft {
 export function draftToInviteView(
   draft: ThemeDraft,
   themeId: string,
-  assets: UploadedAsset[]
+  assets: UploadedAsset[],
+  /**
+   * The plan being previewed. It decides which sections the invitation has —
+   * a free plan has no RSVP — so the preview must be told, or it shows a page
+   * the host will not receive. Defaults to premium for callers that are
+   * demonstrating a theme rather than someone's actual purchase.
+   */
+  planCode = "premium"
 ): InviteView {
   const hosts = draft.hosts
     .filter((h) => h.name.trim())
@@ -51,9 +58,10 @@ export function draftToInviteView(
 
   return {
     id: null,
-    // A builder preview is not a published invitation; premium keeps the
-    // preview unwatermarked so the theme is judged on its own.
-    planCode: "premium",
+    // Drives which sections the preview renders. The watermark is not decided
+    // here — `MadeWithBadge` is rendered by the guest page, not by InviteBody —
+    // so a free preview is honest about its sections without being defaced.
+    planCode,
     slug: draft.slug || "preview",
     eventType: draft.eventType,
     themeId,
@@ -100,16 +108,27 @@ export function ThemeChooser({
   selectedId,
   onSelect,
   invite,
+  premiumThemeIds,
 }: {
   /** Already ordered by relevance to the host's tradition and country. */
   themes: Theme[];
   selectedId: string;
   onSelect: (theme: Theme) => void;
   invite: (themeId: string) => InviteView;
+  /**
+   * Premium themes, badged as such.
+   *
+   * Deliberately *not* disabled. The plan is chosen on the next step, so at
+   * this point nobody has declined to pay — locking a theme here would refuse
+   * a sale before it was offered. The badge sets the expectation, the plan step
+   * repeats it, and `startCheckout` is what actually enforces it.
+   */
+  premiumThemeIds?: ReadonlySet<string>;
 }) {
   const [previewId, setPreviewId] = useState(selectedId);
   const [width, setWidth] = useState<"phone" | "desktop">("phone");
 
+  const premium = premiumThemeIds ?? new Set<string>();
   const preview = themes.find((t) => t.id === previewId) ?? themes[0];
   const previewInvite = useMemo(() => invite(preview.id), [invite, preview.id]);
 
@@ -150,6 +169,11 @@ export function ThemeChooser({
                 {chosen && (
                   <p className="mt-2 flex items-center gap-1 text-sm font-bold text-success">
                     <Check className="size-4" /> Chosen
+                  </p>
+                )}
+                {!chosen && premium.has(t.id) && (
+                  <p className="mt-2 flex items-center gap-1 type-caption font-semibold text-accent">
+                    <Lock className="size-3.5" /> Premium theme
                   </p>
                 )}
               </button>
@@ -211,7 +235,17 @@ export function ThemeChooser({
                 <Check className="size-4" /> This is your theme
               </p>
             ) : (
-              <Button onClick={() => onSelect(preview)}>Use {preview.name}</Button>
+              <div className="flex flex-wrap items-center justify-end gap-3">
+                {premium.has(preview.id) && (
+                  // Said before the choice, not after it. The plan step repeats
+                  // this, and startCheckout enforces it.
+                  <p className="flex items-center gap-1.5 type-caption text-muted">
+                    <Lock className="size-3.5 text-accent" />
+                    Premium theme — needs a paid plan
+                  </p>
+                )}
+                <Button onClick={() => onSelect(preview)}>Use {preview.name}</Button>
+              </div>
             )}
           </div>
         </div>

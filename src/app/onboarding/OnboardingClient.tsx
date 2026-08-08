@@ -13,7 +13,7 @@ import {
 import { eventTypeLabels, subEventPresets } from "@/lib/invites/invite";
 import { capture } from "@/lib/posthog/client";
 import { EVENTS } from "@/lib/posthog/events";
-import type { EventType, PlanRow } from "@/lib/supabase/types";
+import type { EventType, PlanRow, ThemeRow } from "@/lib/supabase/types";
 import { checkSlug, saveDraft, startCheckout } from "./actions";
 import { ThemeChooser, draftToInviteView } from "./ThemeChooser";
 
@@ -119,7 +119,16 @@ function defaultSlug(draft: Draft): string {
   return base;
 }
 
-export function OnboardingClient({ plans, isAgent }: { plans: PlanRow[]; isAgent: boolean }) {
+export function OnboardingClient({
+  plans,
+  themeCatalogue,
+  isAgent,
+}: {
+  plans: PlanRow[];
+  /** Offered themes with their tier. Empty only before the migration is applied. */
+  themeCatalogue: ThemeRow[];
+  isAgent: boolean;
+}) {
   const [step, setStep] = useState(0);
   const [draft, setDraft] = useState<Draft>(emptyDraft);
   const [eventId, setEventId] = useState<string | null>(null);
@@ -178,21 +187,46 @@ export function OnboardingClient({ plans, isAgent }: { plans: PlanRow[]; isAgent
   const theme = getTheme(draft.themeId);
   useEffect(() => setThemeId("royal-maroon"), [setThemeId]);
 
+  /**
+   * Which themes are offered, and which of them this plan may actually use.
+   *
+   * The catalogue decides both — never a hardcoded id, and never the registry
+   * alone. If the catalogue is empty the migration has not been applied yet, so
+   * everything falls back to offered-and-free rather than leaving a host with
+   * an empty picker.
+   */
+  const { offeredThemes, premiumThemeIds } = useMemo(() => {
+    const tierById = new Map(themeCatalogue.map((t) => [t.id, t.tier]));
+    // A catalogue row is what makes a theme offered — an inactive theme is not
+    // returned by the query, so it disappears from the picker without breaking
+    // the invitations already using it.
+    const offered = tierById.size ? themes.filter((t) => tierById.has(t.id)) : themes;
+
+    // Badged, not withheld. The theme step comes *before* the plan step, so
+    // nobody has declined to pay yet — disabling a theme here would refuse a
+    // sale before it was offered. `startCheckout` is the enforcement.
+    const premium = new Set(
+      offered.filter((t) => tierById.get(t.id) === "premium").map((t) => t.id)
+    );
+    return { offeredThemes: offered, premiumThemeIds: premium };
+  }, [themeCatalogue]);
+
   const suggested = suggestedReligions(draft.country);
   const filteredThemes = useMemo(() => {
     const pref = suggested ?? null;
-    const byTradition = themes.filter((t) => t.religionTag === draft.tradition);
+    const pool = offeredThemes;
+    const byTradition = pool.filter((t) => t.religionTag === draft.tradition);
     if (byTradition.length) {
-      return [...byTradition, ...themes.filter((t) => t.religionTag !== draft.tradition)];
+      return [...byTradition, ...pool.filter((t) => t.religionTag !== draft.tradition)];
     }
     if (pref) {
       return [
-        ...themes.filter((t) => pref.includes(t.religionTag)),
-        ...themes.filter((t) => !pref.includes(t.religionTag)),
+        ...pool.filter((t) => pref.includes(t.religionTag)),
+        ...pool.filter((t) => !pref.includes(t.religionTag)),
       ];
     }
-    return themes;
-  }, [draft.tradition, suggested]);
+    return pool;
+  }, [draft.tradition, suggested, offeredThemes]);
 
   const liveSlug = draft.slug || defaultSlug(draft);
   const isWedding = draft.eventType === "wedding";
@@ -201,6 +235,13 @@ export function OnboardingClient({ plans, isAgent }: { plans: PlanRow[]; isAgent
    * The theme step renders the real invitation for whichever theme is being
    * looked at. Rebuilt whenever the draft or the uploaded photographs change,
    * so switching themes after editing a detail shows the edit.
+   *
+   * Previewed as the complete invitation, not as the currently-selected plan.
+   * The plan is chosen on the *next* step, so at this point `planCode` is only
+   * the default rather than a decision — rendering a free preview here would
+   * hide the RSVP section from someone who has not yet been offered the choice,
+   * and judge the theme on a page they may never publish. What the free tier
+   * excludes is said on the plan step, where it has been decided.
    */
   const previewInvite = useCallback(
     (themeId: string) => draftToInviteView({ ...draft, slug: liveSlug }, themeId, assets),
@@ -487,6 +528,7 @@ export function OnboardingClient({ plans, isAgent }: { plans: PlanRow[]; isAgent
             themes={filteredThemes}
             selectedId={draft.themeId}
             invite={previewInvite}
+            premiumThemeIds={premiumThemeIds}
             onSelect={(t) => {
               patch({ themeId: t.id });
               capture(EVENTS.onboarding_theme_chosen, {
@@ -801,10 +843,22 @@ export function OnboardingClient({ plans, isAgent }: { plans: PlanRow[]; isAgent
                   )}
                 </dl>
               )}
+              {/* The one screen where the theme and the plan are both known.
+                  Said here rather than enforced at the theme step, which comes
+                  first — see the comment on `premiumThemeIds`. `startCheckout`
+                  refuses the same combination server-side. */}
+              {isFreePlan && premiumThemeIds.has(draft.themeId) && (
+                <p className="mt-4 rounded-card border border-ornate/40 bg-accent/8 p-3 type-caption">
+                  <strong className="font-semibold text-primary">{theme.name}</strong> is a premium
+                  theme. Choose a paid plan to keep it, or go back and pick a free theme to publish
+                  at no cost.
+                </p>
+              )}
               <Button
                 size="lg"
                 loading={publishing}
                 onClick={publish}
+                disabled={isFreePlan && premiumThemeIds.has(draft.themeId)}
                 className="mt-6 w-full"
                 variant="celebration"
               >
