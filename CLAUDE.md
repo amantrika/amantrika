@@ -211,3 +211,33 @@ in your summary. Work one phase per session; end with a summary and a commit.
 
 Open product decisions live in `project-overview.md` §25 — **ask, do not guess**, especially on real
 prices, whether a free tier exists, and which languages ship first.
+
+## Keep `progress.md` current
+
+`progress.md` is the handover file. More than one agent works in this repo and
+sessions end without warning, so anything not written there is lost.
+
+**Update it in the same commit as the work it describes** — not afterwards, not
+"later". A commit that ships a feature and leaves `progress.md` describing the
+world before it is a commit that has already gone stale.
+
+What belongs there:
+
+- **Shipped** — what exists now, in a sentence someone can act on. Not a diary.
+- **Pending** — with the blocking items separated from the nice-to-haves, and
+  said plainly enough that the next session can pick one up cold.
+- **Known issues** — including the ones you could not resolve. An unresolved
+  problem that is written down is a lead; one that is not is a trap.
+- **Conventions worth not relearning** — every non-obvious thing that cost time
+  to discover. If a bug took twenty minutes to diagnose, the fix belongs in the
+  code and the *reason* belongs here.
+
+Two rules about honesty, because this file is read as fact:
+
+- Mark anything unverified as unverified. "Deployed" and "works" are different
+  claims; do not let the first imply the second.
+- When another agent built something, say so. Do not silently inherit credit,
+  and do not describe their in-flight work as finished.
+
+Remove entries when they stop being true. A pending item that shipped, or a
+known issue that was fixed, should leave the file rather than accumulate.
