@@ -99,6 +99,36 @@ another identity is rejected by Vercel on Hobby, which fails the deploy.
 - `/changelog` and `/roadmap` as MDX.
 - Dodo payments, entitlements, watermark plumbing, AI console *(other agent)*.
 
+### Lifecycle email & scheduling
+- **The scheduler is in the app**, not a side-car: `src/app/api/cron/[job]`,
+  guarded by `CRON_SECRET` in constant time, scheduled in `vercel.json`.
+  Unauthenticated callers get 404, not 401, so the route's existence is not
+  confirmed to strangers.
+- `src/lib/notifications/` claims every message in `automation.notifications`
+  **before** sending it, keyed on a deterministic dedupe key. Overlapping
+  schedules, a retried cron delivery and a manual run during a scheduled one are
+  all safe. `?dryRun=1` renders and ledgers without sending.
+- The **abandoned-draft nudge sequence** (spec §15) is ported and tested — five
+  messages bucketed by idle time and gated on completion score.
+- **One-click unsubscribe** at `/api/unsubscribe`, RFC 8058 `POST` and the human
+  `GET`, HMAC-signed over address and scope so editing the address in the URL
+  cannot unsubscribe someone else. Honoured immediately, no confirmation step.
+- **n8n was retired** (8 Aug 2026). It was well built, but it meant a second
+  email path outside `sendEmail()`, 56KB of logic invisible to typecheck and the
+  test suite, and a second deployment to operate. The `automation` schema and the
+  candidate SQL were kept and moved into the app. Reasoning in `wont-do.md`;
+  port status in `n8n/README.md`.
+
+### Testing
+- **Vitest + Playwright, 216 tests, green.** `npm test` runs both;
+  `npm run test:report` opens the HTML report with traces and video.
+- e2e drives a **production build**, not `next dev` — the dev server invalidates
+  route handlers after `revalidatePath`, which makes the payment webhook 404 on
+  the second call and would make the suite lie.
+- Covers: the payment webhook (forged signature, tampered body, underpayment,
+  replay), the free/paid split, SEO and LLM rules as hard assertions, secret-leak
+  scanning of every downloaded payload, and the scheduler's auth and idempotency.
+
 ---
 
 ## 🔜 Pending
@@ -126,7 +156,14 @@ another identity is rejected by Vercel on Hobby, which fails the deploy.
 - [ ] **`README.md` is stale** — claims payments are stubbed, says 8 themes
       (there are 12), links `/invite/swarnil-weds-prachi` (no longer exists) and
       sends people to `/design-system` (404 on any deployment).
-- [ ] Decide whether `main` or `n8n-automation-layer` is the trunk (below).
+- [ ] **Port the remaining ten lifecycle workflows** — owner alerts, RSVP
+      digests, publish confirmation, expiry warning, post-event wrap-up, guest
+      reminders. `n8n/README.md` tracks them. Mechanical now the substrate
+      exists: move the query into a `security definer` function, write a render
+      function, add an entry to `JOBS` and a schedule. Delete `n8n/` when done.
+- [ ] Decide whether `main` or `n8n-automation-layer` is the trunk (below). The
+      branch name is now misleading — n8n is retired — but Vercel deploys
+      production from it, so renaming is not a free action.
 
 ---
 
@@ -144,9 +181,19 @@ checks. Traced to framer-motion 13 and dynamic `custom` variants — elements wi
 Could not be confirmed: the browser used may have had reduced-motion set. **Needs
 thirty seconds on a real machine to settle.**
 
+**A live OpenRouter key reached `.env.example` twice.** Removed in `7eb3a94`,
+then written back an hour later by a concurrent `git add -A`. That file is
+tracked and the repo has a GitHub remote. It has been moved to `.env.local`
+(gitignored) and the template restored. **The key `sk-or-v1-aa1802…` was never
+committed the second time, but it did sit in the working tree — rotate it if
+that is not already done.** The first key was reported revoked; confirm.
+
 **Two agents, one working tree.** A concurrent `npm install` once wiped installed
 packages mid-task; migration timestamps have interleaved and needed
-`--include-all` twice. Give each agent its own branch, or run them one at a time.
+`--include-all` twice. A rebuild wiped the e2e server's `.next` mid-run three
+times, producing test failures that were not real — the fix was `NEXT_DIST_DIR`
+(below), but a source tree changing under a running suite still cannot be made
+safe. Give each agent its own worktree, or run them one at a time.
 
 ---
 
