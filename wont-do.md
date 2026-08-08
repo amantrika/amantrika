@@ -18,6 +18,17 @@ One Next.js app, one Supabase project, one deployment. Every lifecycle job —
 nudges, expiry, archive offers — is a Vercel Cron hitting a route. If something
 here ever seems to need a worker, the design is wrong, not the constraint.
 
+> **⚠️ Contested — needs a decision.** Commit `eb274f7` added an n8n automation
+> side-car running ten lifecycle and ops workflows. Its case: n8n is an
+> operations layer rather than a product service, reads Supabase directly,
+> writes only to its own `automation` schema, never changes product state, and
+> the product still works if it is down. That is a coherent argument, but it is
+> a second deployment, and CLAUDE.md §2.1 says to stop and re-read the line
+> rather than propose one. **Either amend CLAUDE.md §2.1 to describe the
+> exception explicitly, or move the ten workflows to Vercel Cron routes.**
+> Leaving the rule and the repo disagreeing is the one option that is definitely
+> wrong.
+
 ### Self-hosted email (own SMTP / Postfix)
 Genuinely third-party-free, and genuinely worse. Vercel is serverless with
 outbound port 25 blocked, so it would mean a separate VPS, a dedicated clean IP,
@@ -27,12 +38,14 @@ is payment receipts and "your invitation is live" links; if those land in spam,
 hosts think the product broke. We use Resend, behind `sendEmail()`, so swapping
 provider is ~30 lines in one file.
 
-### An unbreakable watermark
-`src/lib/watermark.ts` makes removal cost more than the upgrade: per-request
-nonces, no shared class or tag, one mark in the document flow. It does not try
-to be uncircumventable, because against markup we ship to the client that is not
-achievable. A determined person with dev-tools will win, and that is an accepted
-loss, not a bug.
+### A watermark on the free tier, at all
+Built once (tiled marks, per-request nonces, selector-resistant) and then
+deleted in favour of a corner "Made with Amantrika" badge. A watermark defaces a
+family's invitation to punish them for not paying, which makes guests resent the
+mark instead of following it — and following it is the only organic acquisition
+loop the product has. What the free tier is denied is **reach**, not beauty: no
+OG image, no `Event` structured data, no indexing. Those are enforced server-side
+off `events.plan_code` and covered by `tests/e2e/badge.spec.ts`.
 
 ### Client-side entitlement checks of any kind
 Entitlements resolve on the server from `events.plan_code`, which only the
@@ -62,7 +75,7 @@ support and reconciliation tool, not a product surface.
 `events→invites`, `sub_events→invite_events`, `rsvps→invite_rsvps`,
 `agents→partners`, `/invite/[slug]→/i/[slug]`. Correct, and untouched here
 because it rewrites every route, query and generated type at once — which would
-have collided with the payments and watermark work in the same session.
+have collided with the payments and free-tier work in the same session.
 **Trigger:** do it as its own session, before the builder rewrite, with the 301s
 from `/invite/[slug]` and `invite.amantrika.com` landing in the same commit so
 circulating guest links never 404.
@@ -99,7 +112,7 @@ can reach a real customer anyway.
 
 ### Status branching beyond draft/published
 The spec has draft, preview, published, expired and archived. We have draft and
-published, plus the watermark that `preview` was mostly there to express.
+published, plus the badge that `preview` was mostly there to express.
 **Trigger:** the expiry and archive crons, which are what make the other states
 mean anything.
 
@@ -110,7 +123,7 @@ content model has not been settled yet (Phase 1's Zod schema). **Trigger:** the
 content schema lands, and the "which languages ship first" decision is made.
 
 ### Dynamic OG images
-`next/og` images for blog posts and paid invitations. Watermarked invitations
+`next/og` images for blog posts and paid invitations. Free invitations
 deliberately emit none, and that part is done and tested — the paid-tier image
 is what is missing. **Trigger:** any time; it is self-contained.
 
