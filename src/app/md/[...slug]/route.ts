@@ -1,4 +1,5 @@
 import { getAllPages, getAllPosts, getContentPage, getPost, formatDate } from "@/lib/content/blog";
+import { toPlainMarkdown } from "@/lib/content/plain-markdown";
 import { absolute } from "@/lib/seo/jsonld";
 
 /**
@@ -71,7 +72,7 @@ export async function GET(
         fm.faq.map((item) => `### ${item.q}\n\n${item.a}`).join("\n\n")
       : "";
 
-    return markdownResponse(`${header}${post.body.trim()}${faq}\n`);
+    return markdownResponse(`${header}${toPlainMarkdown(post.body)}${faq}\n`);
   }
 
   if (segments.length === 1) {
@@ -96,7 +97,7 @@ export async function GET(
         fm.faq.map((item) => `### ${item.q}\n\n${item.a}`).join("\n\n")
       : "";
 
-    return markdownResponse(`${header}${page.body.trim()}${faq}\n`);
+    return markdownResponse(`${header}${toPlainMarkdown(page.body)}${faq}\n`);
   }
 
   return new Response("Not found", { status: 404 });

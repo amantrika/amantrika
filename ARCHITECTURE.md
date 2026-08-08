@@ -88,8 +88,22 @@ a safety rule, not an optimisation.
 | --- | --- |
 | `src/design-system/` | Reusable primitives, theme-aware, no product knowledge |
 | `src/design-system/brand/` | The Amantrika logo — the one place brand identity is drawn |
-| `src/components/site/` | Site chrome — header, footer |
+| `src/components/site/` | Site chrome — header, footer, theme previews, blog covers |
 | `src/components/invite/`, `roadmap/` | Feature-specific pieces |
+
+`site/` is split by render boundary, not by subject: `SiteHeader.tsx` is a
+client module because its nav items carry icon *components*, which cannot be
+serialised from a server shell; `SiteChrome.tsx` keeps the footer on the server
+and re-exports the header so callers still import their chrome from one place.
+
+**Two type pairings live here.** An invitation uses whatever face its theme
+picks. Everything that is Amantrika's own voice — marketing, dashboard, admin,
+auth, onboarding, checkout — adds `.type-chrome` to its shell, which redefines
+`--font-heading` and `--weight-display` for that subtree. It is a class rather
+than a rule on `<body>` because the default theme is declared on `:root`, so a
+body-level override would leak into every invitation using it. Anything that
+re-scopes with `data-theme` (a preview card, a docs demo) escapes it correctly —
+which is why the default theme has an explicit `[data-theme]` block of its own.
 
 `brand/` is the exception that proves the design-system rule: it *is* product
 knowledge, but it sits here because everything else in the app consumes it and

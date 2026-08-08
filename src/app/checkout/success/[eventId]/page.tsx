@@ -56,7 +56,7 @@ export default async function CheckoutSuccessPage({
   const isLive = event.status === "published";
 
   return (
-    <main className="relative flex min-h-screen flex-col items-center justify-center bg-bg px-4 py-16 text-center">
+    <main className="type-chrome relative flex min-h-screen flex-col items-center justify-center bg-bg px-4 py-16 text-center">
       <PetalRain type="marigold" density={16} />
 
       <WaxSeal monogram={initials} size={104} />

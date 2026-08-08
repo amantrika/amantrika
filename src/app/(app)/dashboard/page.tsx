@@ -50,26 +50,49 @@ export default async function DashboardPage() {
       ) : (
         <div className="grid gap-5 md:grid-cols-2">
           {events.map((event) => (
-            <Card key={event.id} variant="ornate" className="flex flex-col p-6">
+            <Card
+              key={event.id}
+              variant="ornate"
+              className="flex flex-col p-6 transition-shadow hover:shadow-lifted"
+            >
               <div className="flex items-start justify-between gap-3">
-                <div>
+                <div className="min-w-0">
                   <p className="type-overline">{eventTypeLabels[event.event_type]}</p>
                   <h2 className="mt-1 type-h2 text-primary">{event.title}</h2>
                 </div>
                 <Badge tone={statusTone[event.status]}>{event.status}</Badge>
               </div>
 
-              <p className="mt-3 type-caption">
-                {event.main_datetime
-                  ? new Date(event.main_datetime).toLocaleDateString("en-IN", {
-                      day: "numeric",
-                      month: "long",
-                      year: "numeric",
-                    })
-                  : "Date not set"}
-                {event.city ? ` · ${event.city}` : ""}
-              </p>
-              <p className="mt-1 font-mono text-sm text-muted">/invite/{event.slug}</p>
+              {/* Date, place and link are the three facts you scan a list of
+                  celebrations for, so they get their own ruled block rather
+                  than trailing off under the title. */}
+              <hr aria-hidden className="dhaga-rule mt-4" />
+              <dl className="mt-4 space-y-1.5 type-caption">
+                <div className="flex gap-2">
+                  <dt className="w-14 shrink-0 text-muted">When</dt>
+                  <dd className="text-foreground">
+                    {event.main_datetime
+                      ? new Date(event.main_datetime).toLocaleDateString("en-IN", {
+                          day: "numeric",
+                          month: "long",
+                          year: "numeric",
+                        })
+                      : "Date not set"}
+                  </dd>
+                </div>
+                {event.city && (
+                  <div className="flex gap-2">
+                    <dt className="w-14 shrink-0 text-muted">Where</dt>
+                    <dd className="text-foreground">{event.city}</dd>
+                  </div>
+                )}
+                <div className="flex gap-2">
+                  <dt className="w-14 shrink-0 text-muted">Link</dt>
+                  <dd className="min-w-0 truncate font-mono text-foreground">
+                    /invite/{event.slug}
+                  </dd>
+                </div>
+              </dl>
 
               <div className="mt-6 flex flex-wrap gap-2">
                 <Link href={`/dashboard/${event.id}`}>

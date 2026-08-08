@@ -65,7 +65,11 @@ export function Section({
           {lead && <p className="mt-3 type-body-lg text-muted">{lead}</p>}
         </header>
       )}
-      <div className={eyebrow || title || lead ? "mt-10" : ""}>{children}</div>
+      {/* Capped so the band can be full-bleed on a wide page while its contents
+          stay a readable grid rather than a six-column sprawl. */}
+      <div className={`mx-auto max-w-6xl ${eyebrow || title || lead ? "mt-10" : ""}`}>
+        {children}
+      </div>
     </section>
   );
 }
@@ -216,7 +220,9 @@ export function SplitFeature({
   const Icon = icon ? resolveIcon(icon) : null;
 
   return (
-    <div className="my-14 grid items-center gap-8 md:grid-cols-2">
+    // Capped, because on a `layout: "wide"` page this block is a direct child of
+    // a full-width container and would otherwise run to 1400px.
+    <div className="mx-auto my-14 grid max-w-5xl items-center gap-8 px-4 md:grid-cols-2">
       <div className={flip ? "md:order-2" : ""}>
         {Icon && (
           <span className="inline-flex size-12 items-center justify-center rounded-full border border-ornate/60 bg-accent/10 text-primary">
@@ -244,10 +250,170 @@ export function SplitFeature({
 
 /* ---------------------------------------------------------------- timeline */
 
-/** Milestones on a dashed thread — the same dhaga motif the themes use. */
+/**
+ * The node on a timeline thread: a ring that draws itself once on load, with a
+ * running-stitch ring turning inside it.
+ *
+ * Two rings rather than one because they say different things — the outer ring
+ * being drawn is the moment arriving, the inner stitch turning is the thread
+ * still running. Both are SVG stroke animations driven by the `.draw-stroke`
+ * and `.thread-run` utilities, which means no client JS and, more importantly,
+ * that `prefers-reduced-motion` already switches them off in one place.
+ */
+function ThreadNode({ icon, size = 56 }: { icon?: string; size?: 56 | 44 }) {
+  const Icon = icon ? resolveIcon(icon) : null;
+  // Circumference of the outer ring, so the draw animation covers it exactly.
+  const r = size / 2 - 2;
+  const circumference = Math.round(2 * Math.PI * r);
+
+  return (
+    <span
+      className="relative inline-flex shrink-0 items-center justify-center"
+      style={{ width: size, height: size }}
+    >
+      <svg
+        aria-hidden
+        viewBox={`0 0 ${size} ${size}`}
+        className="absolute inset-0 size-full text-ornate"
+      >
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={r}
+          fill="var(--color-surface)"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          className="draw-stroke"
+          style={{ ["--draw-length" as string]: circumference }}
+        />
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={r - 5}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1"
+          strokeDasharray="4 4"
+          opacity="0.65"
+          className="thread-run"
+        />
+      </svg>
+      <span className="relative text-primary">
+        {Icon ? (
+          <Icon className={size === 56 ? "size-5" : "size-4"} />
+        ) : (
+          <span className="block size-2 rounded-full bg-accent" />
+        )}
+      </span>
+    </span>
+  );
+}
+
+/**
+ * The dashed thread running from one node to the next.
+ *
+ * Anchored to the node's own height rather than to the bottom of the node —
+ * the column stretches to the full height of its row, so `top-full` would put
+ * the thread below the entire step instead of under the ring. The last step's
+ * thread is hidden by a rule on the list, since a component cannot know it is
+ * last.
+ */
+function ThreadLine({ nodeSize }: { nodeSize: number }) {
+  return (
+    <span
+      aria-hidden
+      data-thread
+      className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center"
+      style={{ top: nodeSize + 4 }}
+    >
+      <svg
+        viewBox="0 0 2 100"
+        preserveAspectRatio="none"
+        className="h-full w-0.5 text-ornate/60"
+      >
+        <line
+          x1="1"
+          y1="0"
+          x2="1"
+          y2="100"
+          stroke="currentColor"
+          strokeWidth="1"
+          strokeDasharray="4 4"
+          vectorEffect="non-scaling-stroke"
+          className="thread-run"
+        />
+      </svg>
+    </span>
+  );
+}
+
+/** Slug for a heading id, matching what rehype-slug would produce. */
+function headingId(text: string) {
+  return text
+    .toLowerCase()
+    .replace(/[^\w\s-]/g, "")
+    .trim()
+    .replace(/\s+/g, "-");
+}
+
+/**
+ * A page's steps as a stitched timeline.
+ *
+ * Distinct from <ProcessSteps>, which is a four-across summary card grid. This
+ * is for a page whose *body* is the sequence — how-it-works is seven stages of
+ * one journey, and read as seven H2s with paragraphs under them it gave no
+ * sense of being one path from start to finish.
+ *
+ * Each step still renders a real <h2> with a stable id, so the heading outline,
+ * the markdown twin and a fragment link all keep working.
+ */
+export function Journey({ children }: { children: ReactNode }) {
+  // The last step's thread is hidden here rather than in JourneyStep, which has
+  // no way of knowing it is last.
+  return (
+    <ol className="mx-auto max-w-3xl px-4 [&>li:last-child_[data-thread]]:hidden">
+      {children}
+    </ol>
+  );
+}
+
+export function JourneyStep({
+  title,
+  icon,
+  when,
+  children,
+}: {
+  title: string;
+  icon?: string;
+  /** Optional label above the title — "Step two", "Before you pay". */
+  when?: string;
+  children: ReactNode;
+}) {
+  return (
+    <li className="grid grid-cols-[3.5rem_minmax(0,1fr)] gap-x-5 pb-12 last:pb-0 sm:gap-x-7">
+      {/* The node column is its own positioning context: the thread hangs from
+          the bottom of the node to the bottom of the row, so the last step —
+          which has no bottom padding — draws no thread and needs no special
+          case. */}
+      <div className="relative flex justify-center">
+        <ThreadNode icon={icon} />
+        <ThreadLine nodeSize={56} />
+      </div>
+      <div className="min-w-0 pb-2">
+        {when && <p className="type-overline text-accent">{when}</p>}
+        <h2 id={headingId(title)} className="mt-1 type-h2 scroll-mt-28 text-primary">
+          {title}
+        </h2>
+        <div className="mt-2 type-body-lg text-muted [&>p:first-child]:mt-0">{children}</div>
+      </div>
+    </li>
+  );
+}
+
+/** Milestones on the same thread, at a smaller node — a history, not a journey. */
 export function Milestones({ children }: { children: ReactNode }) {
   return (
-    <ol className="relative mx-auto max-w-2xl space-y-8 border-l-2 border-dashed border-ornate/50 pl-8">
+    <ol className="mx-auto max-w-2xl px-4 [&>li:last-child_[data-thread]]:hidden">
       {children}
     </ol>
   );
@@ -264,15 +430,17 @@ export function Milestone({
   icon?: string;
   children: ReactNode;
 }) {
-  const Icon = icon ? resolveIcon(icon) : null;
   return (
-    <li className="relative">
-      <span className="absolute -left-[2.6rem] inline-flex size-8 items-center justify-center rounded-full border border-ornate bg-surface text-primary">
-        {Icon ? <Icon className="size-4" /> : <span className="size-2 rounded-full bg-accent" />}
-      </span>
-      <p className="type-overline text-accent">{when}</p>
-      <h3 className="mt-1 type-h3 text-primary">{title}</h3>
-      <div className="mt-1 type-body text-muted [&>p:first-child]:mt-0">{children}</div>
+    <li className="grid grid-cols-[2.75rem_minmax(0,1fr)] gap-x-4 pb-9 last:pb-0">
+      <div className="relative flex justify-center">
+        <ThreadNode icon={icon} size={44} />
+        <ThreadLine nodeSize={44} />
+      </div>
+      <div className="min-w-0 pb-1">
+        <p className="type-overline text-accent">{when}</p>
+        <h3 className="mt-1 type-h3 text-primary">{title}</h3>
+        <div className="mt-1 type-body text-muted [&>p:first-child]:mt-0">{children}</div>
+      </div>
     </li>
   );
 }
@@ -416,6 +584,8 @@ export const sectionComponents = {
   StatBand,
   StatItem,
   SplitFeature,
+  Journey,
+  JourneyStep,
   Milestones,
   Milestone,
   PullQuote,

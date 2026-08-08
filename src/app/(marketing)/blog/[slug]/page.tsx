@@ -5,6 +5,7 @@ import { ArrowLeft, ArrowRight, Clock, FileText } from "lucide-react";
 import { Badge } from "@/design-system/components/bits";
 import { TableOfContents } from "./TableOfContents";
 import { PostCard } from "../PostCard";
+import { PostCover } from "@/components/site/PostCover";
 import { CTA, FAQ } from "@/lib/content/mdx-components";
 import { MdxBody, splitAtSecondSection } from "@/lib/content/render";
 import {
@@ -125,16 +126,18 @@ export default async function BlogPostPage({ params }: Params) {
           </div>
         </header>
 
-        {fm.coverImage && (
-          <figure className="mt-10">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={fm.coverImage}
-              alt={fm.coverAlt ?? ""}
-              className="max-h-[26rem] w-full rounded-card border border-ornate/30 object-cover"
-            />
-          </figure>
-        )}
+        {/* A post without a photograph gets a drawn title card rather than
+            opening on a headline against nothing. */}
+        <figure className="mt-10">
+          <PostCover
+            title={fm.title}
+            category={fm.category}
+            coverImage={fm.coverImage}
+            coverAlt={fm.coverAlt}
+            eager
+            className="h-56 w-full rounded-card border border-ornate/30 sm:h-72 md:h-[26rem]"
+          />
+        </figure>
 
         <div className="mt-12 grid gap-12 lg:grid-cols-[minmax(0,1fr)_16rem]">
           {/* Prose first in the DOM so extractors reach the article before the nav. */}

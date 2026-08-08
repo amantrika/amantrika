@@ -1,6 +1,9 @@
 import Link from "next/link";
-import { Button, Navbar } from "@/design-system/components";
 import { AmantrikaMark, AmantrikaWordmark } from "@/design-system/brand";
+
+// Re-exported so every caller still imports its chrome from one place, even
+// though the header now lives in its own client module.
+export { SiteHeader, siteNav } from "./SiteHeader";
 
 /**
  * One header and one footer for every public page — landing, blog, content
@@ -15,13 +18,6 @@ import { AmantrikaMark, AmantrikaWordmark } from "@/design-system/brand";
  * page, and wrapping it in our navigation would make it feel like ours.
  * The dashboard has its own shell for the same reason.
  */
-
-export const siteNav = [
-  { href: "/showcase", label: "Showcase" },
-  { href: "/how-it-works", label: "How it works" },
-  { href: "/blog", label: "Blog" },
-  { href: "/about", label: "About" },
-];
 
 const footerColumns = [
   {
@@ -60,51 +56,6 @@ const footerColumns = [
     ],
   },
 ];
-
-export function SiteHeader({
-  signedIn = false,
-  dashboardHref = "/login",
-}: {
-  signedIn?: boolean;
-  dashboardHref?: string;
-}) {
-  return (
-    <Navbar
-      items={siteNav}
-      skipToId="main"
-      brand={
-        <Link
-          href="/"
-          aria-label="Amantrika — home"
-          className="group inline-flex items-center gap-2.5 text-primary"
-        >
-          <AmantrikaMark className="size-8 shrink-0 transition-transform duration-300 group-hover:-translate-y-0.5" />
-          {/* Below 400px the wordmark and two buttons cannot both fit; the mark
-              alone is the logo in that case, which is what it was drawn for. */}
-          <AmantrikaWordmark className="hidden min-[400px]:inline-flex" />
-        </Link>
-      }
-      actions={
-        signedIn ? (
-          <Link href={dashboardHref}>
-            <Button size="sm">Dashboard</Button>
-          </Link>
-        ) : (
-          <>
-            <Link href="/login" className="hidden sm:block">
-              <Button variant="ghost" size="sm">
-                Sign in
-              </Button>
-            </Link>
-            <Link href="/signup">
-              <Button size="sm">Create yours</Button>
-            </Link>
-          </>
-        )
-      }
-    />
-  );
-}
 
 export function SiteFooter() {
   return (

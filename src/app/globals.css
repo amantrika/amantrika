@@ -114,8 +114,10 @@
   --tracking-display: 0em;
   --tracking-overline: 0.22em;
   /* Heading weight is a token because not every display face has one. Cormorant
-     is drawn to 600; Marcellus (the chrome face) exists only at 400, and asking
-     the browser to embolden it produces a smeared synthetic weight. */
+     is drawn to 600; Marcellus (the chrome face) and the Devanagari display
+     faces exist only at 400, and asking the browser to embolden them produces a
+     smeared synthetic weight. Each theme states the weight its face actually
+     ships. */
   --weight-display: 600;
   --radius-theme: var(--radius-card);
   --rhythm-scale: 1;
@@ -126,12 +128,44 @@
 
 /* ============ THEME OVERRIDES (semantic tokens only) ============ */
 
+/* Royal Maroon is the default set on :root, and this block restates it.
+   That looks redundant until a *nested* theme scope exists — a preview card on
+   the marketing page, a themed demo in the docs. Those sit inside a surface
+   that has already redefined --font-heading (see `.type-chrome`), and with no
+   [data-theme="royal-maroon"] rule to match, the preview would inherit the
+   chrome's face instead of the theme's. Every other theme gets its own block,
+   so this one needs one too. */
+[data-theme="royal-maroon"] {
+  --font-heading: var(--font-display);
+  --font-accent: var(--font-script);
+  --font-script-local: var(--font-display);
+  --tracking-display: 0em;
+  --tracking-overline: 0.22em;
+  --weight-display: 600;
+  --radius-theme: var(--radius-card);
+  --rhythm-scale: 1;
+  --width-content: var(--width-regular);
+  --pattern-opacity: 0.06;
+  --pattern-opacity-panel: 0.1;
+  --rule-weight: 1px;
+  --color-bg: #fbf6ec;
+  --color-surface: #fffdf6;
+  --color-surface-raised: #ffffff;
+  --color-text: #2b1b12;
+  --color-text-muted: #7d6a58;
+  --color-primary: #6b1f2a;
+  --color-accent: #c9a227;
+  --color-border-ornate: #c9a227;
+  --color-overlay: rgba(43, 27, 18, 0.55);
+}
+
 [data-theme="haldi-sunshine"] {
   --font-heading: var(--font-display);
   --font-accent: var(--font-deva-fun);
   --font-script-local: var(--font-deva-fun);
   --tracking-display: -0.005em;
   --tracking-overline: 0.16em;
+  --weight-display: 600;
   --radius-theme: 24px;
   --rhythm-scale: 0.85;
   --width-content: var(--width-wide);
@@ -155,6 +189,7 @@
   --font-script-local: var(--font-display);
   --tracking-display: 0.005em;
   --tracking-overline: 0.2em;
+  --weight-display: 600;
   --radius-theme: 20px;
   --rhythm-scale: 0.85;
   --width-content: var(--width-regular);
@@ -178,6 +213,7 @@
   --font-script-local: var(--font-deva);
   --tracking-display: 0.012em;
   --tracking-overline: 0.3em;
+  --weight-display: 400;  /* Rozha One / Yatra One ship one weight */
   --radius-theme: 4px;
   --rhythm-scale: 1.18;
   --width-content: var(--width-narrow);
@@ -201,6 +237,7 @@
   --font-script-local: var(--font-nastaliq);
   --tracking-display: 0.01em;
   --tracking-overline: 0.28em;
+  --weight-display: 600;
   --radius-theme: 2px;
   --rhythm-scale: 1.18;
   --width-content: var(--width-regular);
@@ -224,6 +261,7 @@
   --font-script-local: var(--font-nastaliq);
   --tracking-display: 0.02em;
   --tracking-overline: 0.26em;
+  --weight-display: 600;
   --radius-theme: 18px;
   --rhythm-scale: 1;
   --width-content: var(--width-wide);
@@ -249,6 +287,7 @@
   --font-script-local: var(--font-deva);
   --tracking-display: 0em;
   --tracking-overline: 0.24em;
+  --weight-display: 400;  /* Rozha One / Yatra One ship one weight */
   --radius-theme: 10px;
   --rhythm-scale: 1;
   --width-content: var(--width-regular);
@@ -272,6 +311,7 @@
   --font-script-local: var(--font-display);
   --tracking-display: 0.045em;
   --tracking-overline: 0.36em;
+  --weight-display: 600;
   --radius-theme: 0px;
   --rhythm-scale: 1.3;
   --width-content: var(--width-narrow);
@@ -295,6 +335,7 @@
   --font-script-local: var(--font-deva-fun);
   --tracking-display: -0.01em;
   --tracking-overline: 0.14em;
+  --weight-display: 400;  /* Rozha One / Yatra One ship one weight */
   --radius-theme: 28px;
   --rhythm-scale: 0.85;
   --width-content: var(--width-wide);
@@ -318,6 +359,7 @@
   --font-script-local: var(--font-deva);
   --tracking-display: 0.008em;
   --tracking-overline: 0.3em;
+  --weight-display: 400;  /* Rozha One / Yatra One ship one weight */
   --radius-theme: 6px;
   --rhythm-scale: 1;
   --width-content: var(--width-wide);
@@ -341,6 +383,7 @@
   --font-script-local: var(--font-display);
   --tracking-display: 0.03em;
   --tracking-overline: 0.32em;
+  --weight-display: 600;
   --radius-theme: 14px;
   --rhythm-scale: 1.18;
   --width-content: var(--width-wide);
@@ -364,6 +407,7 @@
   --font-script-local: var(--font-body);
   --tracking-display: 0.06em;
   --tracking-overline: 0.4em;
+  --weight-display: 600;
   --radius-theme: 0px;
   --rhythm-scale: 1.35;
   --width-content: var(--width-narrow);
@@ -467,6 +511,11 @@
 
   --radius-soft: 8px;
   --radius-card: 16px;
+  /* `rounded-pill` is used in ~30 places — nav items, chips, filter buttons.
+     Declaring the value on :root is not enough: Tailwind v4 only generates a
+     utility for a variable registered in @theme, so every one of those pills
+     was rendering with square corners. */
+  --radius-pill: 999px;
 
   --shadow-resting: var(--shadow-card-resting);
   --shadow-lifted: var(--shadow-card-lifted);
@@ -543,6 +592,7 @@ body {
    means the existing .type-* utilities pick this up with no other change. */
 .type-chrome {
   --font-heading: var(--font-marcellus);
+  /* Marcellus ships one weight. Asking for 600 gets a synthetic bold. */
   --weight-display: 400;
   --tracking-display: 0.004em;
   --tracking-overline: 0.26em;
@@ -605,6 +655,31 @@ body {
 
 /* Stack rhythm inside a section — the second axis of "dense vs. airy". */
 .block-stack > * + * { margin-top: var(--space-block-gap); }
+
+/* ============ WIDE CONTENT PAGES ============
+   A page with `layout: "wide"` (about, how-it-works) is two things at once: a
+   run of designed <Section> bands that want the whole viewport, and stretches
+   of ordinary prose that emphatically do not — a paragraph 1400px wide is
+   unreadable at any type size.
+
+   Rather than asking the writer to wrap every paragraph, the container is full
+   width and the bare *markdown* elements are pulled back into a reading column
+   here. Only direct children match, and only the ones Markdown itself produces
+   — a JSX block is a designed component and sets its own measure, so anything
+   inside a <Section> keeps the width it was given. */
+.page-wide > p,
+.page-wide > h2,
+.page-wide > h3,
+.page-wide > h4,
+.page-wide > ul,
+.page-wide > ol,
+.page-wide > blockquote,
+.page-wide > hr,
+.page-wide > pre {
+  margin-inline: auto;
+  max-width: 44rem;
+  padding-inline: 1rem;
+}
 
 /* A block that sets its own type, wrapping prose MDX has already put in a
    paragraph. The paragraph has to exist — MDX makes one out of any text between
@@ -705,23 +780,6 @@ body {
 }
 .gentle-pulse { animation: gentle-pulse 2s ease-in-out infinite; }
 
-/* Loading skeleton with a gold-tinted shimmer */
-@keyframes skeleton-sweep {
-  from { background-position: -200% 0; }
-  to { background-position: 200% 0; }
-}
-.skeleton {
-  border-radius: var(--radius-soft);
-  background: linear-gradient(
-    100deg,
-    color-mix(in srgb, var(--color-text) 7%, var(--color-surface)) 40%,
-    color-mix(in srgb, var(--color-accent) 25%, var(--color-surface)) 50%,
-    color-mix(in srgb, var(--color-text) 7%, var(--color-surface)) 60%
-  );
-  background-size: 200% 100%;
-  animation: skeleton-sweep 1.6s linear infinite;
-}
-
 /* The mobile nav drawer's entrance. It is mounted on open rather than hidden
    with CSS (so its links stay out of the tab order while closed), which means
    there is no exit animation to pair with this — the panel goes when it goes. */
@@ -733,7 +791,7 @@ body {
 
 /* Respect reduced motion for all CSS animation utilities */
 @media (prefers-reduced-motion: reduce) {
-  .shimmer-gold, .diya-flicker, .gentle-pulse, .skeleton, .nav-drawer {
+  .shimmer-gold, .diya-flicker, .gentle-pulse, .nav-drawer {
     animation: none;
   }
   .shimmer-gold { color: var(--color-text); background: none; }

@@ -36,7 +36,7 @@ export default async function MockCheckoutPage({
   const event = Array.isArray(order.events) ? order.events[0] : order.events;
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-bg px-4 py-16">
+    <main className="type-chrome flex min-h-screen items-center justify-center bg-bg px-4 py-16">
       <div className="w-full max-w-md">
         <div
           role="status"

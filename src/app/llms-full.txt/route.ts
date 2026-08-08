@@ -1,4 +1,5 @@
 import { getAllPages, getAllPosts, formatDate } from "@/lib/content/blog";
+import { toPlainMarkdown } from "@/lib/content/plain-markdown";
 import { BRAND, absolute } from "@/lib/seo/jsonld";
 
 /**
@@ -29,7 +30,7 @@ export async function GET() {
       "",
       `Source: ${absolute(page.href)} · Updated ${formatDate(page.frontmatter.updatedAt)}`,
       "",
-      page.body.trim(),
+      toPlainMarkdown(page.body),
       "",
       "---",
       "",
@@ -43,7 +44,7 @@ export async function GET() {
       "",
       `> ${post.frontmatter.excerpt}`,
       "",
-      post.body.trim(),
+      toPlainMarkdown(post.body),
       ...(post.frontmatter.faq?.length
         ? [
             "",

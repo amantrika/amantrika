@@ -86,10 +86,26 @@ export default async function ShowcasePage({
                         loading="lazy"
                       />
                     ) : (
-                      <div className="flex aspect-[4/3] w-full">
-                        {theme.palette.map((hex) => (
-                          <span key={hex} className="flex-1" style={{ background: hex }} />
-                        ))}
+                      // No cover: show what the theme actually looks like
+                      // rather than a bar of its palette. `data-theme` rescopes
+                      // every token, so this is the theme, not a drawing of it.
+                      <div
+                        data-theme={theme.id}
+                        className={`flex aspect-[4/3] w-full items-center justify-center px-6 text-center ${theme.texture}`}
+                      >
+                        <div>
+                          <p className="type-greeting text-xs text-accent">{theme.greetingCopy}</p>
+                          <p
+                            className="mt-1 text-2xl leading-tight text-primary"
+                            style={{
+                              fontFamily: "var(--font-heading), serif",
+                              fontWeight: "var(--weight-display)",
+                              letterSpacing: "var(--tracking-display)",
+                            }}
+                          >
+                            {item.title}
+                          </p>
+                        </div>
                       </div>
                     )}
 

@@ -6,10 +6,10 @@ import {
   BarChart3, Check, ImageUp, Link2, MessageSquareHeart, Palette, Users, Wand2,
 } from "lucide-react";
 import { themes } from "@/themes";
-import { motifs } from "@/design-system/motifs";
 import { Badge, Button, Card, Divider, Envelope } from "@/design-system/components";
 import { fadeUpStagger, staggerContainer } from "@/design-system/motion/presets";
 import { SiteFooter, SiteHeader } from "@/components/site/SiteChrome";
+import { ThemePreviewCard } from "@/components/site/ThemePreviewCard";
 import {
   HomeFaq,
   LatestBlogs,
@@ -82,22 +82,33 @@ export function LandingClient({
   faq?: { q: string; a: string }[];
 }) {
   return (
-    <div className="min-h-screen bg-bg">
+    // `type-chrome` is the brand's own pairing (Marcellus over Mulish). The
+    // theme preview cards below re-scope themselves with `data-theme`, so they
+    // keep their own faces inside it.
+    <div className="type-chrome min-h-screen bg-bg">
       <SiteHeader signedIn={signedIn} dashboardHref={dashboardHref} />
 
       {/* The header's skip link points here, so this landmark has to exist and
           has to be the first thing after the chrome. */}
       <main id="main">
-        {/* hero */}
-        <section className="mx-auto grid max-w-6xl items-center gap-12 px-4 pb-20 pt-10 lg:grid-cols-2 lg:pt-16">
+        {/* hero
+            The headline is on `type-hero`, a scale of its own: it sits in half
+            a grid on a laptop, so borrowing the invitation's display-xl either
+            shouted or wrapped to four lines depending on the viewport. The text
+            column is given the larger share, because a sentence needs measure
+            and the envelope reads fine a little smaller. */}
+        <section className="relative mx-auto grid max-w-6xl items-center gap-12 px-4 pb-20 pt-10 lg:grid-cols-[1.08fr_0.92fr] lg:pt-16">
           <motion.div variants={staggerContainer} initial="hidden" animate="visible">
-            <motion.p variants={fadeUpStagger} className="type-overline">
-              Digital invitations for every celebration
+            {/* A hand-lettered line above the headline: the one place on the
+                page where the calligraphic face earns its download, and the
+                thing that stops the hero reading like a SaaS landing page. */}
+            <motion.p variants={fadeUpStagger} className="type-script text-2xl text-accent">
+              Shubh aarambh
             </motion.p>
-            <motion.h1 variants={fadeUpStagger} custom={1} className="mt-3 type-display-xl text-primary">
-              Your wedding countdown<br />starts from here
+            <motion.h1 variants={fadeUpStagger} custom={1} className="mt-1 type-hero text-primary">
+              Your wedding countdown starts here
             </motion.h1>
-            <motion.p variants={fadeUpStagger} custom={2} className="mt-5 max-w-md type-body-lg text-muted">
+            <motion.p variants={fadeUpStagger} custom={2} className="mt-6 max-w-md type-body-lg text-muted">
               Join us in crafting the wedding invitation of your dreams. Animated invitation websites
               that open like a real card — wax seal, envelope and all — built for Indian weddings and
               every occasion after.
@@ -111,18 +122,29 @@ export function LandingClient({
               </Link>
             </motion.div>
             {/* Three plain facts, stated rather than implied — they are what a
-                reader (and a model summarising this page) actually needs. */}
-            <motion.ul
-              variants={fadeUpStagger}
-              custom={4}
-              className="mt-8 flex flex-wrap gap-x-6 gap-y-2 type-caption"
-            >
-              <li>One link, shared once</li>
-              <li aria-hidden>·</li>
-              <li>Free to build, pay when you publish</li>
-              <li aria-hidden>·</li>
-              <li>No app for your guests</li>
-            </motion.ul>
+                reader (and a model summarising this page) actually needs. The
+                stitched rule above them is the card-maker's thread, and it is
+                doing the work a plain <hr> would do without looking borrowed. */}
+            <motion.div variants={fadeUpStagger} custom={4} className="mt-9">
+              <hr className="dhaga-rule max-w-sm" />
+              {/* The separator is a pseudo-element rather than its own <li>, so
+                  a wrapped line never begins with an orphaned dot — which is
+                  exactly what the previous markup did at most widths. */}
+              <ul className="mt-4 flex flex-wrap gap-x-3 gap-y-1 type-caption">
+                {[
+                  "One link, shared once",
+                  "Free to build, pay when you publish",
+                  "No app for your guests",
+                ].map((fact) => (
+                  <li
+                    key={fact}
+                    className="before:mr-3 before:text-accent/70 before:content-['·'] first:before:hidden"
+                  >
+                    {fact}
+                  </li>
+                ))}
+              </ul>
+            </motion.div>
           </motion.div>
           <Envelope guestName="Dear Guest & Family" sealMonogram="अ" autoPlay />
         </section>
@@ -229,28 +251,13 @@ export function LandingClient({
               Hindu, Muslim, Sikh, Christian, interfaith — each with its own motifs, script,
               vocabulary and petals. Never a template recolour.
             </p>
-            <div className="mt-10 grid grid-cols-2 gap-4 lg:grid-cols-4">
-              {themes.map((t) => {
-                const Motif = motifs[t.motifSet.divider];
-                return (
-                  <Link key={t.id} href={`/showcase?theme=${t.id}`} className="group">
-                    <Card className="overflow-hidden transition-shadow group-hover:shadow-gold-glow">
-                      <div className="flex h-16">
-                        {t.palette.map((hex) => (
-                          <span key={hex} className="flex-1" style={{ background: hex }} />
-                        ))}
-                      </div>
-                      <div className="flex items-center justify-between p-4">
-                        <div>
-                          <p className="font-display font-semibold text-primary">{t.name}</p>
-                          <p className="type-caption capitalize">{t.religionTag} · {t.moodTag}</p>
-                        </div>
-                        <Motif className="size-6 text-accent" />
-                      </div>
-                    </Card>
-                  </Link>
-                );
-              })}
+            {/* Each tile is a miniature of the real card — its own fonts,
+                greeting script, corner motif and paper — rather than a strip of
+                its palette. See ThemePreviewCard for why. */}
+            <div className="mt-10 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+              {themes.map((t) => (
+                <ThemePreviewCard key={t.id} theme={t} href={`/showcase?theme=${t.id}`} />
+              ))}
             </div>
           </div>
         </section>

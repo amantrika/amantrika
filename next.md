@@ -122,11 +122,17 @@ lives in `src/design-system/brand/`, `public/brand/*.svg`, `src/app/icon.svg`
 and `src/app/apple-icon.tsx` — **four files that drift silently**, so change all
 four together.
 
-One thing left, and it needs a browser: the header's scroll-reactive surface and
-the mobile drawer have never been watched by a human or an agent. The Chrome
-extension was not connected in either session. Open the site on a phone-width
-window and check the drawer's scrim, the scroll lock, and that the skip link
-lands on `#main`.
+Nav items now carry icons (`NavItem.icon`) — a glyph in the bar, a ruled
+medallion in the drawer. The drawer was opened and screenshotted at 390px in
+headless Chromium on 8 Aug 2026 and renders correctly.
+
+**Still unwatched by a human:** the scroll-reactive header surface, the drawer's
+body scroll lock, and whether the skip link lands on `#main`. One thing looked
+wrong in the screenshot and was left alone as out of scope: **the drawer's scrim
+does not appear to dim the page behind it.** The element is rendered
+(`fixed inset-0 bg-[var(--color-overlay)]` in `navigation.tsx`); tapping outside
+still closes the menu, so it is a visual question, not a broken interaction.
+Worth thirty seconds in a real browser.
 
 ---
 
@@ -149,8 +155,13 @@ anonymously is not agreeing to be quoted. Add a separate
 
 ## 5. Smaller, safe wins
 
-- **Route-level loading states.** `ShehnaiLoadingBlock` exists; only `/admin` and
-  `/dashboard` have `loading.tsx`. Add to `/agent`, `/profile`, `/dashboard/[id]`.
+- **Look at the dashboard and admin signed in.** They were restyled on 8 Aug 2026
+  — sticky header with an active-state nav, a ruled page header, a gold rail on
+  the active admin row, invitation cards as a labelled `<dl>` — and it all
+  typechecks and builds, but **nobody has seen it rendered while logged in.**
+- **Route-level loading states.** `LoadingBlock` exists (the ring loader); only
+  `/admin` and `/dashboard` have `loading.tsx`. Add to `/agent`, `/profile`,
+  `/dashboard/[id]`.
 - **README is stale.** Still claims payments are stubbed and links
   `/invite/swarnil-weds-prachi`, which no longer exists.
 - **Comment pass** on older `src/design-system/` files. Newer code is commented

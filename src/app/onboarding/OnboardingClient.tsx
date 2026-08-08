@@ -376,7 +376,7 @@ export function OnboardingClient({ plans, isAgent }: { plans: PlanRow[]; isAgent
   if (publishedSlug) {
     const initials = draft.hosts.map((h) => h.name[0] ?? "").filter(Boolean).join("·") || "A";
     return (
-      <div className="relative flex min-h-screen flex-col items-center justify-center bg-bg px-4 text-center">
+      <div className="type-chrome relative flex min-h-screen flex-col items-center justify-center bg-bg px-4 text-center">
         <PetalRain type="marigold" density={18} />
         <motion.div
           initial={{ scale: 2.2, opacity: 0, y: -60 }}
@@ -403,7 +403,7 @@ export function OnboardingClient({ plans, isAgent }: { plans: PlanRow[]; isAgent
   }
 
   return (
-    <div className="min-h-screen bg-bg pb-24">
+    <div className="type-chrome min-h-screen bg-bg pb-24">
       <header className="mx-auto flex max-w-3xl items-center justify-between px-4 py-5">
         <Link href="/" className="font-display text-2xl font-semibold text-primary">
           Amantrika

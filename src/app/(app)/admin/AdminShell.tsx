@@ -64,8 +64,9 @@ export function AdminNav({ pendingPartners }: { pendingPartners: number }) {
 
   return (
     <>
-      {/* Desktop: sidebar */}
-      <nav aria-label="Admin sections" className="hidden lg:block">
+      {/* Desktop: sidebar. Sticky under the (also sticky) app header, so the
+          section list stays reachable down a long table of invitations. */}
+      <nav aria-label="Admin sections" className="hidden lg:block lg:sticky lg:top-24 lg:self-start">
         <div className="flex flex-col gap-6">
           {groups.map((group) => (
             <div key={group.heading}>
@@ -79,13 +80,19 @@ export function AdminNav({ pendingPartners }: { pendingPartners: number }) {
                       <Link
                         href={item.href}
                         aria-current={active ? "page" : undefined}
-                        className={`flex items-center gap-2.5 rounded-soft px-3 py-2 text-sm font-semibold transition-colors ${
+                        // The active row gets a gold rail on its leading edge as
+                        // well as a tint: on a tinted sidebar the tint alone is
+                        // easy to miss at a glance.
+                        className={`flex items-center gap-2.5 rounded-soft border-l-2 px-3 py-2 text-sm font-semibold transition-colors ${
                           active
-                            ? "bg-primary/10 text-primary"
-                            : "text-muted hover:bg-accent/8 hover:text-foreground"
+                            ? "border-accent bg-primary/10 text-primary"
+                            : "border-transparent text-muted hover:bg-accent/8 hover:text-foreground"
                         }`}
                       >
-                        <Icon aria-hidden className="size-4 shrink-0" />
+                        <Icon
+                          aria-hidden
+                          className={`size-4 shrink-0 ${active ? "text-accent" : ""}`}
+                        />
                         <span className="flex-1">{item.label}</span>
                         {item.href === "/admin/partners" && pendingPartners > 0 && (
                           <Badge tone="error">{pendingPartners}</Badge>

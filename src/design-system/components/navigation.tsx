@@ -346,18 +346,25 @@ export function SideNav({
           <ul className="flex flex-col gap-0.5">
             {group.items.map((item) => {
               const active = isActive(current, item.href);
+              const Icon = item.icon;
               return (
                 <li key={item.href}>
                   <Link
                     href={item.href}
                     aria-current={active ? "page" : undefined}
-                    className={`flex items-center justify-between rounded-soft px-3 py-2 text-sm transition-colors ${
+                    className={`flex items-center gap-2.5 rounded-soft px-3 py-2 text-sm transition-colors ${
                       active
                         ? "bg-primary-soft font-semibold text-primary"
                         : "text-foreground/75 hover:bg-accent/10 hover:text-primary"
                     }`}
                   >
-                    <span>{item.label}</span>
+                    {Icon && (
+                      <Icon
+                        aria-hidden
+                        className={`size-4 shrink-0 ${active ? "text-accent" : "text-accent/70"}`}
+                      />
+                    )}
+                    <span className="flex-1">{item.label}</span>
                     {item.trailing}
                   </Link>
                 </li>

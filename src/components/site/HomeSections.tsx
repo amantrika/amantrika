@@ -16,6 +16,7 @@ import {
   SeenAndCounted,
 } from "@/design-system/icons/mission";
 import { fadeUpStagger, staggerContainer } from "@/design-system/motion/presets";
+import { PostCover } from "@/components/site/PostCover";
 
 /**
  * Homepage sections carrying the copy from amantrika.com, expanded.
@@ -252,17 +253,13 @@ export function LatestBlogs({ posts }: { posts: HomePostSummary[] }) {
             custom={i}
             className="group relative flex flex-col overflow-hidden rounded-card border border-ornate/30 bg-surface transition-shadow hover:shadow-resting"
           >
-            {post.coverImage && (
-              /* eslint-disable-next-line @next/next/no-img-element */
-              <img
-                src={post.coverImage}
-                alt={post.coverAlt ?? ""}
-                width={1200}
-                height={630}
-                loading="lazy"
-                className="h-40 w-full object-cover"
-              />
-            )}
+            <PostCover
+              title={post.title}
+              category={post.category}
+              coverImage={post.coverImage}
+              coverAlt={post.coverAlt}
+              className="h-40 w-full"
+            />
             <div className="flex flex-1 flex-col p-6">
               <p className="type-overline text-accent">{post.category}</p>
               <h3 className="mt-2 type-h3 text-primary">

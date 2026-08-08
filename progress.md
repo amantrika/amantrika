@@ -146,7 +146,56 @@ another identity is rejected by Vercel on Hobby, which fails the deploy.
 - One `SiteHeader` / `SiteFooter` for the landing page and every marketing page,
   wrapping the design system's `Navbar`. The header carries the logo, an
   active-link rule, a scroll-reactive surface, a skip link to `#main`, and a
-  mobile drawer with a scrim and body scroll lock.
+  mobile drawer with a scrim and body scroll lock. Nav items carry an **icon**
+  (`NavItem.icon`) — a small glyph in the bar, a ruled medallion in the drawer.
+  `SiteHeader` lives in its own **client** module for that reason: icon
+  components cannot be serialised across the server/client boundary.
+
+### Design: the chrome pairing and the wedding ornament set
+Done 8 Aug 2026. A visual pass over every surface that is *ours* rather than a
+couple's — marketing, dashboard, admin, auth, onboarding, checkout.
+
+- **Two type pairings, not one.** An invitation keeps its theme's face
+  (Cormorant and the script faces). The chrome gets **Marcellus over Mulish**,
+  applied by `.type-chrome` on each shell. It is a class rather than a rule on
+  `<body>` because the default theme is declared on `:root`, so a body-level
+  override would leak into every invitation using it.
+- `--weight-display` is now a token. Marcellus, Rozha One and Yatra One ship a
+  single 400 weight and were being synthetically emboldened to 600. Every theme
+  states the weight its face actually has.
+- `--text-hero` / `.type-hero` — a scale for the landing headline alone, separate
+  from `display-xl`, which is drawn for couple names in a full-width column.
+- `.dhaga-frame` and `.dhaga-rule` — the card-maker's edge: a hairline rule with
+  a running-stitch thread inside it, and the same stitch as a fading divider.
+  Used on the theme previews, the hero, page headers and the dashboard.
+- **Theme cards are miniature invitations**, not palette strips
+  (`src/components/site/ThemePreviewCard.tsx`). `data-theme` on the card
+  rescopes every token, so the preview *is* the theme at a smaller size — add a
+  theme to the registry and its card is correct with nothing drawn by hand.
+- **The loader is a ring again** (`Loader`, `LoadingBlock`; `ShehnaiLoader` is
+  gone). The shehnai was ours but unfamiliar in the one place where being
+  instantly recognised is the whole job. The wedding is in the detail now: a
+  dotted gold track, an accent arc, a bindi orbiting the rim. Pure CSS.
+- **A post with no cover image gets a drawn title card** (`PostCover`) instead of
+  nothing, so a mixed grid stops coming out ragged and a post page never opens
+  on a headline against blank space.
+- **`layout: "wide"`** for content pages (`about`, `how-it-works`): full content
+  width, no contents rail. `.page-wide` pulls bare markdown back into a reading
+  column while designed `<Section>` bands keep the whole page.
+- **`<Journey>` / `<JourneyStep>`** — the stitched timeline `/how-it-works` is
+  now built from. Nodes are SVG rings that draw once on load with a running
+  stitch turning inside; the thread between them is a dashed SVG line. All CSS
+  (`.draw-stroke`, `.thread-run`), so it is a server component and reduced
+  motion is handled in one place. Each step still emits a real `<h2>` with a
+  stable id, so the outline and fragment links survive.
+- **Markdown twins are flattened** (`src/lib/content/plain-markdown.ts`). They
+  were serving raw MDX, so `/about.md` came back as a wall of `<Section>` tags
+  with the prose buried between them — worse than the HTML it replaces. Title
+  and lead props are promoted to real headings; every other tag is dropped.
+  Covered by `tests/unit/plain-markdown.test.ts`.
+- **`rounded-pill` never worked.** Used in ~30 places, declared on `:root` but
+  never registered in `@theme`, so Tailwind v4 emitted no utility and every
+  "pill" had square corners. Registered.
 
 - One default share card, `public/assets/og-default.png` — the mark, the
   wordmark and the tagline. `pageMetadata()` falls back to it, so every public
@@ -281,12 +330,12 @@ commit shipped. Nothing about the code prevented this — only the habit.
 `n8n-automation-layer`; both are at `bddc17a` and pushed. There was nothing to
 merge in the other direction — `origin/main` was already an ancestor.
 
-**Blank hero, unresolved.** The homepage hero rendered blank in two browser
-checks. Traced to framer-motion 13 and dynamic `custom` variants — elements with
-`custom` stayed hidden while one without it appeared. Predates all recent work
-(`framer-motion: ^13` and the `custom` pattern are both in commit `2793102`).
-Could not be confirmed: the browser used may have had reduced-motion set. **Needs
-thirty seconds on a real machine to settle.**
+**~~Blank hero.~~ Did not reproduce, 8 Aug 2026.** Checked in headless Chromium
+against the dev server, at both `reducedMotion: no-preference` and `reduce`: the
+`<h1>` is visible, `opacity: 1`, `transform: none`, 579×238. The hero has since
+been rebuilt (still framer-motion, still dynamic `custom` variants), so if it
+returns it is worth suspecting a specific browser rather than the pattern.
+**Not verified in a real browser on a real machine** — only headless.
 
 **Demo data is gone from production** (8 Aug 2026). Five seeded invitations,
 three showcase clones and five `@example.com` accounts deleted. `/showcase` is
@@ -361,7 +410,35 @@ safe. Give each agent its own worktree, or run them one at a time.
   `.type-inherit-prose` (`src/app/globals.css`) so the inner paragraph inherits
   the wrapper's type instead of carrying its own.
 - **Never pass a function as a prop to a client component.** Formatters cross the
-  boundary as a named string, not a callback.
+  boundary as a named string, not a callback. **A component counts as a
+  function** — a lucide icon in a nav-item array fails the render with
+  "Functions cannot be passed directly to Client Components", and it fails at
+  *prerender*, so the build breaks on one page and you go looking at that page.
+  Build the list inside the client module (`SiteHeader.tsx`, `DashboardNav.tsx`)
+  rather than handing it in from a server shell.
+- **A CSS variable on `:root` is not a Tailwind theme variable.** Tailwind v4
+  only generates a utility for a variable declared in `@theme` / `@theme inline`.
+  `--radius-pill` sat on `:root` for months; `rounded-pill` compiled to nothing
+  and ~30 pills silently had square corners. If you add a token a utility should
+  use, add it in both places — and check the compiled
+  `.next/static/css/app/layout.css`, which is the only honest answer.
+- **The default theme needs its own `[data-theme]` block even though `:root`
+  already declares it.** A nested theme scope — a preview card, a docs demo —
+  sits inside a surface that may have redefined `--font-heading`, and with no
+  rule to match, the "default" theme inherits whatever it is nested in. Every
+  other theme has a block; royal-maroon needs one too.
+- **`useId` makes a component client-only.** `PatternBackground` uses it, which
+  is why every consumer of it is `"use client"`. A server component that wants a
+  motif wash uses the `motifs` set (plain inline SVG) or a CSS texture instead.
+- **Markdown twins serve the MDX body.** Anything you express as a JSX prop
+  instead of Markdown disappears from `/page.md` and `/llms-full.txt` unless
+  `src/lib/content/plain-markdown.ts` knows how to flatten it. Add a rule to
+  `HEADING_LEVELS` when you add a title-bearing block.
+- **A timeline connector cannot hang off `top-full`.** A grid cell stretches to
+  its row's height, so `top-full` puts the thread below the whole step rather
+  than under the node. Anchor it to the node's own height, and hide the last
+  one from the list (`[&>li:last-child_[data-thread]]:hidden`) — a step cannot
+  know it is last.
 - **`NEXT_DIST_DIR` isolates a second Next process.** Two `next dev`/`next build`
   runs in one checkout corrupt each other's `.next`. The e2e suite builds to
   `.next-e2e`; the other agent uses `.next-claude`. `.gitignore` ignores

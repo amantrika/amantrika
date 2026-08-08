@@ -1,6 +1,9 @@
 "use client";
 
 import type { ReactNode } from "react";
+// `Sparkles` is aliased: the design system exports an ornament of that name,
+// and the nav wants the lucide glyph.
+import { BookOpen, Heart, Sparkles as SparklesGlyph, Wand2 } from "lucide-react";
 import {
   Badge, BandBaajaMarquee, BilingualHeading, Bunting, Button, Card, ConfettiButton,
   ConnectedTimeline, CornerFlourish, CountdownTimer, CoupleMonogram, DayScheduleCard,
@@ -17,6 +20,7 @@ import {
   FamilyTree, EventCalendar, VideoFrame, VideoHero, DecorativeBorder,
   SectionHeader, ThemedCard, ThemedHero, OurStorySection, ThemedOpening,
   Navbar, Breadcrumbs, SideNav, Pager, LayoutSection, SectionTitle, ThemedHeroVariant,
+  Loader, LoadingBlock,
 } from "./registry-helpers";
 import type { NavItem } from "@/design-system/components";
 import { AmantrikaBadge, AmantrikaLogo, AmantrikaMark, AmantrikaWordmark } from "@/design-system/brand";
@@ -46,11 +50,13 @@ const Dhol = icons.dhol;
 
 /* ---- fixtures for the Navigation and Layout entries ---- */
 
+// With icons, because that is how the real site nav is configured — a nav is
+// either all icons or none, and the demo should show the shape we ship.
 const navSample: NavItem[] = [
-  { href: "/showcase", label: "Showcase" },
-  { href: "/how-it-works", label: "How it works" },
-  { href: "/blog", label: "Blog" },
-  { href: "/about", label: "About" },
+  { href: "/showcase", label: "Showcase", icon: SparklesGlyph },
+  { href: "/how-it-works", label: "How it works", icon: Wand2 },
+  { href: "/blog", label: "Blog", icon: BookOpen },
+  { href: "/about", label: "About", icon: Heart },
 ];
 
 const heroSample = {
@@ -170,6 +176,31 @@ export const componentDocs: ComponentDoc[] = [
     demos: [
       { title: "Variants", node: <div className="flex flex-wrap gap-3"><Button>Primary</Button><Button variant="secondary">Secondary</Button><Button variant="ghost">Ghost</Button><Button variant="celebration">Celebration</Button></div> },
       { title: "Sizes & loading", node: <div className="flex flex-wrap items-center gap-3"><Button size="sm">Small</Button><Button size="md">Medium</Button><Button size="lg">Large</Button><Button loading>Saving</Button></div> },
+    ],
+  },
+  {
+    slug: "loader",
+    title: "Loader",
+    category: "Core UI",
+    description:
+      "The waiting state. A ring, because a spinner should be recognised instantly rather than decoded — the wedding is in the dotted gold track, the accent arc and the bindi orbiting the rim. Pure CSS, so it costs no client JS and stops moving entirely under prefers-reduced-motion.",
+    demos: [
+      {
+        title: "Sizes",
+        note: "sm sits inside a button; lg is the route-segment and panel size.",
+        node: (
+          <div className="flex flex-wrap items-center gap-8">
+            <Loader size="sm" label="Loading" />
+            <Loader size="md" label="Loading" />
+            <Loader size="lg" label="Loading" />
+          </div>
+        ),
+      },
+      {
+        title: "In a panel",
+        note: "LoadingBlock — what a loading.tsx route segment renders.",
+        node: <LoadingBlock label="Loading your celebrations" />,
+      },
     ],
   },
   {

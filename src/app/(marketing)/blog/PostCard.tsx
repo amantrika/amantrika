@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Clock } from "lucide-react";
 import { Badge } from "@/design-system/components/bits";
+import { PostCover } from "@/components/site/PostCover";
 import { categorySlug, formatDate, type Post } from "@/lib/content/blog";
 
 /**
@@ -16,17 +17,21 @@ export function PostCard({ post, featured = false }: { post: Post; featured?: bo
         featured ? "sm:flex-row" : ""
       }`}
     >
-      {fm.coverImage && (
-        <div className={featured ? "sm:w-2/5 sm:shrink-0" : ""}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={fm.coverImage}
-            alt={fm.coverAlt ?? ""}
-            loading={featured ? "eager" : "lazy"}
-            className="h-44 w-full object-cover sm:h-full"
-          />
-        </div>
-      )}
+      {/* Always rendered. With no cover image this is a drawn title card rather
+          than nothing, which is what stops a mixed grid coming out ragged. */}
+      <div className={featured ? "sm:w-2/5 sm:shrink-0" : ""}>
+        <PostCover
+          title={fm.title}
+          category={fm.category}
+          coverImage={fm.coverImage}
+          coverAlt={fm.coverAlt}
+          eager={featured}
+          // `sm:h-full` only for the featured card, where the cover is a column
+          // beside the text and has a row height to fill. On a stacked card it
+          // resolves to auto and the cover grows to the image's own height.
+          className={`h-44 w-full ${featured ? "sm:h-full" : ""}`}
+        />
+      </div>
 
       <div className="flex flex-1 flex-col p-6">
         <div className="flex flex-wrap items-center gap-2">

@@ -44,6 +44,7 @@ export default async function ContentPageRoute({ params }: Params) {
 
   const { frontmatter: fm } = page;
   const legal = fm.layout === "legal";
+  const wide = fm.layout === "wide";
 
   return (
     <>
@@ -63,11 +64,18 @@ export default async function ContentPageRoute({ params }: Params) {
         ]}
       />
 
-      <div className="mx-auto max-w-6xl px-4 py-14">
-        <header className="max-w-3xl">
+      <div className={`mx-auto py-14 ${wide ? "w-full max-w-[90rem] px-0" : "max-w-6xl px-4"}`}>
+        {/* A wide page opens centred and framed, because it has no contents
+            rail to anchor the eye — the header has to do that job itself. */}
+        <header className={wide ? "mx-auto max-w-3xl px-4 text-center" : "max-w-3xl"}>
           <h1 className="type-display-lg text-primary">{fm.title}</h1>
           <p className="mt-4 type-body-lg text-muted">{fm.description}</p>
-          <p className="mt-4 flex flex-wrap items-center gap-3 type-caption">
+          {wide && <hr aria-hidden className="dhaga-rule mx-auto mt-8 w-40" />}
+          <p
+            className={`mt-4 flex flex-wrap items-center gap-3 type-caption ${
+              wide ? "justify-center" : ""
+            }`}
+          >
             <span>
               {legal ? "In effect from " : "Last updated "}
               <time dateTime={fm.updatedAt}>{formatDate(fm.updatedAt)}</time>
@@ -85,15 +93,20 @@ export default async function ContentPageRoute({ params }: Params) {
 
         <div
           className={
-            legal
-              ? "mt-10 max-w-3xl"
-              : "mt-10 grid gap-12 lg:grid-cols-[minmax(0,1fr)_16rem]"
+            wide
+              ? "mt-12"
+              : legal
+                ? "mt-10 max-w-3xl"
+                : "mt-10 grid gap-12 px-0 lg:grid-cols-[minmax(0,1fr)_16rem]"
           }
         >
-          <div className="min-w-0 max-w-2xl">
+          {/* `page-wide` is what makes the two halves of a wide page work: bare
+              prose stays in a readable column, designed <Section> bands take the
+              full width. See the rule in globals.css. */}
+          <div className={wide ? "page-wide min-w-0" : "min-w-0 max-w-2xl"}>
             <MdxBody source={page.body} />
             {fm.faq?.length ? (
-              <section className="mt-16">
+              <section className={wide ? "mx-auto mt-16 max-w-3xl px-4" : "mt-16"}>
                 <h2 id="frequently-asked-questions" className="type-h2 scroll-mt-28 text-primary">
                   Frequently asked questions
                 </h2>
@@ -102,7 +115,7 @@ export default async function ContentPageRoute({ params }: Params) {
             ) : null}
           </div>
 
-          {!legal && (
+          {!legal && !wide && (
             <div className="lg:sticky lg:top-24 lg:self-start">
               <TableOfContents entries={page.toc} />
             </div>

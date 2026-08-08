@@ -15,7 +15,7 @@ export function AuthShell({
   footer: ReactNode;
 }) {
   return (
-    <main className="flex min-h-screen items-center justify-center bg-bg px-4 py-12">
+    <main className="type-chrome flex min-h-screen items-center justify-center bg-bg px-4 py-12">
       <div className="w-full max-w-md">
         <Link href="/" className="mb-8 flex flex-col items-center leading-none">
           <span className="font-display text-4xl font-semibold text-primary">Amantrika</span>
