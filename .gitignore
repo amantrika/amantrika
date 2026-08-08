@@ -46,6 +46,10 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# personal learning notes — explanations of the codebase written for the
+# owner's own understanding, not part of the product or its documentation
+/learning/
+
 # testing
 /playwright-report
 /test-results

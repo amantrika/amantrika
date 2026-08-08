@@ -153,10 +153,12 @@ export async function cleanupE2EData(): Promise<{ users: number; events: number 
     await supabase.from("events").delete().in("id", eventIds);
   }
 
-  // Test users are found through `profiles`, not `auth.admin.listUsers()` —
-  // that endpoint errors on this project, and a prefix match on a table we
-  // control is narrower anyway. `profiles.id` is the auth user id, and deleting
-  // the auth user cascades back through the profile.
+  // Test users are found through `profiles` rather than
+  // `auth.admin.listUsers()`. That endpoint used to error project-wide (NULL
+  // GoTrue token columns, fixed in migration 20260808130223) and it now works —
+  // but a prefix match on a table we control is still narrower than listing
+  // every account and filtering client-side. `profiles.id` is the auth user id,
+  // and deleting the auth user cascades back through the profile.
   const { data: testProfiles } = await supabase
     .from("profiles")
     .select("id, email")

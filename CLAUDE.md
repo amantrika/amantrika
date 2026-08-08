@@ -241,3 +241,40 @@ Two rules about honesty, because this file is read as fact:
 
 Remove entries when they stop being true. A pending item that shipped, or a
 known issue that was fixed, should leave the file rather than accumulate.
+
+## Keep `learning/` current
+
+`learning/` is the owner's explanatory documentation — how the system works and
+why, written to be read cold. It is gitignored, so it is invisible to code
+review and will rot silently unless you maintain it deliberately.
+
+**Every time you change how something works, update the relevant file in
+`learning/` and append an entry to `learning/CHANGELOG.md` in the same turn.**
+
+Which file to update:
+
+| You changed | Update |
+| --- | --- |
+| Architecture, surfaces, services | `01-the-big-picture.md` |
+| Routing, rendering, actions, middleware | `02-nextjs-app-router.md` |
+| Schema, RLS, auth, Supabase clients | `03-supabase.md` |
+| Any user-facing flow | `04-user-journeys.md` |
+| Pricing, payments, plans, the paywall | `05-money-and-entitlements.md` |
+| Added, moved or removed a module | `06-file-map.md` |
+| Commands, env vars, tests, deploy | `07-how-to-run-it.md` |
+
+Always append to `CHANGELOG.md`, newest first, using the template at its foot.
+
+The notes are read as a website via `node learning/build.mjs`, which renders
+them into `learning/index.html`. **Re-run it after editing any note** — a stale
+`index.html` is worse than none, because it looks current. Never edit
+`index.html` by hand; it is generated.
+
+This is not a substitute for `progress.md`. `progress.md` is the agent handover
+file — state, pending work, known issues. `learning/` explains *how the system
+works and why it was built that way*, for a reader who was not in the session.
+Both get updated; they answer different questions.
+
+Write it the way the rest of this repo comments itself: state the reasoning, not
+the mechanics. A reader can see what the code does — tell them why it is like
+that, and what breaks if it isn't.

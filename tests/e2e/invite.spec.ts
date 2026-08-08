@@ -1,12 +1,24 @@
 import { expect, test } from "@playwright/test";
-import { createDraftEvent, createTestHost } from "./helpers/supabase";
+import { createDraftEvent, createTestHost, type TestHost } from "./helpers/supabase";
 
 /**
  * `/invite/[slug]` is the product. These tests guard the two things that make
  * it one: it must be fast, and it must never leak an unpublished draft.
+ *
+ * The fixture is created here rather than borrowed from the seeded `demo-*`
+ * invitations: those exist to make a fresh database look alive, they are deleted
+ * by `clean_demo_data()` before real customers arrive, and a suite that depends
+ * on them fails the moment production is cleaned.
  */
 
-const PUBLISHED_SLUG = "demo-aarav-weds-priya";
+let host: TestHost;
+let PUBLISHED_SLUG: string;
+
+test.beforeAll(async () => {
+  host = await createTestHost();
+  const invite = await createDraftEvent(host, { status: "published", plan_code: "premium" });
+  PUBLISHED_SLUG = invite.slug;
+});
 
 test.describe("a published invitation", () => {
   test("renders server-side, with no client fetch for first paint", async ({ page }) => {
@@ -15,8 +27,9 @@ test.describe("a published invitation", () => {
     expect(response?.status()).toBe(200);
 
     // The names must be in the HTML the server sent, not painted in later.
+    // `createDraftEvent` seeds this host.
     const html = await response!.text();
-    expect(html).toContain("Aarav");
+    expect(html).toContain("Asha");
   });
 
   test("sets lang and a document title", async ({ page }) => {
@@ -56,7 +69,7 @@ test.describe("a published invitation", () => {
     await page.waitForLoadState("networkidle");
 
     const kilobytes = Math.round(scriptBytes / 1024);
-    console.log(`[budget] /invite/${PUBLISHED_SLUG} shipped ~${kilobytes}KB of JavaScript`);
+    console.log(`[budget] /invite/[slug] shipped ~${kilobytes}KB of JavaScript`);
 
     // The budget in CLAUDE.md §2 is 100KB gzipped on this route.
     expect(kilobytes).toBeLessThanOrEqual(100);

@@ -33,10 +33,19 @@ delete from auth.users where email like '%@example.com';
  * string, so no password will ever verify and these accounts cannot be signed
  * into. They exist to own demo rows and to populate the admin and agent views.
  */
+--
+-- The token columns are written as '' rather than left NULL. GoTrue scans them
+-- into non-nullable Go strings, so a single NULL row breaks the Admin API for
+-- the *whole project*: listUsers() fails with "Database error finding users
+-- count" and deleteUser() with "Database error loading user". That is not
+-- theoretical — it happened here, and it is what stopped clean_demo_data() from
+-- removing these very accounts. Repaired in migration 20260808130223.
 insert into auth.users (
   instance_id, id, aud, role, email, encrypted_password,
   email_confirmed_at, created_at, updated_at,
-  raw_app_meta_data, raw_user_meta_data
+  raw_app_meta_data, raw_user_meta_data,
+  confirmation_token, recovery_token, email_change,
+  email_change_token_new, phone_change, phone_change_token
 )
 select
   '00000000-0000-0000-0000-000000000000',
@@ -44,7 +53,8 @@ select
   'DEMO-ACCOUNT-NO-PASSWORD',
   now(), now() - interval '60 days', now(),
   '{"provider":"email","providers":["email"]}'::jsonb,
-  meta
+  meta,
+  '', '', '', '', '', ''
 from (values
   ('d0000000-0000-4000-a000-000000000001'::uuid, 'priya.host@example.com',  '{"full_name":"Priya Sharma","role":"host","phone":"+91 90000 00001"}'::jsonb),
   ('d0000000-0000-4000-a000-000000000002'::uuid, 'arjun.host@example.com',  '{"full_name":"Arjun Mehta","role":"host","phone":"+91 90000 00002"}'::jsonb),

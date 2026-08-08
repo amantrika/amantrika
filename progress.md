@@ -141,8 +141,11 @@ another identity is rejected by Vercel on Hobby, which fails the deploy.
       pays and their invitation never publishes — the worst possible failure.
 - [ ] **Add `https://amantrika.imswarnil.com/auth/callback`** to the authorised
       redirect URIs in Google Cloud, or Google SSO fails on the live domain only.
-- [ ] **Run `select clean_demo_data();`** before real users arrive. Production
-      currently shows fictional invitations, guests and ~₹18k of fake revenue.
+- [x] ~~Run `clean_demo_data()`~~ — done 8 Aug 2026.
+- [ ] **₹11,998 of test revenue still shows in admin.** Two paid orders remain,
+      one `mock` and one `dodo` test-mode, against the owner's own accounts.
+      Not demo seed data, so `clean_demo_data()` does not touch them. Delete
+      them by hand before anyone sees the dashboard as truth.
 
 ### Product
 - [ ] Route-level loading states. `ShehnaiLoadingBlock` exists but only `Button`
@@ -180,6 +183,22 @@ checks. Traced to framer-motion 13 and dynamic `custom` variants — elements wi
 (`framer-motion: ^13` and the `custom` pattern are both in commit `2793102`).
 Could not be confirmed: the browser used may have had reduced-motion set. **Needs
 thirty seconds on a real machine to settle.**
+
+**Demo data is gone from production** (8 Aug 2026). Five seeded invitations,
+three showcase clones and five `@example.com` accounts deleted. `/showcase` is
+now empty rather than showing invented families — correct, not a regression.
+
+**`clean_demo_data()` never worked, and now does.** It was `security invoker`, so
+deleting from `auth.users` ran as the caller and failed with "permission denied
+for table users". Fixed in migration `20260808130049`, and execute is revoked
+from every PostgREST role — it is callable from the SQL editor as `postgres`,
+which is where a destructive one-shot belongs.
+
+**`auth.admin.listUsers()` is fixed.** Root cause was `seed-demo.sql` inserting
+into `auth.users` with NULL token columns; GoTrue scans those into non-nullable
+Go strings, and one bad row broke the Admin API for the whole project. Repaired
+in `20260808130223`, and the seed now writes `''`. This also unblocked deleting
+the demo accounts.
 
 **A live OpenRouter key reached `.env.example` twice.** Removed in `7eb3a94`,
 then written back an hour later by a concurrent `git add -A`. That file is
@@ -225,9 +244,11 @@ safe. Give each agent its own worktree, or run them one at a time.
   runs as production, where mock checkout is correctly disabled. That is the
   guard working, not a workaround — but it does mean the guard itself is not
   covered by a test.
-- **Test teardown finds users through `profiles`, not `auth.admin.listUsers()`**,
-  which errors on this project with "Database error finding users count". Root
-  cause unknown.
+- **Never insert into `auth.users` with NULL token columns.** GoTrue scans
+  `confirmation_token`, `recovery_token`, `email_change`,
+  `email_change_token_new`, `phone_change` and `phone_change_token` into
+  non-nullable Go strings; one NULL row breaks `listUsers()` and `deleteUser()`
+  for the entire project. Write `''`.
 - **`automation` is not exposed to PostgREST** and must stay that way. The app
   reaches the ledger through `security definer` functions in `public` granted to
   `service_role` alone, so the table itself stays invisible.
