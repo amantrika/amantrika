@@ -111,20 +111,24 @@ async function readPost(file: string): Promise<Post> {
         parsed.error.issues.map((i) => `  · ${i.path.join(".")}: ${i.message}`).join("\n")
     );
   }
-  if (parsed.data.slug !== filename) {
+  // The filename is the URL, so it is the authority. Declaring `slug` is
+  // optional — Keystatic writes the slug as the filename and no frontmatter key
+  // — but declaring it *differently* is a mistake worth stopping the build for.
+  if (parsed.data.slug && parsed.data.slug !== filename) {
     throw new Error(
       `content/blog/${file}: slug "${parsed.data.slug}" must match the filename "${filename}". ` +
         `The filename is what the URL is built from.`
     );
   }
+  const frontmatter = { ...parsed.data, slug: filename };
 
   return {
-    frontmatter: parsed.data,
-    author: getAuthor(parsed.data.author),
+    frontmatter,
+    author: getAuthor(frontmatter.author),
     body: content,
     readingTime: readingTimeOf(content),
     toc: tableOfContents(content),
-    href: `/blog/${parsed.data.slug}`,
+    href: `/blog/${frontmatter.slug}`,
   };
 }
 
@@ -283,17 +287,18 @@ export const getAllPages = cache(async (): Promise<ContentPage[]> => {
             parsed.error.issues.map((i) => `  · ${i.path.join(".")}: ${i.message}`).join("\n")
         );
       }
-      if (parsed.data.slug !== filename) {
+      if (parsed.data.slug && parsed.data.slug !== filename) {
         throw new Error(
           `content/pages/${file}: slug "${parsed.data.slug}" must match the filename.`
         );
       }
+      const frontmatter = { ...parsed.data, slug: filename };
 
       return {
-        frontmatter: parsed.data,
+        frontmatter,
         body: content,
         toc: tableOfContents(content),
-        href: `/${parsed.data.slug}`,
+        href: `/${frontmatter.slug}`,
       };
     })
   );

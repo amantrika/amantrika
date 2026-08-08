@@ -1,4 +1,4 @@
-import { ShehnaiLoadingBlock } from "@/design-system/components";
+import { LoadingBlock } from "@/design-system/components";
 
 /**
  * Shown while an admin page fetches. Admin pages issue several database round
@@ -6,5 +6,5 @@ import { ShehnaiLoadingBlock } from "@/design-system/components";
  * which is part of why a slow load read as a 404.
  */
 export default function AdminLoading() {
-  return <ShehnaiLoadingBlock label="Loading platform data" />;
+  return <LoadingBlock label="Loading platform data" />;
 }

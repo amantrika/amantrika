@@ -1,7 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { env } from "@/lib/env";
-import { designSystemAllowed } from "@/lib/flags";
+import { designSystemAllowed, keystaticAllowed } from "@/lib/flags";
 
 /** Routes that require a session. Everything else is public (invites must be). */
 const PROTECTED = ["/dashboard", "/onboarding", "/admin", "/agent"];
@@ -24,6 +24,20 @@ export async function middleware(request: NextRequest) {
   // into the HTML and would still serve, whereas middleware runs per request.
   if (rawPath === "/design-system" || rawPath.startsWith("/design-system/")) {
     if (!designSystemAllowed(request.headers.get("host"))) {
+      return new NextResponse(null, { status: 404 });
+    }
+  }
+
+  // The content editor and the API it saves through. Both are local-only: the
+  // config uses local storage, so on a deployment there is no repo to write to.
+  // Gated here as well as in the route so the API is covered too — it is the
+  // half that actually writes files.
+  if (
+    rawPath === "/keystatic" ||
+    rawPath.startsWith("/keystatic/") ||
+    rawPath.startsWith("/api/keystatic/")
+  ) {
+    if (!keystaticAllowed(request.headers.get("host"))) {
       return new NextResponse(null, { status: 404 });
     }
   }

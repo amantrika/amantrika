@@ -35,10 +35,17 @@ export const faqItemSchema = z.object({
 export const postFrontmatterSchema = z
   .object({
     title: z.string().min(1).max(90),
-    /** Must equal the filename. Enforced by the loader, not here. */
+    /**
+     * Optional, because the filename is what the URL is actually built from and
+     * the loader fills this in from it. Write it and it must match — a
+     * disagreement is an error, not a silent preference. Keystatic encodes the
+     * slug in the filename and writes no `slug` key, which is why declaring it
+     * cannot be mandatory.
+     */
     slug: z
       .string()
-      .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Lowercase words separated by hyphens"),
+      .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Lowercase words separated by hyphens")
+      .optional(),
     /** Doubles as the meta description, so it is length-capped. */
     excerpt: z.string().min(40).max(180),
     publishedAt: isoDate,
@@ -61,12 +68,23 @@ export const postFrontmatterSchema = z
     path: ["coverAlt"],
   });
 
-export type PostFrontmatter = z.infer<typeof postFrontmatterSchema>;
+/**
+ * What a post's frontmatter is *after* the loader has resolved it. `slug` is
+ * optional to declare and always present to read, so nothing downstream has to
+ * think about where it came from.
+ */
+export type PostFrontmatter = Omit<z.infer<typeof postFrontmatterSchema>, "slug"> & {
+  slug: string;
+};
 
 /** Standalone marketing/legal pages written as MDX. */
 export const pageFrontmatterSchema = z.object({
   title: z.string().min(1).max(90),
-  slug: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
+  /** Optional and filename-derived, exactly as for a post. */
+  slug: z
+    .string()
+    .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/)
+    .optional(),
   description: z.string().min(40).max(180),
   updatedAt: isoDate,
   /** Legal pages get a narrower column and a "last updated" line. */
@@ -76,4 +94,6 @@ export const pageFrontmatterSchema = z.object({
   faq: z.array(faqItemSchema).optional(),
 });
 
-export type PageFrontmatter = z.infer<typeof pageFrontmatterSchema>;
+export type PageFrontmatter = Omit<z.infer<typeof pageFrontmatterSchema>, "slug"> & {
+  slug: string;
+};

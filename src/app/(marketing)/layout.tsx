@@ -16,7 +16,10 @@ export default async function MarketingLayout({ children }: { children: ReactNod
   const profile = await getProfile().catch(() => null);
 
   return (
-    <div className="flex min-h-dvh flex-col bg-bg">
+    // `type-chrome` swaps the heading face to Marcellus for this whole surface.
+    // It lives on the shell rather than on <body> so an invitation preview
+    // rendered inside a marketing page keeps its own theme's type.
+    <div className="type-chrome flex min-h-dvh flex-col bg-bg">
       <JsonLd nodes={[organizationJsonLd(), websiteJsonLd()]} />
       <SiteHeader
         signedIn={Boolean(profile)}

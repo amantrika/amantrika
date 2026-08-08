@@ -31,7 +31,13 @@
   --color-error: #a93226;
   --color-overlay: rgba(43, 27, 18, 0.55);
 
-  /* ---- Type scale (fluid) ---- */
+  /* ---- Type scale (fluid) ----
+     `hero` is the landing headline only. It is separate from `display-xl`
+     because the two have different jobs: display-xl sets couple names in a
+     full-width invitation column, the hero sets a sentence in half a grid on a
+     laptop. Sharing one value meant the landing headline was either timid on a
+     desktop or wrapping to four lines on a phone. */
+  --text-hero: clamp(2.75rem, 4.4vw + 1.35rem, 5.5rem);
   --text-display-xl: clamp(3.5rem, 5vw + 1.75rem, 6rem);
   --text-display-lg: clamp(2.5rem, 3.5vw + 1.25rem, 4rem);
   --text-h1: clamp(2rem, 2vw + 1.1rem, 2.75rem);
@@ -107,6 +113,10 @@
   --font-script-local: var(--font-display);
   --tracking-display: 0em;
   --tracking-overline: 0.22em;
+  /* Heading weight is a token because not every display face has one. Cormorant
+     is drawn to 600; Marcellus (the chrome face) exists only at 400, and asking
+     the browser to embolden it produces a smeared synthetic weight. */
+  --weight-display: 600;
   --radius-theme: var(--radius-card);
   --rhythm-scale: 1;
   --pattern-opacity: 0.06;
@@ -446,6 +456,7 @@
   --color-ink: var(--am-ink);
 
   --font-display: var(--font-display), "Cormorant Garamond", Georgia, serif;
+  --font-marcellus: var(--font-marcellus), "Marcellus", "Cormorant Garamond", Georgia, serif;
   --font-script: var(--font-script), "Great Vibes", cursive;
   --font-body: var(--font-body), "Mulish", system-ui, sans-serif;
   --font-deva: var(--font-deva), "Tiro Devanagari Hindi", serif;
@@ -485,11 +496,21 @@ body {
 
 /* ============ TYPE UTILITIES ============ */
 
-.type-display-xl { font-family: var(--font-heading), serif; font-size: var(--text-display-xl); line-height: 1.05; font-weight: 600; letter-spacing: var(--tracking-display); }
-.type-display-lg { font-family: var(--font-heading), serif; font-size: var(--text-display-lg); line-height: 1.1; font-weight: 600; letter-spacing: var(--tracking-display); }
-.type-h1 { font-family: var(--font-heading), serif; font-size: var(--text-h1); line-height: 1.15; font-weight: 600; letter-spacing: var(--tracking-display); }
-.type-h2 { font-family: var(--font-heading), serif; font-size: var(--text-h2); line-height: 1.2; font-weight: 600; letter-spacing: var(--tracking-display); }
-.type-h3 { font-family: var(--font-heading), serif; font-size: var(--text-h3); line-height: 1.3; font-weight: 600; letter-spacing: var(--tracking-display); }
+.type-hero {
+  font-family: var(--font-heading), serif;
+  font-size: var(--text-hero);
+  line-height: 1.02;
+  font-weight: var(--weight-display);
+  letter-spacing: var(--tracking-display);
+  /* The headline is a sentence, not a name — an orphaned last word reads as a
+     mistake at this size. */
+  text-wrap: balance;
+}
+.type-display-xl { font-family: var(--font-heading), serif; font-size: var(--text-display-xl); line-height: 1.05; font-weight: var(--weight-display); letter-spacing: var(--tracking-display); }
+.type-display-lg { font-family: var(--font-heading), serif; font-size: var(--text-display-lg); line-height: 1.1; font-weight: var(--weight-display); letter-spacing: var(--tracking-display); }
+.type-h1 { font-family: var(--font-heading), serif; font-size: var(--text-h1); line-height: 1.15; font-weight: var(--weight-display); letter-spacing: var(--tracking-display); }
+.type-h2 { font-family: var(--font-heading), serif; font-size: var(--text-h2); line-height: 1.2; font-weight: var(--weight-display); letter-spacing: var(--tracking-display); }
+.type-h3 { font-family: var(--font-heading), serif; font-size: var(--text-h3); line-height: 1.3; font-weight: var(--weight-display); letter-spacing: var(--tracking-display); }
 .type-body-lg { font-size: var(--text-body-lg); line-height: 1.65; }
 .type-body { font-size: var(--text-body); line-height: 1.6; }
 .type-caption { font-size: var(--text-caption); line-height: 1.5; color: var(--color-text-muted); }
@@ -509,6 +530,23 @@ body {
 .type-deva-display { font-family: var(--font-deva-display), serif; line-height: 1.4; }
 .type-deva-fun { font-family: var(--font-deva-fun), cursive; line-height: 1.4; }
 .type-nastaliq { font-family: var(--font-nastaliq), serif; line-height: 2; direction: rtl; }
+
+/* ---------- The chrome pairing ----------
+   Marketing, dashboard and admin are Amantrika's own voice, not a couple's.
+   They get their own pairing — Marcellus for headings, Mulish for everything
+   else — so the product chrome reads as one brand while an invitation keeps
+   whatever face its theme chose.
+
+   It is a class on the shell rather than a rule on <body> deliberately: the
+   default theme (royal-maroon) is declared on :root, so a body-level override
+   would leak into every invitation using it. Redeclaring the type tokens here
+   means the existing .type-* utilities pick this up with no other change. */
+.type-chrome {
+  --font-heading: var(--font-marcellus);
+  --weight-display: 400;
+  --tracking-display: 0.004em;
+  --tracking-overline: 0.26em;
+}
 
 /* ============ SECTION SURFACES ============
    The four backgrounds a themed section can sit on. A theme's layout picks one
@@ -597,6 +635,33 @@ body {
   border: 1px solid color-mix(in srgb, var(--color-border-ornate) 55%, transparent);
   border-radius: inherit;
   pointer-events: none;
+}
+
+/* Dhaga frame — a hairline rule with a running-stitch thread set inside it.
+   The card-maker's edge: the outer line is the die-cut, the dashes are the
+   thread. Pair with <FrameCorners> for the four gold corner brackets; the
+   dashes alone are the quiet version. */
+.dhaga-frame {
+  position: relative;
+  border: var(--rule-weight) solid color-mix(in srgb, var(--color-border-ornate) 45%, transparent);
+  border-radius: var(--radius-theme);
+}
+.dhaga-frame::after {
+  content: "";
+  position: absolute;
+  inset: 7px;
+  border: 1px dashed color-mix(in srgb, var(--color-border-ornate) 55%, transparent);
+  border-radius: calc(var(--radius-theme) - 5px);
+  pointer-events: none;
+}
+
+/* The same stitch as a horizontal rule, fading at both ends so it reads as
+   thread running off the page rather than a boxed-in divider. */
+.dhaga-rule {
+  height: 0;
+  border: 0;
+  border-top: 1px dashed color-mix(in srgb, var(--color-border-ornate) 70%, transparent);
+  mask-image: linear-gradient(90deg, transparent, black 18%, black 82%, transparent);
 }
 
 .radius-arch { border-radius: var(--radius-arch); }
@@ -895,33 +960,56 @@ body {
   .draw-stroke { stroke-dasharray: none; }
 }
 
-/* ---------- Shehnai loader ----------
-   The waiting state, played rather than spun. `shehnai-note` is the held-note
-   waveform; `shehnai-sway` is the small lift of the instrument as it sounds.
-   Both stop entirely under reduced motion — the bars stay at their resting
-   heights, which still reads as "busy" without any movement. */
-@keyframes shehnai-note {
-  0%, 100% { transform: scaleY(0.35); opacity: 0.55; }
-  50%      { transform: scaleY(1);    opacity: 1; }
+/* ---------- Loader ----------
+   A ring, because a ring is what "busy" looks like everywhere and a waiting
+   state is the wrong place to make someone learn a new symbol. The wedding is
+   in the detail rather than the shape: the track is a dotted gold rule (the
+   same stitch as .dhaga-rule), the sweep is a conic arc in the theme's accent,
+   and a single bindi dot orbits the rim so it reads as ours at a glance.
+
+   Both layers rotate at different rates; under reduced motion the sweep holds
+   still and only its opacity breathes, so nothing moves across the screen. */
+@keyframes loader-spin {
+  to { transform: rotate(360deg); }
 }
 
-@keyframes shehnai-sway {
-  0%, 100% { transform: translateY(0) rotate(-2deg); }
-  50%      { transform: translateY(-1.5px) rotate(2deg); }
+@keyframes loader-breathe {
+  0%, 100% { opacity: 0.35; }
+  50%      { opacity: 1; }
 }
 
-.shehnai-note {
-  animation: shehnai-note 1.1s ease-in-out infinite;
+.loader-ring {
+  border-radius: 999px;
+  /* The arc: opaque for a third of the turn, then fading out behind itself. */
+  background: conic-gradient(
+    from 0deg,
+    var(--color-accent) 0deg,
+    color-mix(in srgb, var(--color-accent) 30%, transparent) 130deg,
+    transparent 260deg,
+    transparent 360deg
+  );
+  /* Punches the middle out, leaving a ring of --loader-weight. */
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - var(--loader-weight, 3px)), black calc(100% - var(--loader-weight, 3px)));
+  mask: radial-gradient(farthest-side, transparent calc(100% - var(--loader-weight, 3px)), black calc(100% - var(--loader-weight, 3px)));
+  animation: loader-spin 0.9s linear infinite;
 }
 
-.shehnai-sway {
-  animation: shehnai-sway 1.6s ease-in-out infinite;
+/* The dotted track the arc runs on. */
+.loader-track {
+  border-radius: 999px;
+  border: var(--loader-weight, 3px) dotted color-mix(in srgb, var(--color-border-ornate) 45%, transparent);
+}
+
+/* The bindi: one dot orbiting the rim, a half-beat behind the arc. */
+.loader-bindi {
+  animation: loader-spin 1.8s linear infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .shehnai-note,
-  .shehnai-sway {
+  .loader-ring {
+    animation: loader-breathe 1.6s ease-in-out infinite;
+  }
+  .loader-bindi {
     animation: none;
   }
-  .shehnai-note { opacity: 0.8; }
 }

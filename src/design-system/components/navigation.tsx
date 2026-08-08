@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useState, type ReactNode } from "react";
+import { useEffect, useId, useState, type ComponentType, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ChevronRight, Menu, X } from "lucide-react";
@@ -22,6 +22,12 @@ import { ChevronRight, Menu, X } from "lucide-react";
 export interface NavItem {
   href: string;
   label: string;
+  /**
+   * Drawn before the label. Any component taking a `className` works — a
+   * lucide icon or one of our own SVGs. Optional, and a nav is either all
+   * icons or none: one item with a glyph and three without reads as a bug.
+   */
+  icon?: ComponentType<{ className?: string }>;
   /** Rendered after the label — a count, a "New" badge. */
   trailing?: ReactNode;
 }
@@ -142,7 +148,7 @@ export function Navbar({
         {brand}
 
         {items.length > 0 && (
-          <nav aria-label="Main" className="ml-auto hidden items-center gap-7 md:flex">
+          <nav aria-label="Main" className="ml-auto hidden items-center gap-6 md:flex">
             {items.map((item) => (
               <NavLink key={item.href} item={item} active={isActive(current, item.href)} />
             ))}
@@ -190,7 +196,7 @@ export function Navbar({
                   <NavLink
                     item={item}
                     active={isActive(current, item.href)}
-                    className="flex items-center justify-between py-3.5"
+                    className="flex items-center justify-between py-2.5"
                     withChevron
                   />
                 </li>
@@ -215,6 +221,8 @@ function NavLink({
   /** Drawer rows read as rows, not as a stack of inline links. */
   withChevron?: boolean;
 }) {
+  const Icon = item.icon;
+
   return (
     <Link
       href={item.href}
@@ -223,7 +231,31 @@ function NavLink({
         active ? "text-primary" : "text-foreground/80 hover:text-primary"
       } ${className}`}
     >
-      <span className="inline-flex items-center gap-1.5">
+      <span className="inline-flex items-center gap-2">
+        {/* In the drawer the icon sits in a ruled medallion, which is the same
+            device the invitation themes use for a monogram and gives the rows
+            a left edge to align on. In the bar it is just a small glyph — a
+            medallion there would make the header twice as tall. */}
+        {Icon &&
+          (withChevron ? (
+            <span
+              aria-hidden
+              className={`inline-flex size-9 shrink-0 items-center justify-center rounded-full border transition-colors ${
+                active
+                  ? "border-ornate bg-accent/15 text-primary"
+                  : "border-ornate/40 bg-accent/6 text-accent group-hover:border-ornate group-hover:bg-accent/12"
+              }`}
+            >
+              <Icon className="size-4" />
+            </span>
+          ) : (
+            <Icon
+              aria-hidden
+              className={`size-4 shrink-0 transition-colors ${
+                active ? "text-accent" : "text-accent/70 group-hover:text-accent"
+              }`}
+            />
+          ))}
         {item.label}
         {item.trailing}
       </span>

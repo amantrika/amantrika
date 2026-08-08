@@ -1,7 +1,7 @@
 "use client";
 
 import { forwardRef, type ButtonHTMLAttributes } from "react";
-import { ShehnaiLoader } from "./ShehnaiLoader";
+import { Loader } from "./Loader";
 
 export type ButtonVariant = "primary" | "secondary" | "ghost" | "celebration";
 export type ButtonSize = "sm" | "md" | "lg";
@@ -11,7 +11,7 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
    * ghost: text only · celebration: rani pink with gold shimmer on hover */
   variant?: ButtonVariant;
   size?: ButtonSize;
-  /** shows the shehnai loader and disables the button */
+  /** shows the loader and disables the button */
   loading?: boolean;
   /** Announced while loading. Prefer something specific: "Publishing invitation". */
   loadingLabel?: string;
@@ -49,10 +49,9 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       className={`inline-flex items-center justify-center rounded-soft font-semibold tracking-wide transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer ${sizeCls[size]} ${variantCls[variant]} ${className}`}
       {...rest}
     >
-      {/* A shehnai holding a note, not a spinning circle — the waiting state
-          should sound like the product it belongs to. `loadingLabel` says what
-          is happening, since "Loading" alone tells a screen-reader user nothing. */}
-      {loading && <ShehnaiLoader size="sm" label={loadingLabel ?? "Working"} />}
+      {/* `loadingLabel` says what is happening, since "Loading" alone tells a
+          screen-reader user nothing about which button they pressed. */}
+      {loading && <Loader size="sm" label={loadingLabel ?? "Working"} />}
       {children}
     </button>
   );

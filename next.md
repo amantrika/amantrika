@@ -18,12 +18,18 @@ payments have ever completed. That is the whole of the risk.
 
 ---
 
-## 0a. Push, before anything else
+## 0a. ~~Push, before anything else~~ — done 8 Aug 2026
 
-**`/invite/[slug]` and `/roadmap` are returning 500 on the live site**, and the
-fix is committed but **not pushed** (`e6a76be`). Production deploys from
-`n8n-automation-layer`, so `git push` is the deploy. Do that first and then load
-an invitation to confirm — a READY deploy is not a rendering page.
+The `/invite/[slug]` and `/roadmap` 500s are **fixed, deployed and verified
+live**: both return 200, a missing slug still 404s. `main` and
+`n8n-automation-layer` are both at `bddc17a`.
+
+**Correction, and it cost an outage:** this section used to say "production
+deploys from `n8n-automation-layer`, so `git push` is the deploy." That is
+false. The GitHub integration does not build this project — **deploying is a
+manual `vercel --prod`**. The fix had been committed *and* pushed and was still
+not live. Check `vercel ls` after any change you expect to see on the site, and
+load the page: a READY deploy is not a rendering page.
 
 Cause, for the record: caching those reads left them calling `createClient()`
 inside `unstable_cache`, and Next throws rather than degrading when a cached

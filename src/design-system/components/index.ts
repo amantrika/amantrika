@@ -20,7 +20,8 @@ export { RSVPForm } from "./RSVPForm";
 export { BlessingsWall, MusicToggle, GiftBlock, MapEmbedPlaceholder } from "./wedding-extras";
 export { PhotoFrame } from "./PhotoFrame";
 export { PhotoUploader } from "./PhotoUploader";
-export { ShehnaiLoader, ShehnaiLoadingBlock } from "./ShehnaiLoader";
+export { Loader, LoadingBlock } from "./Loader";
+export type { LoaderSize } from "./Loader";
 export type { UploadedAsset } from "./PhotoUploader";
 export { PetalRain } from "./PetalRain";
 

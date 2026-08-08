@@ -44,6 +44,11 @@ Items 1–3 need a human with dashboard access. No agent can do them.
 | Supabase | project `Amantrika`, ref `wzwzeoqaaronnuvfzvxf`, region `ap-southeast-1` |
 | Vercel | project `amantrika`, Hobby plan |
 
+**Deploying is a manual `vercel --prod` — `git push` does not deploy.** The
+GitHub integration does not build this project; every deployment in
+`vercel ls` is CLI-authored. Pushing and assuming it shipped is how the
+`/invite/[slug]` 500 fix sat live-broken after it was "deployed".
+
 Accounts for Supabase, Vercel and GitHub are **dedicated to Amantrika**, separate
 from any personal ones. Git commits are authored as `Amantrika` — a commit from
 another identity is rejected by Vercel on Hobby, which fails the deploy.
@@ -227,8 +232,10 @@ another identity is rejected by Vercel on Hobby, which fails the deploy.
 
 ## ⚠️ Known issues
 
-**`/invite/[slug]` and `/roadmap` were returning 500 in production — fixed
-8 Aug 2026.** Caching those reads (`993c788`) left them on `createClient()`,
+**`/invite/[slug]` and `/roadmap` were returning 500 in production — fixed and
+deployed 8 Aug 2026.** Verified live: `/invite/swarnil-weds-prachi` and
+`/roadmap` both return 200, and a missing slug still 404s.
+Caching those reads (`993c788`) left them on `createClient()`,
 which reads cookies, inside `unstable_cache`, which forbids it. Next throws
 rather than degrading, so the product's single most important route was down on
 the live site and nobody knew. `getPublishedInvite()`, `listFeatureRequests()`
@@ -239,10 +246,9 @@ Worth sitting with: `tests/e2e/invite.spec.ts` asserts a 200 on that route and
 would have caught this immediately. The suite was not run before the caching
 commit shipped. Nothing about the code prevented this — only the habit.
 
-**Branch divergence.** Production is deployed from **`n8n-automation-layer`**,
-not `main`. `main` is behind by several sessions of work. Not merged yet because
-the other agent has uncommitted changes in flight, and sweeping a half-finished
-state into trunk is worse than the divergence. Decide deliberately.
+**~~Branch divergence.~~ Resolved 8 Aug 2026.** `main` was fast-forwarded to
+`n8n-automation-layer`; both are at `bddc17a` and pushed. There was nothing to
+merge in the other direction — `origin/main` was already an ancestor.
 
 **Blank hero, unresolved.** The homepage hero rendered blank in two browser
 checks. Traced to framer-motion 13 and dynamic `custom` variants — elements with

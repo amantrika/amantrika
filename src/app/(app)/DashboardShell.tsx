@@ -40,7 +40,7 @@ export function DashboardShell({
   const nav = [...(navByRole[profile.role] ?? navByRole.host), PROFILE_LINK];
 
   return (
-    <div className="min-h-screen bg-bg">
+    <div className="type-chrome min-h-screen bg-bg">
       <header className="border-b border-ornate/30 bg-surface">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-4">
           <div className="flex items-center gap-6">

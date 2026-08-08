@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import {
   Cormorant_Garamond,
+  Marcellus,
   Mulish,
   Tiro_Devanagari_Hindi,
   Amiri,
@@ -18,9 +19,20 @@ import { siteUrl } from "@/lib/env";
 import "./globals.css";
 
 /* ---- The Amantrika type wardrobe ----
- * display   Cormorant Garamond — ceremonial serif for headings & names
+ * There are two pairings here, not one, because there are two voices.
+ *
+ * An *invitation* is the couple's: Cormorant Garamond, or whatever the theme
+ * chose, set against Mulish. The *chrome* — marketing, dashboard, admin — is
+ * Amantrika's: Marcellus against Mulish, applied by the `.type-chrome` class on
+ * each shell. Marcellus is Trajan-descended, so it carries the engraved,
+ * lettered-by-hand quality of a printed card at heading sizes where Cormorant
+ * (a text face) goes thin and loses its edge. Both share Mulish underneath,
+ * which is what keeps the two halves of the product recognisably related.
+ *
+ * display   Cormorant Garamond — ceremonial serif for couple names & verses
+ * marcellus Marcellus — the chrome heading face (single 400 weight by design)
  * script    Great Vibes — English calligraphy, the "hand-lettered card" face
- * body      Mulish — warm humanist UI text
+ * body      Mulish — warm humanist UI text, shared by both pairings
  * deva      Tiro Devanagari Hindi — Hindi body text
  * devaDisp  Rozha One — bold Devanagari display (शुभ विवाह banners)
  * devaFun   Yatra One — playful Devanagari (haldi/mehndi moods)
@@ -33,6 +45,12 @@ const display = Cormorant_Garamond({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
   style: ["normal", "italic"],
+});
+
+const marcellus = Marcellus({
+  variable: "--font-marcellus",
+  subsets: ["latin"],
+  weight: "400",
 });
 
 const script = Great_Vibes({
@@ -89,6 +107,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   const fontVars = [
     display.variable,
+    marcellus.variable,
     script.variable,
     body.variable,
     devanagari.variable,
