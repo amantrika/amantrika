@@ -5,7 +5,10 @@ any personal ones. They are connected by hand — copying keys into environment
 variables — rather than through the Vercel Marketplace Supabase integration,
 which would tie the two accounts' billing together.
 
-Repository: `github.com/imswarnil/amantrika` (private).
+Repository: `github.com/amantrika/amantrika_web` (private).
+
+The Supabase project is `Amantrika`, ref `wzwzeoqaaronnuvfzvxf`, region
+`ap-southeast-1` (Singapore).
 
 ---
 
@@ -115,7 +118,7 @@ deploys to work against the same database.
 
 Alternatively, connect the GitHub repo from the Vercel dashboard so every push
 to `main` deploys automatically. The Amantrika Vercel account will need access
-granted to `imswarnil/amantrika` during the GitHub app install.
+granted to `amantrika/amantrika_web` during the GitHub app install.
 
 ### Custom domain
 
