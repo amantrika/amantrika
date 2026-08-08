@@ -7,7 +7,6 @@ import { getCachedPlans } from "@/lib/cache";
 import { JsonLd } from "@/lib/seo/json-ld";
 import { faqJsonLd, organizationJsonLd, websiteJsonLd } from "@/lib/seo/jsonld";
 import { pageMetadata } from "@/lib/seo/metadata";
-import type { PlanRow } from "@/lib/supabase/types";
 
 /**
  * Homepage FAQ. Rendered into FAQPage structured data and worth keeping in

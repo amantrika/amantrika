@@ -28,7 +28,11 @@ export default defineConfig({
   workers: 1,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
-  timeout: 60_000,
+  // 90s, not 60s: the first navigation of a run has timed out on a loaded
+  // machine even against a warm production server. That is contention, not a
+  // slow page — the budget test still holds `/invite/[slug]` to 100KB — but a
+  // suite that goes red for reasons unrelated to the code stops being believed.
+  timeout: 90_000,
   expect: { timeout: 10_000 },
 
   reporter: [

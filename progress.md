@@ -168,5 +168,21 @@ packages mid-task; migration timestamps have interleaved and needed
   an error. Always pin: `assets!assets_event_id_fkey(...)`.
 - **Never pass a function as a prop to a client component.** Formatters cross the
   boundary as a named string, not a callback.
+- **`NEXT_DIST_DIR` isolates a second Next process.** Two `next dev`/`next build`
+  runs in one checkout corrupt each other's `.next`. The e2e suite builds to
+  `.next-e2e`; the other agent uses `.next-claude`. `.gitignore` ignores
+  `/.next-*/` and eslint ignores `.next-*/**` — without the latter,
+  `npx eslint .` reports ~33,000 problems from generated code and hides the two
+  real ones.
+- **The e2e suite sets `ALLOW_MOCK_PAYMENTS=true` on its own server.** `next start`
+  runs as production, where mock checkout is correctly disabled. That is the
+  guard working, not a workaround — but it does mean the guard itself is not
+  covered by a test.
+- **Test teardown finds users through `profiles`, not `auth.admin.listUsers()`**,
+  which errors on this project with "Database error finding users count". Root
+  cause unknown.
+- **`automation` is not exposed to PostgREST** and must stay that way. The app
+  reaches the ledger through `security definer` functions in `public` granted to
+  `service_role` alone, so the table itself stays invisible.
 - **`vercel.json` rejects unknown keys** — a `//` comment fails the whole deploy.
   Hobby allows one cron run per day.

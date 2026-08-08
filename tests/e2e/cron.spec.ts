@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { createHmac } from "node:crypto";
-import { admin, createDraftEvent, createTestHost, type TestHost } from "./helpers/supabase";
+import { admin, createDraftEvent, createTestHost } from "./helpers/supabase";
 
 /**
  * The scheduler replaced the n8n side-car (CLAUDE.md §2.1: one deployment).
