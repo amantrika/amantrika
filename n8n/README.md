@@ -25,10 +25,12 @@ again.*
 
 ## Setup
 
-**Where does n8n actually run?** Not on Vercel — it needs a persistent process and its own database,
-and Vercel is serverless. See **[DEPLOYMENT.md](./DEPLOYMENT.md)** for hosting options, the full
-credential walkthrough, the WhatsApp template setup, and the bring-up order. It also covers the
-alternative of skipping n8n and using Vercel Cron instead.
+**Already have an n8n instance? Start with [SETUP.md](./SETUP.md)** — a step-by-step walkthrough
+that gets the first workflow live, with your actual connection details filled in.
+
+**Need somewhere to run n8n?** Not Vercel — it needs a persistent process and its own database, and
+Vercel is serverless. [DEPLOYMENT.md](./DEPLOYMENT.md) covers hosting options, WhatsApp template
+setup, and the alternative of skipping n8n for Vercel Cron.
 
 ### 1. Apply the migration
 
@@ -318,8 +320,9 @@ select * from automation.settings;
 
 ```
 n8n/
-  README.md          this file — how the workflows work
-  DEPLOYMENT.md      where to run n8n, credentials, bring-up order
+  SETUP.md           start here — get the first workflow running
+  README.md          this file — how the workflows work, and the runbook
+  DEPLOYMENT.md      where to run n8n, WhatsApp setup, the Vercel Cron alternative
   docker-compose.yml self-hosting on your own server
   .env.example       the n8n-side environment contract
   sql/               every query, with the reasoning in comments
