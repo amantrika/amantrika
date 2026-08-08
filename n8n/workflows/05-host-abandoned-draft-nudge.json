@@ -1,0 +1,391 @@
+{
+  "name": "Amantrika · 05 Host — abandoned draft nudge",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## 05 · Abandoned draft nudge\n\nHourly. The five-message drip from project-overview.md §15, keyed to idle time and gated on completion score.\n\nNever nudges a published invitation, one whose date has passed, or an opted-out recipient. Once a later message goes out, earlier ones are permanently off the table — otherwise editing a draft and going quiet would restart the sequence.\n\n**Simplifications:** no `resume_token` route exists, so the CTA is `/onboarding?resume=<id>` behind normal auth. The 72h email's rendered preview of the host's actual invitation is not possible yet; it links to the live preview instead.\n\nQuery: `n8n/sql/05-stale-drafts.sql`",
+        "height": 260,
+        "width": 420,
+        "color": 4
+      },
+      "id": "sticky0076",
+      "name": "About this workflow",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -620,
+        -200
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 1,
+              "triggerAtMinute": 20
+            }
+          ]
+        }
+      },
+      "id": "n0064",
+      "name": "Hourly",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -260,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "-- Workflow 05 — abandoned-draft nudge drip. Runs hourly.\n--\n-- Spec §15. Five messages keyed to idle time and gated on completion score, so\n-- the email a host gets depends on how far in they actually are:\n--\n--   draft_1h    score < 30   \"your invitation is waiting\"\n--   draft_24h   30..70       \"you're X% done\" — names the exact missing field\n--   draft_72h   score > 70   the one that converts\n--   draft_7d    any          value reminder\n--   draft_30d   any          final, prominent opt-out\n--\n-- Three rules that matter more than the copy:\n--\n--   1. A draft enters at whichever bucket its idle time lands in. It is never\n--      backfilled through earlier ones — nobody receives a 1h nudge on day four.\n--   2. Once a later message has gone out, earlier ones are permanently off the\n--      table (the `later_sent` guard). Without it, editing a draft and going\n--      quiet again would restart the sequence.\n--   3. Never nudge a published or archived invitation, one whose date has\n--      already passed, or an opted-out recipient. §15 states this explicitly\n--      and it is the difference between a nudge and spam.\n--\n-- Simplification vs the spec: there is no resume_token / /resume/[token] route\n-- in the app yet, so the CTA is /onboarding?resume=<event_id> behind normal\n-- auth. Noted in n8n/README.md as a follow-up.\n\nwith ranked as (\n  select\n    d.*,\n    p.email      as owner_email,\n    coalesce(nullif(trim(p.full_name), ''), 'there') as owner_name,\n    case\n      when d.hours_idle >= 720 then 'draft_30d'\n      when d.hours_idle >= 168 then 'draft_7d'\n      when d.hours_idle >= 72  then 'draft_72h'\n      when d.hours_idle >= 24  then 'draft_24h'\n      when d.hours_idle >= 1   then 'draft_1h'\n    end as kind,\n    (select value::int from automation.settings where key = 'nudge_score_low')  as score_low,\n    (select value::int from automation.settings where key = 'nudge_score_high') as score_high\n  from automation.stale_drafts d\n  join profiles p on p.id = d.owner_id\n  where p.email is not null\n    -- Never nudge about a celebration that has already happened.\n    and (d.main_datetime is null or d.main_datetime > now())\n),\nscored as (\n  select r.*,\n    case r.kind\n      when 'draft_1h'  then 1 when 'draft_24h' then 2 when 'draft_72h' then 3\n      when 'draft_7d'  then 4 when 'draft_30d' then 5\n    end as rank\n  from ranked r\n  where r.kind is not null\n    and case r.kind\n      when 'draft_1h'  then r.completion_score <  r.score_low\n      when 'draft_24h' then r.completion_score >= r.score_low\n                        and r.completion_score <= r.score_high\n      when 'draft_72h' then r.completion_score >  r.score_high\n      else true\n    end\n)\nselect\n  s.event_id::text  as event_id,\n  s.slug,\n  s.title,\n  s.theme_id,\n  s.event_type::text as event_type,\n  s.owner_email,\n  s.owner_name,\n  s.kind,\n  s.completion_score,\n  s.next_step,\n  round(s.hours_idle)::int as hours_idle,\n  to_char(s.main_datetime at time zone 'Asia/Kolkata', 'DD Mon YYYY') as event_date,\n  case\n    when s.main_datetime is null then null\n    else greatest((s.main_datetime::date - current_date), 0)\n  end as days_until_event,\n  'nudge:' || s.event_id::text || ':' || s.kind as dedupe_key\nfrom scored s\n-- This exact message has not gone out...\nwhere not exists (\n  select 1 from automation.notifications n\n  where n.dedupe_key = 'nudge:' || s.event_id::text || ':' || s.kind\n)\n-- ...and no later message in the sequence has either.\nand not exists (\n  select 1 from automation.notifications n\n  where n.subject_id = s.event_id\n    and n.workflow = '05-host-abandoned-draft-nudge'\n    and case n.kind\n      when 'draft_1h'  then 1 when 'draft_24h' then 2 when 'draft_72h' then 3\n      when 'draft_7d'  then 4 when 'draft_30d' then 5 else 0\n    end >= s.rank\n)\n-- ...and they have not opted out.\nand not exists (\n  select 1 from automation.optouts o\n  where o.recipient_hash = automation.hash_email(s.owner_email)\n    and o.scope in ('all', 'nudge')\n)\norder by s.rank desc, s.updated_at asc\nlimit 100;",
+        "options": {}
+      },
+      "id": "n0065",
+      "name": "Find stale drafts",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        -40,
+        0
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "amantrika-postgres",
+          "name": "Amantrika Supabase (Postgres)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// ---- shared chrome -------------------------------------------------------\n// Inline styles only: Gmail strips <style> blocks. Coral #e35d5d is the brand\n// accent from project-overview.md §25.2.\nconst brand = '#e35d5d';\nconst site = ($env.AMANTRIKA_SITE_URL || 'https://amantrika.com').replace(/\\/+$/, '');\nconst esc = (s) => String(s ?? '').replace(/[&<>\"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;' }[c]));\nconst inr = (n) => '₹' + Number(n || 0).toLocaleString('en-IN');\nconst stat = (label, value) => `<div style=\"display:inline-block;min-width:118px;margin:0 14px 14px 0;\"><div style=\"font-size:26px;font-weight:600;color:#1f1a19;line-height:1.1;\">${value}</div><div style=\"font-size:12px;color:#8a7d7a;text-transform:uppercase;letter-spacing:.06em;margin-top:3px;\">${label}</div></div>`;\nconst shell = (heading, bodyHtml, ctaLabel, ctaHref, footNote) => `\n<div style=\"margin:0;padding:24px 12px;background:#faf7f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;\">\n  <div style=\"max-width:560px;margin:0 auto;background:#ffffff;border-radius:14px;padding:32px 28px;border:1px solid #f0e6e2;\">\n    <div style=\"font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:${brand};font-weight:600;\">Amantrika</div>\n    <h1 style=\"margin:14px 0 18px;font-size:22px;line-height:1.32;color:#1f1a19;font-weight:600;\">${heading}</h1>\n    <div style=\"font-size:15px;line-height:1.65;color:#453c3a;\">${bodyHtml}</div>\n    ${ctaHref ? `<div style=\"margin:26px 0 6px;\"><a href=\"${ctaHref}\" style=\"display:inline-block;background:${brand};color:#ffffff;text-decoration:none;padding:13px 26px;border-radius:9px;font-weight:600;font-size:15px;\">${ctaLabel}</a></div>` : ''}\n    ${footNote ? `<p style=\"margin:24px 0 0;font-size:13px;line-height:1.6;color:#8a7d7a;\">${footNote}</p>` : ''}\n  </div>\n  <div style=\"max-width:560px;margin:16px auto 0;text-align:center;font-size:12px;color:#a29793;\">\n    Amantrika · digital invitations for Indian celebrations<br/>\n    <a href=\"${site}\" style=\"color:#a29793;\">${site.replace(/^https?:\\/\\//, '')}</a>\n  </div>\n</div>`;\n// No /unsubscribe route exists in the app yet, so RFC 8058's mailto form is\n// used. See \"Follow-ups\" in n8n/README.md.\nconst unsub = (scope) => 'mailto:' + ($env.AMANTRIKA_UNSUBSCRIBE_MAILBOX || 'unsubscribe@amantrika.com')\n  + '?subject=' + encodeURIComponent('unsubscribe ' + scope);\nconst d = $json;\n\nconst resume  = site + '/onboarding?resume=' + encodeURIComponent(d.event_id);\nconst preview = site + '/invite/' + encodeURIComponent(d.slug);\nconst name = d.owner_name;\nconst title = d.title && d.title.trim() ? d.title.trim() : 'your invitation';\n\n// One object per step of the drip. Copy quotes plan names and links to /pricing\n// rather than hardcoding amounts: project-overview.md §25.1 says every price in\n// the spec is a placeholder, and early-bird is disabled behind PRICING_EARLY_BIRD.\nconst steps = {\n  draft_1h: {\n    subject: 'Your invitation is waiting',\n    heading: 'Your invitation is waiting',\n    body: `<p style=\"margin:0 0 14px;\">Hi ${esc(name)}, you started building ${esc(title)} an hour ago and stepped away. It is saved exactly as you left it.</p>\n           <p style=\"margin:0;\">Picking it up takes a minute \\u2014 the next thing is ${esc(d.next_step)}.</p>`,\n    cta: 'Pick up where you left off',\n  },\n  draft_24h: {\n    subject: `You're ${d.completion_score}% done`,\n    heading: `You're ${d.completion_score}% done`,\n    body: `<p style=\"margin:0 0 14px;\">Hi ${esc(name)}, ${esc(title)} is most of the way there.</p>\n           <div style=\"background:#faf7f5;border-radius:10px;padding:16px 18px;margin:0 0 14px;\">\n             <div style=\"height:8px;background:#efe4e0;border-radius:99px;overflow:hidden;\">\n               <div style=\"height:8px;width:${Math.max(6, Math.min(100, Number(d.completion_score)))}%;background:${brand};\"></div>\n             </div>\n             <p style=\"margin:12px 0 0;font-size:14px;color:#453c3a;\">Next: <strong>${esc(d.next_step)}</strong></p>\n           </div>`,\n    cta: 'Add ' + d.next_step,\n  },\n  draft_72h: {\n    subject: 'Nearly there \\u2014 ' + title,\n    heading: 'Nearly there',\n    body: `<p style=\"margin:0 0 14px;\">Hi ${esc(name)}, ${esc(title)} is ${d.completion_score}% complete. This is what it looks like right now:</p>\n           <p style=\"margin:0 0 14px;\"><a href=\"${preview}\" style=\"color:${brand};font-weight:600;\">See your invitation \\u2192</a></p>\n           <p style=\"margin:0;\">One more pass \\u2014 ${esc(d.next_step)} \\u2014 and it is ready to send.</p>`,\n    cta: 'Finish and publish',\n  },\n  draft_7d: {\n    subject: 'Still holding your invitation',\n    heading: 'Still holding your invitation',\n    body: `<p style=\"margin:0 0 14px;\">Hi ${esc(name)}, ${esc(title)} is still saved.${d.days_until_event != null ? ' Your celebration is in <strong>' + d.days_until_event + ' days</strong>.' : ''}</p>\n           <p style=\"margin:0;\">Booking early costs less and gives you time to get the details right. Plans and what each one includes are on the pricing page.</p>`,\n    cta: 'Finish your invitation',\n  },\n  draft_30d: {\n    subject: 'Last note about your invitation',\n    heading: 'Last note about your invitation',\n    body: `<p style=\"margin:0 0 14px;\">Hi ${esc(name)}, this is the last time we will write about ${esc(title)}. It stays saved in your account either way \\u2014 nothing is deleted.</p>\n           <p style=\"margin:0;\">If the celebration is still ahead of you, it is waiting.</p>`,\n    cta: 'Open my draft',\n  },\n};\n\nconst step = steps[d.kind];\nconst html = shell(step.heading, step.body, step.cta, resume,\n  `You are receiving this because you started an invitation on Amantrika. <a href=\"${unsub('nudge')}\" style=\"color:#8a7d7a;\">Unsubscribe</a>`);\n\nreturn { json: {\n  dedupe_key: d.dedupe_key,\n  to: d.owner_email,\n  stored: {\n    event_id: d.event_id, slug: d.slug, title: d.title, kind: d.kind,\n    completion_score: d.completion_score, next_step: d.next_step,\n    hours_idle: d.hours_idle, dedupe_key: d.dedupe_key,\n    subject: step.subject,\n    html,\n    text: step.heading + '\\n\\n' + String(step.body).replace(/<[^>]+>/g, '').replace(/\\n{3,}/g, '\\n\\n').trim()\n      + '\\n\\n' + step.cta + ': ' + resume,\n    unsubscribe: unsub('nudge'),\n  },\n} };"
+      },
+      "id": "n0066",
+      "name": "Render email",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        180,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "-- Claim before sending. Source of truth: n8n/sql/00-ledger-helpers.sql\nwith claimed as (\n  insert into automation.notifications\n    (workflow, kind, subject_type, subject_id, dedupe_key, channel, recipient_hash, payload)\n  values\n    ($1, $2, $3, nullif($4, '')::uuid, $5, $6, automation.hash_email(nullif($9, '')), $8::jsonb)\n  on conflict (dedupe_key) do nothing\n  returning id\n)\nselect\n  (select id from claimed)           as ledger_id,\n  (select count(*) from claimed) > 0 as did_claim,\n  $8::jsonb                          as payload,\n  -- Returned so the send node has an address. Deliberately not a column.\n  nullif($9, '')                     as recipient,\n  $7                                 as dedupe_key;",
+        "options": {
+          "queryReplacement": "={{ [ '05-host-abandoned-draft-nudge', $json.stored.kind, 'event', $json.stored.event_id, $json.dedupe_key, 'email', $json.dedupe_key, JSON.stringify($json.stored), $json.to ] }}"
+        }
+      },
+      "id": "n0067",
+      "name": "Claim in ledger",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        400,
+        0
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "amantrika-postgres",
+          "name": "Amantrika Supabase (Postgres)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c0068",
+              "leftValue": "={{ $json.did_claim }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "n0069",
+      "name": "New only",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        620,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c0070",
+              "leftValue": "={{ $env.AMANTRIKA_DRY_RUN }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "n0071",
+      "name": "Dry run?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        840,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "update automation.notifications\nset status = 'skipped', payload = payload || $2::jsonb\nwhere id = $1::uuid\nreturning id, status;",
+        "options": {
+          "queryReplacement": "={{ [ $json.ledger_id, JSON.stringify({ dry_run: true }) ] }}"
+        }
+      },
+      "id": "n0072",
+      "name": "Mark skipped (dry run)",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        1080,
+        -140
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "amantrika-postgres",
+          "name": "Amantrika Supabase (Postgres)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.resend.com/emails",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameter": [
+            {
+              "name": "Idempotency-Key",
+              "value": "={{ $json.dedupe_key }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  from: $env.AMANTRIKA_EMAIL_FROM,\n  to: [ $json.recipient ],\n  subject: $json.payload.subject,\n  html: $json.payload.html,\n  text: $json.payload.text,\n  headers: $json.payload.unsubscribe\n    ? { 'List-Unsubscribe': '<' + $json.payload.unsubscribe + '>',\n        'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click' }\n    : {}\n}) }}",
+        "options": {}
+      },
+      "id": "n0073",
+      "name": "Send via Resend",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1080,
+        100
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "amantrika-resend",
+          "name": "Resend API"
+        }
+      },
+      "onError": "continueErrorOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "update automation.notifications\nset status = 'sent', sent_at = now(), payload = payload || $2::jsonb\nwhere id = $1::uuid\nreturning id, status;",
+        "options": {
+          "queryReplacement": "={{ [ $('Claim in ledger').item.json.ledger_id, JSON.stringify({ delivered_at: $now.toISO(), channel: $json.channel || 'email' }) ] }}"
+        }
+      },
+      "id": "n0074",
+      "name": "Mark sent",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        1320,
+        20
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "amantrika-postgres",
+          "name": "Amantrika Supabase (Postgres)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "-- Left as 'failed', not deleted: the item is not retried on the next\n-- schedule. A failed nudge is not worth a retry storm. Delete the row by hand\n-- to force a resend. n8n/sql/00-ledger-helpers.sql has the runbook query.\nupdate automation.notifications\nset status = 'failed', error = left($2, 2000)\nwhere id = $1::uuid\nreturning id, status;",
+        "options": {
+          "queryReplacement": "={{ [ $('Claim in ledger').item.json.ledger_id, JSON.stringify($json.error ?? $json).slice(0, 1900) ] }}"
+        }
+      },
+      "id": "n0075",
+      "name": "Mark failed",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        1320,
+        220
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "amantrika-postgres",
+          "name": "Amantrika Supabase (Postgres)"
+        }
+      },
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "connections": {
+    "Hourly": {
+      "main": [
+        [
+          {
+            "node": "Find stale drafts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find stale drafts": {
+      "main": [
+        [
+          {
+            "node": "Render email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Render email": {
+      "main": [
+        [
+          {
+            "node": "Claim in ledger",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claim in ledger": {
+      "main": [
+        [
+          {
+            "node": "New only",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "New only": {
+      "main": [
+        [
+          {
+            "node": "Dry run?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Dry run?": {
+      "main": [
+        [
+          {
+            "node": "Mark skipped (dry run)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send via Resend",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send via Resend": {
+      "main": [
+        [
+          {
+            "node": "Mark sent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Mark failed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "timezone": "Asia/Kolkata"
+  },
+  "pinData": {},
+  "versionId": "1",
+  "meta": {
+    "instanceId": "amantrika"
+  },
+  "tags": [
+    {
+      "name": "amantrika"
+    },
+    {
+      "name": "host"
+    },
+    {
+      "name": "lifecycle"
+    }
+  ]
+}

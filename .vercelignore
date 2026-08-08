@@ -1,0 +1,36 @@
+# Files never worth uploading to Vercel.
+#
+# Without this, `vercel --prod` uploaded ~500 MB — the local build output, test
+# artefacts and tooling — which is slow and was failing outright with EPIPE
+# partway through. Vercel builds from source, so the local `.next` is not only
+# unnecessary but actively wrong to ship.
+
+.next/
+.next-*/
+out/
+build/
+
+node_modules/
+
+# Tests and their artefacts never run on the deployment.
+tests/
+test-results/
+playwright-report/
+coverage/
+*.spec.ts
+*.test.ts
+
+# Local-only tooling and scratch files.
+.env*
+!.env.example
+supabase/.temp/
+supabase/.branches/
+scripts/
+*.log
+.DS_Store
+
+# Docs that are not part of the app.
+DEPLOY.md
+progress.md
+instruction.md
+project-overview.md

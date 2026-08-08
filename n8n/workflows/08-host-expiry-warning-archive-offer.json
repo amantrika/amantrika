@@ -1,0 +1,395 @@
+{
+  "name": "Amantrika · 08 Host — expiry warning & archive offer",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## 08 · Expiry warning & archive offer\n\nDaily 04:30 UTC = 10:00 IST. project-overview.md §14 calls the archive offer \"the easiest margin in the product\": sentimentality peaks about a month after the celebration and hosting cost is near zero.\n\n**This workflow mutates nothing.** `event_status` is ('draft','published','archived') — there is no `expired` value. Adding one changes what /invite/[slug] renders and belongs in an app phase, not a side-car. So these are warnings; the invitation stays live.\n\n**There is no archive SKU.** `plans` holds free/classic/premium only, so the CTA links to /pricing#archive rather than opening a checkout. Wiring it to money needs a plans row and a Dodo product id first.\n\nQuery: `n8n/sql/08-expiry-candidates.sql`",
+        "height": 260,
+        "width": 420,
+        "color": 4
+      },
+      "id": "sticky0128",
+      "name": "About this workflow",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -620,
+        -200
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 24,
+              "triggerAtHour": 4,
+              "triggerAtMinute": 30
+            }
+          ]
+        }
+      },
+      "id": "n0116",
+      "name": "04:30 UTC (10:00 IST)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -260,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "-- Workflow 08 — expiry warning and archive offer. Runs daily 04:30 UTC = 10:00 IST.\n--\n-- Spec §14 calls the archive offer \"the easiest margin in the product\":\n-- sentimentality peaks around a month after the celebration and hosting cost is\n-- near zero. This workflow is the only reason that revenue exists.\n--\n-- TWO HONEST LIMITATIONS, both structural rather than laziness:\n--\n--   1. This workflow MUTATES NOTHING. event_status is\n--      ('draft','published','archived') — there is no 'expired' value\n--      (core_schema.sql:14). Adding one changes what /invite/[slug] renders and\n--      belongs in an app phase, not in a side-car. So these are warnings; the\n--      invitation stays live until someone changes the enum.\n--\n--   2. There is no archive SKU. `plans` holds free/classic/premium only, so the\n--      archive CTA links to /pricing#archive rather than opening a checkout.\n--      Wiring it to money needs a plans row and a Dodo product id first.\n--\n-- Expiry is derived (main_datetime + 30 days) via automation.invite_expiry\n-- rather than read from a stored expires_at, which does not exist yet.\n\nwith candidates as (\n  select\n    x.*,\n    (x.expires_at::date - current_date)       as days_to_expiry,\n    (current_date - x.archive_offer_at::date) as days_since_offer_due\n  from automation.invite_expiry x\n)\nselect\n  c.event_id::text as event_id,\n  c.slug,\n  c.title,\n  c.plan_code,\n  p.email          as owner_email,\n  coalesce(nullif(trim(p.full_name), ''), 'there') as owner_name,\n  to_char(c.main_datetime at time zone 'Asia/Kolkata', 'DD Mon YYYY') as event_date,\n  to_char(c.expires_at    at time zone 'Asia/Kolkata', 'DD Mon YYYY') as expires_on,\n  c.days_to_expiry,\n  k.kind,\n  -- What they would lose, which is the only argument the archive email needs.\n  (select count(*) from page_views v where v.event_id = c.event_id)                  as total_views,\n  (select count(*) from rsvps r where r.event_id = c.event_id and r.attending = 'yes') as rsvp_yes,\n  (select count(*) from blessings b where b.event_id = c.event_id and b.is_approved)  as blessings,\n  (select count(*) from assets a where a.event_id = c.event_id and a.kind = 'photo')  as photos,\n  'expiry:' || c.event_id::text || ':' || k.kind as dedupe_key\nfrom candidates c\njoin profiles p on p.id = c.owner_id\njoin lateral (\n  select case\n    -- Checked most-urgent-first so a single row never matches two kinds.\n    when c.days_since_offer_due between 0 and 2 then 'archive_offer'\n    when c.days_to_expiry = 1                   then 'expiry_1d'\n    when c.days_to_expiry between 6 and 7       then 'expiry_7d'\n  end as kind\n) k on k.kind is not null\nwhere p.email is not null\n  and not exists (\n    select 1 from automation.notifications n\n    where n.dedupe_key = 'expiry:' || c.event_id::text || ':' || k.kind\n  )\n  and not exists (\n    select 1 from automation.optouts o\n    where o.recipient_hash = automation.hash_email(p.email)\n      and o.scope in ('all', 'reminder')\n  )\norder by c.days_to_expiry asc\nlimit 200;",
+        "options": {}
+      },
+      "id": "n0117",
+      "name": "Find expiring invitations",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        -40,
+        0
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "amantrika-postgres",
+          "name": "Amantrika Supabase (Postgres)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// ---- shared chrome -------------------------------------------------------\n// Inline styles only: Gmail strips <style> blocks. Coral #e35d5d is the brand\n// accent from project-overview.md §25.2.\nconst brand = '#e35d5d';\nconst site = ($env.AMANTRIKA_SITE_URL || 'https://amantrika.com').replace(/\\/+$/, '');\nconst esc = (s) => String(s ?? '').replace(/[&<>\"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;' }[c]));\nconst inr = (n) => '₹' + Number(n || 0).toLocaleString('en-IN');\nconst stat = (label, value) => `<div style=\"display:inline-block;min-width:118px;margin:0 14px 14px 0;\"><div style=\"font-size:26px;font-weight:600;color:#1f1a19;line-height:1.1;\">${value}</div><div style=\"font-size:12px;color:#8a7d7a;text-transform:uppercase;letter-spacing:.06em;margin-top:3px;\">${label}</div></div>`;\nconst shell = (heading, bodyHtml, ctaLabel, ctaHref, footNote) => `\n<div style=\"margin:0;padding:24px 12px;background:#faf7f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;\">\n  <div style=\"max-width:560px;margin:0 auto;background:#ffffff;border-radius:14px;padding:32px 28px;border:1px solid #f0e6e2;\">\n    <div style=\"font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:${brand};font-weight:600;\">Amantrika</div>\n    <h1 style=\"margin:14px 0 18px;font-size:22px;line-height:1.32;color:#1f1a19;font-weight:600;\">${heading}</h1>\n    <div style=\"font-size:15px;line-height:1.65;color:#453c3a;\">${bodyHtml}</div>\n    ${ctaHref ? `<div style=\"margin:26px 0 6px;\"><a href=\"${ctaHref}\" style=\"display:inline-block;background:${brand};color:#ffffff;text-decoration:none;padding:13px 26px;border-radius:9px;font-weight:600;font-size:15px;\">${ctaLabel}</a></div>` : ''}\n    ${footNote ? `<p style=\"margin:24px 0 0;font-size:13px;line-height:1.6;color:#8a7d7a;\">${footNote}</p>` : ''}\n  </div>\n  <div style=\"max-width:560px;margin:16px auto 0;text-align:center;font-size:12px;color:#a29793;\">\n    Amantrika · digital invitations for Indian celebrations<br/>\n    <a href=\"${site}\" style=\"color:#a29793;\">${site.replace(/^https?:\\/\\//, '')}</a>\n  </div>\n</div>`;\n// No /unsubscribe route exists in the app yet, so RFC 8058's mailto form is\n// used. See \"Follow-ups\" in n8n/README.md.\nconst unsub = (scope) => 'mailto:' + ($env.AMANTRIKA_UNSUBSCRIBE_MAILBOX || 'unsubscribe@amantrika.com')\n  + '?subject=' + encodeURIComponent('unsubscribe ' + scope);\nconst d = $json;\n\nconst url  = site + '/invite/' + encodeURIComponent(d.slug);\nconst dash = site + '/dashboard/' + encodeURIComponent(d.event_id);\nconst archiveCta = site + '/pricing#archive';\n\nconst memories = `<div style=\"margin:0 0 20px;\">\n    ${stat('Views', d.total_views)}${stat('Attended', d.rsvp_yes)}\n    ${stat('Blessings', d.blessings)}${stat('Photos', d.photos)}\n  </div>`;\n\nconst steps = {\n  expiry_7d: {\n    subject: 'Your invitation comes down in a week',\n    heading: 'A week left',\n    body: `<p style=\"margin:0 0 16px;\">Hi ${esc(d.owner_name)}, <strong>${esc(d.title)}</strong> comes down on ${esc(d.expires_on)} \\u2014 a week from now.</p>\n           ${memories}\n           <p style=\"margin:0;\">If you want to keep the link working \\u2014 the photos, the blessings, the guest list \\u2014 you can archive it permanently. The URL never changes, so every message you already sent keeps working.</p>`,\n    cta: 'Keep it permanently', href: archiveCta,\n  },\n  expiry_1d: {\n    subject: 'Your invitation comes down tomorrow',\n    heading: 'Tomorrow',\n    body: `<p style=\"margin:0 0 16px;\">Hi ${esc(d.owner_name)}, this is the last reminder: <strong>${esc(d.title)}</strong> comes down on ${esc(d.expires_on)}.</p>\n           ${memories}\n           <p style=\"margin:0;\">Archiving keeps the same link alive permanently. After tomorrow you can still archive it, but the link will have been dark in the meantime.</p>`,\n    cta: 'Keep it permanently', href: archiveCta,\n  },\n  archive_offer: {\n    subject: 'Keep ' + (d.title || 'your invitation') + ' forever',\n    heading: 'Keep it forever',\n    body: `<p style=\"margin:0 0 16px;\">Hi ${esc(d.owner_name)}, it has been about a month since ${esc(d.event_date)}. Here is what ${esc(d.title)} did:</p>\n           ${memories}\n           <p style=\"margin:0 0 14px;\">${Number(d.blessings) > 0\n             ? '<strong>' + d.blessings + ' people</strong> left you a message on it. Those are worth keeping.'\n             : 'Everything is still there \\u2014 the photos, the story, the guest list.'}</p>\n           <p style=\"margin:0;\">Archiving keeps the same link working permanently, on the same URL you already shared.</p>`,\n    cta: 'Archive my invitation', href: archiveCta,\n  },\n};\n\nconst step = steps[d.kind];\nreturn { json: {\n  dedupe_key: d.dedupe_key,\n  to: d.owner_email,\n  stored: {\n    event_id: d.event_id, slug: d.slug, title: d.title, kind: d.kind,\n    expires_on: d.expires_on, days_to_expiry: d.days_to_expiry,\n    total_views: d.total_views, blessings: d.blessings, dedupe_key: d.dedupe_key,\n    subject: step.subject,\n    html: shell(step.heading, step.body, step.cta, step.href,\n      `Your invitation: <a href=\"${url}\" style=\"color:#8a7d7a;\">${esc(d.slug)}</a> \\u00b7 <a href=\"${dash}\" style=\"color:#8a7d7a;\">dashboard</a> \\u00b7 <a href=\"${unsub('reminder')}\" style=\"color:#8a7d7a;\">unsubscribe</a>`),\n    text: step.heading + '\\n\\n' + d.title + '\\nExpires ' + d.expires_on + '\\n'\n      + d.total_views + ' views, ' + d.rsvp_yes + ' attended, ' + d.blessings + ' blessings\\n\\n'\n      + step.cta + ': ' + step.href,\n    unsubscribe: unsub('reminder'),\n  },\n} };"
+      },
+      "id": "n0118",
+      "name": "Render email",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        180,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "-- Claim before sending. Source of truth: n8n/sql/00-ledger-helpers.sql\nwith claimed as (\n  insert into automation.notifications\n    (workflow, kind, subject_type, subject_id, dedupe_key, channel, recipient_hash, payload)\n  values\n    ($1, $2, $3, nullif($4, '')::uuid, $5, $6, automation.hash_email(nullif($9, '')), $8::jsonb)\n  on conflict (dedupe_key) do nothing\n  returning id\n)\nselect\n  (select id from claimed)           as ledger_id,\n  (select count(*) from claimed) > 0 as did_claim,\n  $8::jsonb                          as payload,\n  -- Returned so the send node has an address. Deliberately not a column.\n  nullif($9, '')                     as recipient,\n  $7                                 as dedupe_key;",
+        "options": {
+          "queryReplacement": "={{ [ '08-host-expiry-archive', $json.stored.kind, 'event', $json.stored.event_id, $json.dedupe_key, 'email', $json.dedupe_key, JSON.stringify($json.stored), $json.to ] }}"
+        }
+      },
+      "id": "n0119",
+      "name": "Claim in ledger",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        400,
+        0
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "amantrika-postgres",
+          "name": "Amantrika Supabase (Postgres)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c0120",
+              "leftValue": "={{ $json.did_claim }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "n0121",
+      "name": "New only",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        620,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c0122",
+              "leftValue": "={{ $env.AMANTRIKA_DRY_RUN }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "n0123",
+      "name": "Dry run?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        840,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "update automation.notifications\nset status = 'skipped', payload = payload || $2::jsonb\nwhere id = $1::uuid\nreturning id, status;",
+        "options": {
+          "queryReplacement": "={{ [ $json.ledger_id, JSON.stringify({ dry_run: true }) ] }}"
+        }
+      },
+      "id": "n0124",
+      "name": "Mark skipped (dry run)",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        1080,
+        -140
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "amantrika-postgres",
+          "name": "Amantrika Supabase (Postgres)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.resend.com/emails",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameter": [
+            {
+              "name": "Idempotency-Key",
+              "value": "={{ $json.dedupe_key }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  from: $env.AMANTRIKA_EMAIL_FROM,\n  to: [ $json.recipient ],\n  subject: $json.payload.subject,\n  html: $json.payload.html,\n  text: $json.payload.text,\n  headers: $json.payload.unsubscribe\n    ? { 'List-Unsubscribe': '<' + $json.payload.unsubscribe + '>',\n        'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click' }\n    : {}\n}) }}",
+        "options": {}
+      },
+      "id": "n0125",
+      "name": "Send via Resend",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1080,
+        100
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "amantrika-resend",
+          "name": "Resend API"
+        }
+      },
+      "onError": "continueErrorOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "update automation.notifications\nset status = 'sent', sent_at = now(), payload = payload || $2::jsonb\nwhere id = $1::uuid\nreturning id, status;",
+        "options": {
+          "queryReplacement": "={{ [ $('Claim in ledger').item.json.ledger_id, JSON.stringify({ delivered_at: $now.toISO(), channel: $json.channel || 'email' }) ] }}"
+        }
+      },
+      "id": "n0126",
+      "name": "Mark sent",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        1320,
+        20
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "amantrika-postgres",
+          "name": "Amantrika Supabase (Postgres)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "-- Left as 'failed', not deleted: the item is not retried on the next\n-- schedule. A failed nudge is not worth a retry storm. Delete the row by hand\n-- to force a resend. n8n/sql/00-ledger-helpers.sql has the runbook query.\nupdate automation.notifications\nset status = 'failed', error = left($2, 2000)\nwhere id = $1::uuid\nreturning id, status;",
+        "options": {
+          "queryReplacement": "={{ [ $('Claim in ledger').item.json.ledger_id, JSON.stringify($json.error ?? $json).slice(0, 1900) ] }}"
+        }
+      },
+      "id": "n0127",
+      "name": "Mark failed",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        1320,
+        220
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "amantrika-postgres",
+          "name": "Amantrika Supabase (Postgres)"
+        }
+      },
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "connections": {
+    "04:30 UTC (10:00 IST)": {
+      "main": [
+        [
+          {
+            "node": "Find expiring invitations",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find expiring invitations": {
+      "main": [
+        [
+          {
+            "node": "Render email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Render email": {
+      "main": [
+        [
+          {
+            "node": "Claim in ledger",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claim in ledger": {
+      "main": [
+        [
+          {
+            "node": "New only",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "New only": {
+      "main": [
+        [
+          {
+            "node": "Dry run?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Dry run?": {
+      "main": [
+        [
+          {
+            "node": "Mark skipped (dry run)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send via Resend",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send via Resend": {
+      "main": [
+        [
+          {
+            "node": "Mark sent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Mark failed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "timezone": "Asia/Kolkata"
+  },
+  "pinData": {},
+  "versionId": "1",
+  "meta": {
+    "instanceId": "amantrika"
+  },
+  "tags": [
+    {
+      "name": "amantrika"
+    },
+    {
+      "name": "host"
+    },
+    {
+      "name": "lifecycle"
+    },
+    {
+      "name": "revenue"
+    }
+  ]
+}

@@ -1,0 +1,456 @@
+{
+  "name": "Amantrika · 01 Owner — new signup alert",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## 01 · New signup alert\n\nEvery 10 min. Pings you when anyone signs up, with the referral source so you can tell an organic host from a partner-driven one.\n\nThe address is masked in SQL by `automation.mask_email()` — the raw one never leaves Postgres on this path. Full record is behind /admin auth.\n\nQuery: `n8n/sql/01-new-signups.sql`",
+        "height": 260,
+        "width": 420,
+        "color": 4
+      },
+      "id": "sticky0015",
+      "name": "About this workflow",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -620,
+        -200
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 10
+            }
+          ]
+        }
+      },
+      "id": "n0001",
+      "name": "Every 10 minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -260,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "-- Workflow 01 — new signup alert. Runs every 10 minutes.\n--\n-- The 24h window is a safety net, not the dedupe mechanism: the LEFT JOIN on\n-- the ledger is what stops a repeat. The window only bounds the scan, and means\n-- an n8n outage shorter than a day self-heals on the next run.\n--\n-- Note this alert path never sees a raw address. automation.mask_email() does\n-- the redaction inside Postgres, and the full record stays behind /admin auth.\n\nselect\n  p.id::text                                as profile_id,\n  coalesce(nullif(trim(p.full_name), ''), 'Someone') as full_name,\n  automation.mask_email(p.email)            as email_masked,\n  p.role::text                              as role,\n  p.phone is not null                       as has_phone,\n  to_char(p.created_at at time zone 'Asia/Kolkata', 'DD Mon, HH24:MI') as signed_up_ist,\n  a.agency_name,\n  a.referral_code,\n  ref.full_name                             as referred_by_name,\n  -- Distinguishes \"an agent applied\" from \"a host signed up via an agent link\".\n  case\n    when p.role = 'agent'       then 'partner application'\n    when p.referred_by is not null then 'referred by a partner'\n    else 'direct'\n  end                                       as source,\n  'signup:' || p.id::text                   as dedupe_key\nfrom profiles p\nleft join agents   a   on a.id   = p.id\nleft join profiles ref on ref.id = p.referred_by\nleft join automation.notifications n on n.dedupe_key = 'signup:' || p.id::text\nwhere p.created_at > now() - interval '24 hours'\n  and n.id is null\norder by p.created_at asc\nlimit 50;",
+        "options": {}
+      },
+      "id": "n0002",
+      "name": "Find new signups",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        -40,
+        0
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "amantrika-postgres",
+          "name": "Amantrika Supabase (Postgres)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// ---- shared chrome -------------------------------------------------------\n// Inline styles only: Gmail strips <style> blocks. Coral #e35d5d is the brand\n// accent from project-overview.md §25.2.\nconst brand = '#e35d5d';\nconst site = ($env.AMANTRIKA_SITE_URL || 'https://amantrika.com').replace(/\\/+$/, '');\nconst esc = (s) => String(s ?? '').replace(/[&<>\"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;' }[c]));\nconst inr = (n) => '₹' + Number(n || 0).toLocaleString('en-IN');\nconst stat = (label, value) => `<div style=\"display:inline-block;min-width:118px;margin:0 14px 14px 0;\"><div style=\"font-size:26px;font-weight:600;color:#1f1a19;line-height:1.1;\">${value}</div><div style=\"font-size:12px;color:#8a7d7a;text-transform:uppercase;letter-spacing:.06em;margin-top:3px;\">${label}</div></div>`;\nconst shell = (heading, bodyHtml, ctaLabel, ctaHref, footNote) => `\n<div style=\"margin:0;padding:24px 12px;background:#faf7f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;\">\n  <div style=\"max-width:560px;margin:0 auto;background:#ffffff;border-radius:14px;padding:32px 28px;border:1px solid #f0e6e2;\">\n    <div style=\"font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:${brand};font-weight:600;\">Amantrika</div>\n    <h1 style=\"margin:14px 0 18px;font-size:22px;line-height:1.32;color:#1f1a19;font-weight:600;\">${heading}</h1>\n    <div style=\"font-size:15px;line-height:1.65;color:#453c3a;\">${bodyHtml}</div>\n    ${ctaHref ? `<div style=\"margin:26px 0 6px;\"><a href=\"${ctaHref}\" style=\"display:inline-block;background:${brand};color:#ffffff;text-decoration:none;padding:13px 26px;border-radius:9px;font-weight:600;font-size:15px;\">${ctaLabel}</a></div>` : ''}\n    ${footNote ? `<p style=\"margin:24px 0 0;font-size:13px;line-height:1.6;color:#8a7d7a;\">${footNote}</p>` : ''}\n  </div>\n  <div style=\"max-width:560px;margin:16px auto 0;text-align:center;font-size:12px;color:#a29793;\">\n    Amantrika · digital invitations for Indian celebrations<br/>\n    <a href=\"${site}\" style=\"color:#a29793;\">${site.replace(/^https?:\\/\\//, '')}</a>\n  </div>\n</div>`;\n// No /unsubscribe route exists in the app yet, so RFC 8058's mailto form is\n// used. See \"Follow-ups\" in n8n/README.md.\nconst unsub = (scope) => 'mailto:' + ($env.AMANTRIKA_UNSUBSCRIBE_MAILBOX || 'unsubscribe@amantrika.com')\n  + '?subject=' + encodeURIComponent('unsubscribe ' + scope);\nconst d = $json;\n\nconst heading = d.role === 'agent' ? 'New partner application' : 'New signup';\nconst cta = site + (d.role === 'agent' ? '/admin/partners' : '/admin/users');\n\nconst line = [\n  d.full_name,\n  d.role === 'agent' ? 'partner application' : 'host',\n  d.source,\n  d.agency_name ? 'agency ' + d.agency_name : null,\n  d.referred_by_name ? 'via ' + d.referred_by_name : null,\n].filter(Boolean).join(' \\u00b7 ');\n\nconst bodyHtml = `\n  <p style=\"margin:0 0 14px;\"><strong>${esc(d.full_name)}</strong> signed up at ${esc(d.signed_up_ist)} IST.</p>\n  <ul style=\"margin:0;padding-left:18px;\">\n    <li>${esc(d.email_masked || 'no email on file')}</li>\n    <li>Role: ${esc(d.role)}${d.has_phone ? ' \\u00b7 phone on file' : ''}</li>\n    <li>Source: ${esc(d.source)}${d.referred_by_name ? ' (' + esc(d.referred_by_name) + ')' : ''}</li>\n    ${d.agency_name ? '<li>Agency: ' + esc(d.agency_name) + '</li>' : ''}\n    ${d.referral_code ? '<li>Referral code: ' + esc(d.referral_code) + '</li>' : ''}\n  </ul>`;\n\nreturn { json: {\n  dedupe_key: d.dedupe_key,\n  to: '',\n  stored: {\n    profile_id: d.profile_id,\n    full_name: d.full_name,\n    email_masked: d.email_masked,\n    role: d.role,\n    source: d.source,\n    dedupe_key: d.dedupe_key,\n    subject: heading + ': ' + d.full_name,\n    // Single line: WhatsApp rejects newlines in template parameters.\n    whatsapp: heading + ' \\u2014 ' + line + '. ' + cta,\n    html: shell(heading, bodyHtml, 'Open admin', cta, null),\n    text: heading + '\\n' + line + '\\n' + cta,\n  },\n} };"
+      },
+      "id": "n0003",
+      "name": "Render alert",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        180,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "-- Claim before sending. Source of truth: n8n/sql/00-ledger-helpers.sql\nwith claimed as (\n  insert into automation.notifications\n    (workflow, kind, subject_type, subject_id, dedupe_key, channel, recipient_hash, payload)\n  values\n    ($1, $2, $3, nullif($4, '')::uuid, $5, $6, automation.hash_email(nullif($9, '')), $8::jsonb)\n  on conflict (dedupe_key) do nothing\n  returning id\n)\nselect\n  (select id from claimed)           as ledger_id,\n  (select count(*) from claimed) > 0 as did_claim,\n  $8::jsonb                          as payload,\n  -- Returned so the send node has an address. Deliberately not a column.\n  nullif($9, '')                     as recipient,\n  $7                                 as dedupe_key;",
+        "options": {
+          "queryReplacement": "={{ [ '01-owner-new-signup-alert', 'signup', 'profile', $json.stored.profile_id, $json.dedupe_key, 'whatsapp', $json.dedupe_key, JSON.stringify($json.stored), '' ] }}"
+        }
+      },
+      "id": "n0004",
+      "name": "Claim in ledger",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        400,
+        0
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "amantrika-postgres",
+          "name": "Amantrika Supabase (Postgres)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c0005",
+              "leftValue": "={{ $json.did_claim }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "n0006",
+      "name": "New only",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        620,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c0007",
+              "leftValue": "={{ $env.AMANTRIKA_DRY_RUN }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "n0008",
+      "name": "Dry run?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        840,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "update automation.notifications\nset status = 'skipped', payload = payload || $2::jsonb\nwhere id = $1::uuid\nreturning id, status;",
+        "options": {
+          "queryReplacement": "={{ [ $json.ledger_id, JSON.stringify({ dry_run: true }) ] }}"
+        }
+      },
+      "id": "n0009",
+      "name": "Mark skipped (dry run)",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        1080,
+        -140
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "amantrika-postgres",
+          "name": "Amantrika Supabase (Postgres)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v21.0/{{ $env.AMANTRIKA_WA_PHONE_NUMBER_ID }}/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": false,
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  messaging_product: 'whatsapp',\n  to: $env.AMANTRIKA_OWNER_WHATSAPP,\n  type: 'template',\n  template: {\n    name: $env.AMANTRIKA_WA_TEMPLATE || 'amantrika_ops_alert',\n    language: { code: 'en' },\n    components: [ { type: 'body', parameters: [ { type: 'text', text: $json.payload.whatsapp } ] } ]\n  }\n}) }}",
+        "options": {}
+      },
+      "id": "n0010",
+      "name": "Alert owner on WhatsApp",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1080,
+        100
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "amantrika-whatsapp",
+          "name": "Meta WhatsApp Cloud"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "update automation.notifications\nset status = 'sent', sent_at = now(), payload = payload || $2::jsonb\nwhere id = $1::uuid\nreturning id, status;",
+        "options": {
+          "queryReplacement": "={{ [ $('Claim in ledger').item.json.ledger_id, JSON.stringify({ delivered_at: $now.toISO(), channel: $json.channel || 'email' }) ] }}"
+        }
+      },
+      "id": "n0011",
+      "name": "Mark sent",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        1320,
+        20
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "amantrika-postgres",
+          "name": "Amantrika Supabase (Postgres)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.resend.com/emails",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameter": [
+            {
+              "name": "Idempotency-Key",
+              "value": "={{ $('Claim in ledger').item.json.dedupe_key }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  from: $env.AMANTRIKA_EMAIL_FROM,\n  to: [ $env.AMANTRIKA_OWNER_EMAIL ],\n  subject: $('Claim in ledger').item.json.payload.subject,\n  html: $('Claim in ledger').item.json.payload.html,\n  text: $('Claim in ledger').item.json.payload.text\n}) }}",
+        "options": {}
+      },
+      "id": "n0012",
+      "name": "Fall back to email",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1080,
+        300
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "amantrika-resend",
+          "name": "Resend API"
+        }
+      },
+      "onError": "continueErrorOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "update automation.notifications\nset status = 'sent', sent_at = now(), payload = payload || $2::jsonb\nwhere id = $1::uuid\nreturning id, status;",
+        "options": {
+          "queryReplacement": "={{ [ $('Claim in ledger').item.json.ledger_id, JSON.stringify({ delivered_at: $now.toISO(), channel: $json.channel || 'email' }) ] }}"
+        }
+      },
+      "id": "n0013",
+      "name": "Mark sent (email fallback)",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        1320,
+        240
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "amantrika-postgres",
+          "name": "Amantrika Supabase (Postgres)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "-- Left as 'failed', not deleted: the item is not retried on the next\n-- schedule. A failed nudge is not worth a retry storm. Delete the row by hand\n-- to force a resend. n8n/sql/00-ledger-helpers.sql has the runbook query.\nupdate automation.notifications\nset status = 'failed', error = left($2, 2000)\nwhere id = $1::uuid\nreturning id, status;",
+        "options": {
+          "queryReplacement": "={{ [ $('Claim in ledger').item.json.ledger_id, JSON.stringify($json.error ?? $json).slice(0, 1900) ] }}"
+        }
+      },
+      "id": "n0014",
+      "name": "Mark failed (both channels)",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        1320,
+        440
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "amantrika-postgres",
+          "name": "Amantrika Supabase (Postgres)"
+        }
+      },
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "connections": {
+    "Every 10 minutes": {
+      "main": [
+        [
+          {
+            "node": "Find new signups",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find new signups": {
+      "main": [
+        [
+          {
+            "node": "Render alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Render alert": {
+      "main": [
+        [
+          {
+            "node": "Claim in ledger",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claim in ledger": {
+      "main": [
+        [
+          {
+            "node": "New only",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "New only": {
+      "main": [
+        [
+          {
+            "node": "Dry run?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Dry run?": {
+      "main": [
+        [
+          {
+            "node": "Mark skipped (dry run)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Alert owner on WhatsApp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Alert owner on WhatsApp": {
+      "main": [
+        [
+          {
+            "node": "Mark sent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Fall back to email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fall back to email": {
+      "main": [
+        [
+          {
+            "node": "Mark sent (email fallback)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Mark failed (both channels)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "timezone": "Asia/Kolkata"
+  },
+  "pinData": {},
+  "versionId": "1",
+  "meta": {
+    "instanceId": "amantrika"
+  },
+  "tags": [
+    {
+      "name": "amantrika"
+    },
+    {
+      "name": "owner"
+    }
+  ]
+}

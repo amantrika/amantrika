@@ -1,0 +1,390 @@
+{
+  "name": "Amantrika · 07 Host — publish confirmation & share kit",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## 07 · Publish confirmation & share kit\n\nEvery 10 min. There are two publish paths and only one sends mail today:\n\n- **paid** — the webhook settles, publishes and sends a receipt. These hosts already heard from us, so they get the sharing tools only. A second confirmation would read as a double charge.\n- **free** — `src/app/onboarding/actions.ts` publishes inline; the webhook never runs, so these hosts currently receive **nothing**. They get the full confirmation.\n\nThe free plan is watermarked and emits no `og:image` by design, so the free copy does not promise a rich WhatsApp preview it will not deliver.\n\n**Third-party dependency:** the QR image comes from `api.qrserver.com`. To drop it, delete the `qr` line in the render node.\n\nQuery: `n8n/sql/07-recent-publishes.sql`",
+        "height": 260,
+        "width": 420,
+        "color": 4
+      },
+      "id": "sticky0115",
+      "name": "About this workflow",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -620,
+        -200
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 10
+            }
+          ]
+        }
+      },
+      "id": "n0103",
+      "name": "Every 10 minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -260,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "-- Workflow 07 — publish confirmation and share kit. Runs every 10 minutes.\n--\n-- There are two publish paths in this codebase and only one of them sends mail:\n--\n--   paid  src/app/api/payments/webhook/route.ts settles the order, publishes,\n--         and calls sendConfirmation() — a receipt. These hosts already heard\n--         from us, so `variant = 'share_kit'` sends the sharing tools only.\n--         Sending a second confirmation would look like a double charge.\n--\n--   free  src/app/onboarding/actions.ts:317-326 publishes inline. The webhook\n--         never runs, so today these hosts receive nothing at all. They get\n--         `variant = 'confirmation'` — the full message.\n--\n-- The entitlement note matters for the copy: on the free plan the invitation is\n-- watermarked and emits no og:image by design (src/lib/entitlements.ts), so the\n-- free email must not promise a rich WhatsApp preview it will not deliver. It\n-- points at the upgrade instead.\n\nselect\n  e.id::text     as event_id,\n  e.slug,\n  e.title,\n  e.plan_code,\n  e.theme_id,\n  e.event_type::text as event_type,\n  e.city,\n  p.email        as owner_email,\n  coalesce(nullif(trim(p.full_name), ''), 'there') as owner_name,\n  to_char(e.main_datetime at time zone 'Asia/Kolkata', 'DD Mon YYYY')      as event_date,\n  to_char(e.main_datetime at time zone 'Asia/Kolkata', 'Day, DD Month YYYY') as event_date_long,\n  e.plan_code = 'free' as is_watermarked,\n  case when paid.id is not null then 'share_kit' else 'confirmation' end as variant,\n  paid.amount_inr,\n  paid.plan_name,\n  (select count(*) from guests g where g.event_id = e.id) as guests_added,\n  'published:' || e.id::text as dedupe_key\nfrom events e\njoin profiles p on p.id = e.owner_id\nleft join lateral (\n  select o.id, o.amount_inr, pl.name as plan_name\n  from orders o\n  join plans pl on pl.code = o.plan_code\n  where o.event_id = e.id and o.status = 'paid'\n  order by o.paid_at desc\n  limit 1\n) paid on true\nwhere e.status = 'published'\n  and e.published_at > now() - interval '24 hours'\n  and p.email is not null\n  and not exists (\n    select 1 from automation.notifications n\n    where n.dedupe_key = 'published:' || e.id::text\n  )\norder by e.published_at asc\nlimit 50;",
+        "options": {}
+      },
+      "id": "n0104",
+      "name": "Find recent publishes",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        -40,
+        0
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "amantrika-postgres",
+          "name": "Amantrika Supabase (Postgres)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// ---- shared chrome -------------------------------------------------------\n// Inline styles only: Gmail strips <style> blocks. Coral #e35d5d is the brand\n// accent from project-overview.md §25.2.\nconst brand = '#e35d5d';\nconst site = ($env.AMANTRIKA_SITE_URL || 'https://amantrika.com').replace(/\\/+$/, '');\nconst esc = (s) => String(s ?? '').replace(/[&<>\"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;' }[c]));\nconst inr = (n) => '₹' + Number(n || 0).toLocaleString('en-IN');\nconst stat = (label, value) => `<div style=\"display:inline-block;min-width:118px;margin:0 14px 14px 0;\"><div style=\"font-size:26px;font-weight:600;color:#1f1a19;line-height:1.1;\">${value}</div><div style=\"font-size:12px;color:#8a7d7a;text-transform:uppercase;letter-spacing:.06em;margin-top:3px;\">${label}</div></div>`;\nconst shell = (heading, bodyHtml, ctaLabel, ctaHref, footNote) => `\n<div style=\"margin:0;padding:24px 12px;background:#faf7f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;\">\n  <div style=\"max-width:560px;margin:0 auto;background:#ffffff;border-radius:14px;padding:32px 28px;border:1px solid #f0e6e2;\">\n    <div style=\"font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:${brand};font-weight:600;\">Amantrika</div>\n    <h1 style=\"margin:14px 0 18px;font-size:22px;line-height:1.32;color:#1f1a19;font-weight:600;\">${heading}</h1>\n    <div style=\"font-size:15px;line-height:1.65;color:#453c3a;\">${bodyHtml}</div>\n    ${ctaHref ? `<div style=\"margin:26px 0 6px;\"><a href=\"${ctaHref}\" style=\"display:inline-block;background:${brand};color:#ffffff;text-decoration:none;padding:13px 26px;border-radius:9px;font-weight:600;font-size:15px;\">${ctaLabel}</a></div>` : ''}\n    ${footNote ? `<p style=\"margin:24px 0 0;font-size:13px;line-height:1.6;color:#8a7d7a;\">${footNote}</p>` : ''}\n  </div>\n  <div style=\"max-width:560px;margin:16px auto 0;text-align:center;font-size:12px;color:#a29793;\">\n    Amantrika · digital invitations for Indian celebrations<br/>\n    <a href=\"${site}\" style=\"color:#a29793;\">${site.replace(/^https?:\\/\\//, '')}</a>\n  </div>\n</div>`;\n// No /unsubscribe route exists in the app yet, so RFC 8058's mailto form is\n// used. See \"Follow-ups\" in n8n/README.md.\nconst unsub = (scope) => 'mailto:' + ($env.AMANTRIKA_UNSUBSCRIBE_MAILBOX || 'unsubscribe@amantrika.com')\n  + '?subject=' + encodeURIComponent('unsubscribe ' + scope);\nconst d = $json;\n\nconst url  = site + '/invite/' + encodeURIComponent(d.slug);\nconst dash = site + '/dashboard/' + encodeURIComponent(d.event_id);\n\n// Pre-filled WhatsApp deep link. NOT the WhatsApp API — project-overview.md §18\n// permits batched deep links and forbids unofficial automation. This just opens\n// the host's own WhatsApp with the message ready.\nconst waText = `${d.title}\\n${d.event_date_long ? d.event_date_long.replace(/\\s+/g, ' ').trim() : ''}\\n\\n${url}`;\nconst waLink = 'https://wa.me/?text=' + encodeURIComponent(waText);\nconst qr = 'https://api.qrserver.com/v1/create-qr-code/?size=240x240&margin=8&data=' + encodeURIComponent(url);\nconst shareKit = `\n  <div style=\"background:#faf7f5;border-radius:12px;padding:20px;margin:0 0 18px;text-align:center;\">\n    <div style=\"font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:14px;color:#1f1a19;word-break:break-all;margin:0 0 14px;\">${esc(url)}</div>\n    <a href=\"${waLink}\" style=\"display:inline-block;background:#25d366;color:#ffffff;text-decoration:none;padding:11px 22px;border-radius:8px;font-weight:600;font-size:14px;\">Share on WhatsApp</a>\n  </div>\n  <div style=\"text-align:center;margin:0 0 18px;\">\n    <img src=\"${qr}\" width=\"150\" height=\"150\" alt=\"QR code linking to ${esc(d.title)}\" style=\"border-radius:10px;border:1px solid #f0e6e2;\" />\n    <div style=\"font-size:12px;color:#8a7d7a;margin-top:7px;\">Print this on a card. It opens the invitation.</div>\n  </div>`;\n\nlet heading, bodyHtml, subject, footNote;\n\nif (d.variant === 'confirmation') {\n  heading = 'Your invitation is live';\n  subject = 'Your invitation is live \\u2014 ' + d.title;\n  bodyHtml = `\n    <p style=\"margin:0 0 18px;\">Hi ${esc(d.owner_name)}, <strong>${esc(d.title)}</strong> is published. One link, and it works on every phone.</p>\n    ${shareKit}\n    ${d.is_watermarked ? `<div style=\"background:#fff5f3;border-left:3px solid ${brand};padding:12px 16px;border-radius:6px;margin:0 0 4px;\">\n        <strong>You are on the free plan.</strong> Your invitation carries an Amantrika mark, and links shared to WhatsApp show as plain text rather than a rich preview card. Upgrading removes both.\n      </div>` : ''}`;\n  footNote = d.is_watermarked\n    ? `See what each plan includes at <a href=\"${site}/pricing\" style=\"color:${brand};\">${site.replace(/^https?:\\/\\//, '')}/pricing</a>.`\n    : null;\n} else {\n  heading = 'Everything you need to share it';\n  subject = 'Share ' + d.title;\n  bodyHtml = `\n    <p style=\"margin:0 0 18px;\">Hi ${esc(d.owner_name)}, your receipt is already in your inbox. This one is the sharing kit for <strong>${esc(d.title)}</strong>.</p>\n    ${shareKit}\n    <p style=\"margin:0;\">${Number(d.guests_added) > 0\n      ? 'You have <strong>' + d.guests_added + '</strong> guests on your list. Personalised links \\u2014 one per guest, so their RSVP is pre-filled \\u2014 are on your dashboard.'\n      : 'Add your guest list on the dashboard to get personalised links, one per guest, so their RSVP arrives pre-filled.'}</p>`;\n  footNote = null;\n}\n\nreturn { json: {\n  dedupe_key: d.dedupe_key,\n  to: d.owner_email,\n  stored: {\n    event_id: d.event_id, slug: d.slug, title: d.title, plan_code: d.plan_code,\n    variant: d.variant, is_watermarked: d.is_watermarked, url,\n    dedupe_key: d.dedupe_key,\n    subject,\n    html: shell(heading, bodyHtml, 'Open your dashboard', dash, footNote),\n    text: heading + '\\n\\n' + d.title + '\\n' + url + '\\n\\nDashboard: ' + dash,\n  },\n} };"
+      },
+      "id": "n0105",
+      "name": "Render email",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        180,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "-- Claim before sending. Source of truth: n8n/sql/00-ledger-helpers.sql\nwith claimed as (\n  insert into automation.notifications\n    (workflow, kind, subject_type, subject_id, dedupe_key, channel, recipient_hash, payload)\n  values\n    ($1, $2, $3, nullif($4, '')::uuid, $5, $6, automation.hash_email(nullif($9, '')), $8::jsonb)\n  on conflict (dedupe_key) do nothing\n  returning id\n)\nselect\n  (select id from claimed)           as ledger_id,\n  (select count(*) from claimed) > 0 as did_claim,\n  $8::jsonb                          as payload,\n  -- Returned so the send node has an address. Deliberately not a column.\n  nullif($9, '')                     as recipient,\n  $7                                 as dedupe_key;",
+        "options": {
+          "queryReplacement": "={{ [ '07-host-publish-confirmation', $json.stored.variant, 'event', $json.stored.event_id, $json.dedupe_key, 'email', $json.dedupe_key, JSON.stringify($json.stored), $json.to ] }}"
+        }
+      },
+      "id": "n0106",
+      "name": "Claim in ledger",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        400,
+        0
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "amantrika-postgres",
+          "name": "Amantrika Supabase (Postgres)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c0107",
+              "leftValue": "={{ $json.did_claim }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "n0108",
+      "name": "New only",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        620,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c0109",
+              "leftValue": "={{ $env.AMANTRIKA_DRY_RUN }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "n0110",
+      "name": "Dry run?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        840,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "update automation.notifications\nset status = 'skipped', payload = payload || $2::jsonb\nwhere id = $1::uuid\nreturning id, status;",
+        "options": {
+          "queryReplacement": "={{ [ $json.ledger_id, JSON.stringify({ dry_run: true }) ] }}"
+        }
+      },
+      "id": "n0111",
+      "name": "Mark skipped (dry run)",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        1080,
+        -140
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "amantrika-postgres",
+          "name": "Amantrika Supabase (Postgres)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.resend.com/emails",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameter": [
+            {
+              "name": "Idempotency-Key",
+              "value": "={{ $json.dedupe_key }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  from: $env.AMANTRIKA_EMAIL_FROM,\n  to: [ $json.recipient ],\n  subject: $json.payload.subject,\n  html: $json.payload.html,\n  text: $json.payload.text,\n  headers: $json.payload.unsubscribe\n    ? { 'List-Unsubscribe': '<' + $json.payload.unsubscribe + '>',\n        'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click' }\n    : {}\n}) }}",
+        "options": {}
+      },
+      "id": "n0112",
+      "name": "Send via Resend",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1080,
+        100
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "amantrika-resend",
+          "name": "Resend API"
+        }
+      },
+      "onError": "continueErrorOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "update automation.notifications\nset status = 'sent', sent_at = now(), payload = payload || $2::jsonb\nwhere id = $1::uuid\nreturning id, status;",
+        "options": {
+          "queryReplacement": "={{ [ $('Claim in ledger').item.json.ledger_id, JSON.stringify({ delivered_at: $now.toISO(), channel: $json.channel || 'email' }) ] }}"
+        }
+      },
+      "id": "n0113",
+      "name": "Mark sent",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        1320,
+        20
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "amantrika-postgres",
+          "name": "Amantrika Supabase (Postgres)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "-- Left as 'failed', not deleted: the item is not retried on the next\n-- schedule. A failed nudge is not worth a retry storm. Delete the row by hand\n-- to force a resend. n8n/sql/00-ledger-helpers.sql has the runbook query.\nupdate automation.notifications\nset status = 'failed', error = left($2, 2000)\nwhere id = $1::uuid\nreturning id, status;",
+        "options": {
+          "queryReplacement": "={{ [ $('Claim in ledger').item.json.ledger_id, JSON.stringify($json.error ?? $json).slice(0, 1900) ] }}"
+        }
+      },
+      "id": "n0114",
+      "name": "Mark failed",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        1320,
+        220
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "amantrika-postgres",
+          "name": "Amantrika Supabase (Postgres)"
+        }
+      },
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "connections": {
+    "Every 10 minutes": {
+      "main": [
+        [
+          {
+            "node": "Find recent publishes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find recent publishes": {
+      "main": [
+        [
+          {
+            "node": "Render email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Render email": {
+      "main": [
+        [
+          {
+            "node": "Claim in ledger",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claim in ledger": {
+      "main": [
+        [
+          {
+            "node": "New only",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "New only": {
+      "main": [
+        [
+          {
+            "node": "Dry run?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Dry run?": {
+      "main": [
+        [
+          {
+            "node": "Mark skipped (dry run)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send via Resend",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send via Resend": {
+      "main": [
+        [
+          {
+            "node": "Mark sent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Mark failed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "timezone": "Asia/Kolkata"
+  },
+  "pinData": {},
+  "versionId": "1",
+  "meta": {
+    "instanceId": "amantrika"
+  },
+  "tags": [
+    {
+      "name": "amantrika"
+    },
+    {
+      "name": "host"
+    },
+    {
+      "name": "lifecycle"
+    }
+  ]
+}

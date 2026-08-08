@@ -1,0 +1,458 @@
+{
+  "name": "Amantrika · 02 Owner — daily digest",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## 02 · Daily digest\n\n03:30 UTC = 09:00 IST. One message: what happened yesterday, what is standing, and what needs a decision from you.\n\n**Does not call `admin_overview()`.** That RPC is `security invoker` and gates on `is_admin()`, which reads `auth.uid()`. Over a direct Postgres connection that is null, so it returns zeros rather than erroring — a silently wrong digest every morning.\n\nQuery: `n8n/sql/02-daily-digest.sql`",
+        "height": 260,
+        "width": 420,
+        "color": 4
+      },
+      "id": "sticky0030",
+      "name": "About this workflow",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -620,
+        -200
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 24,
+              "triggerAtHour": 3,
+              "triggerAtMinute": 30
+            }
+          ]
+        }
+      },
+      "id": "n0016",
+      "name": "03:30 UTC (09:00 IST)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -260,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "-- Workflow 02 — daily owner digest. Runs 03:30 UTC = 09:00 IST.\n--\n-- IMPORTANT: this deliberately does NOT call admin_overview() or\n-- admin_daily_series(). Those are `security invoker` and gate internally on\n-- is_admin(), which reads auth.uid(). Over a direct Postgres connection\n-- auth.uid() is null, so both functions return zeros rather than raising —\n-- a silently wrong digest every morning. Plain SQL is the only safe option\n-- from n8n.\n--\n-- One row, one object, so the workflow has nothing to assemble.\n\nwith window_bounds as (\n  select now() - interval '24 hours' as d1,\n         now() - interval '7 days'   as d7,\n         now() - interval '30 days'  as d30\n)\nselect\n  to_char(now() at time zone 'Asia/Kolkata', 'Dy DD Mon YYYY')       as report_date,\n  to_char((now() at time zone 'Asia/Kolkata')::date, 'YYYY-MM-DD')   as dedupe_date,\n\n  -- acquisition\n  (select count(*) from profiles, window_bounds where created_at > d1)  as signups_24h,\n  (select count(*) from profiles, window_bounds where created_at > d7)  as signups_7d,\n\n  -- build funnel\n  (select count(*) from events, window_bounds where created_at > d1)    as invites_created_24h,\n  (select count(*) from events where status = 'draft')                  as drafts_open,\n  (select count(*) from events, window_bounds\n     where status = 'published' and published_at > d1)                  as published_24h,\n  (select count(*) from events where status = 'published')              as published_total,\n\n  -- money\n  (select coalesce(sum(amount_inr), 0) from orders, window_bounds\n     where status = 'paid' and paid_at > d1)                            as revenue_24h,\n  (select coalesce(sum(amount_inr), 0) from orders, window_bounds\n     where status = 'paid' and paid_at > d30)                           as revenue_30d,\n  (select coalesce(sum(amount_inr), 0) from orders where status = 'paid') as revenue_all,\n  (select count(*) from orders, window_bounds\n     where status = 'paid' and paid_at > d1)                            as orders_paid_24h,\n  (select coalesce(sum(amount_inr), 0) from commissions\n     where status in ('accrued', 'payable'))                            as commission_owed,\n\n  -- things that need a decision from you\n  (select count(*) from agents where status = 'pending')                as partners_pending,\n  (select count(*) from orders, window_bounds\n     where status = 'pending' and created_at < now() - interval '30 minutes'\n       and created_at > d7)                                             as orders_stuck,\n  (select count(*) from orders, window_bounds\n     where status = 'failed' and created_at > d1)                       as orders_failed_24h,\n  (select count(*) from blessings b join events e on e.id = b.event_id\n     where b.is_approved = false\n       and coalesce((e.settings ->> 'moderateBlessings')::boolean, false))\n                                                                        as blessings_awaiting,\n\n  -- guest side\n  (select count(*) from page_views, window_bounds where occurred_at > d1) as views_24h,\n  (select count(distinct visitor_hash) from page_views, window_bounds\n     where occurred_at > d1)                                            as unique_visitors_24h,\n  (select count(*) from rsvps, window_bounds where created_at > d1)      as rsvps_24h,\n\n  -- top five invitations by yesterday's traffic, as a ready-to-render array\n  (select coalesce(jsonb_agg(t order by t.views desc), '[]'::jsonb)\n     from (\n       select e.slug, e.title, count(*) as views\n       from page_views pv\n       join events e on e.id = pv.event_id, window_bounds\n       where pv.occurred_at > d1\n       group by e.slug, e.title\n       order by views desc\n       limit 5\n     ) t)                                                               as top_invites;",
+        "options": {}
+      },
+      "id": "n0017",
+      "name": "Gather yesterday's numbers",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        -40,
+        0
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "amantrika-postgres",
+          "name": "Amantrika Supabase (Postgres)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// ---- shared chrome -------------------------------------------------------\n// Inline styles only: Gmail strips <style> blocks. Coral #e35d5d is the brand\n// accent from project-overview.md §25.2.\nconst brand = '#e35d5d';\nconst site = ($env.AMANTRIKA_SITE_URL || 'https://amantrika.com').replace(/\\/+$/, '');\nconst esc = (s) => String(s ?? '').replace(/[&<>\"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;' }[c]));\nconst inr = (n) => '₹' + Number(n || 0).toLocaleString('en-IN');\nconst stat = (label, value) => `<div style=\"display:inline-block;min-width:118px;margin:0 14px 14px 0;\"><div style=\"font-size:26px;font-weight:600;color:#1f1a19;line-height:1.1;\">${value}</div><div style=\"font-size:12px;color:#8a7d7a;text-transform:uppercase;letter-spacing:.06em;margin-top:3px;\">${label}</div></div>`;\nconst shell = (heading, bodyHtml, ctaLabel, ctaHref, footNote) => `\n<div style=\"margin:0;padding:24px 12px;background:#faf7f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;\">\n  <div style=\"max-width:560px;margin:0 auto;background:#ffffff;border-radius:14px;padding:32px 28px;border:1px solid #f0e6e2;\">\n    <div style=\"font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:${brand};font-weight:600;\">Amantrika</div>\n    <h1 style=\"margin:14px 0 18px;font-size:22px;line-height:1.32;color:#1f1a19;font-weight:600;\">${heading}</h1>\n    <div style=\"font-size:15px;line-height:1.65;color:#453c3a;\">${bodyHtml}</div>\n    ${ctaHref ? `<div style=\"margin:26px 0 6px;\"><a href=\"${ctaHref}\" style=\"display:inline-block;background:${brand};color:#ffffff;text-decoration:none;padding:13px 26px;border-radius:9px;font-weight:600;font-size:15px;\">${ctaLabel}</a></div>` : ''}\n    ${footNote ? `<p style=\"margin:24px 0 0;font-size:13px;line-height:1.6;color:#8a7d7a;\">${footNote}</p>` : ''}\n  </div>\n  <div style=\"max-width:560px;margin:16px auto 0;text-align:center;font-size:12px;color:#a29793;\">\n    Amantrika · digital invitations for Indian celebrations<br/>\n    <a href=\"${site}\" style=\"color:#a29793;\">${site.replace(/^https?:\\/\\//, '')}</a>\n  </div>\n</div>`;\n// No /unsubscribe route exists in the app yet, so RFC 8058's mailto form is\n// used. See \"Follow-ups\" in n8n/README.md.\nconst unsub = (scope) => 'mailto:' + ($env.AMANTRIKA_UNSUBSCRIBE_MAILBOX || 'unsubscribe@amantrika.com')\n  + '?subject=' + encodeURIComponent('unsubscribe ' + scope);\nconst d = $json;\n\nconst dedupe_key = 'digest:' + d.dedupe_date;\n\n// Work before numbers: a dashboard that only reports is a dashboard you stop\n// opening. Everything in this list is a decision waiting on you.\nconst todo = [];\nif (Number(d.partners_pending)   > 0) todo.push(d.partners_pending + ' partner application(s) waiting');\nif (Number(d.orders_stuck)       > 0) todo.push(d.orders_stuck + ' order(s) stuck pending');\nif (Number(d.orders_failed_24h)  > 0) todo.push(d.orders_failed_24h + ' payment(s) failed yesterday');\nif (Number(d.blessings_awaiting) > 0) todo.push(d.blessings_awaiting + ' blessing(s) awaiting moderation');\n\nconst top = (d.top_invites || []).map((t) =>\n  '<li><a href=\"' + site + '/invite/' + esc(t.slug) + '\" style=\"color:' + brand + ';\">'\n  + esc(t.title) + '</a> \\u2014 ' + t.views + ' views</li>').join('');\n\nconst bodyHtml = `\n  ${todo.length\n    ? `<div style=\"background:#fff5f3;border-left:3px solid ${brand};padding:12px 16px;border-radius:6px;margin:0 0 22px;\">\n        <div style=\"font-weight:600;color:#1f1a19;margin-bottom:6px;\">Needs you</div>\n        <ul style=\"margin:0;padding-left:18px;\">${todo.map((t) => '<li>' + esc(t) + '</li>').join('')}</ul>\n       </div>`\n    : '<p style=\"margin:0 0 20px;color:#6b615e;\">Nothing needs a decision from you today.</p>'}\n\n  <div style=\"margin:0 0 8px;font-weight:600;color:#1f1a19;\">Yesterday</div>\n  <div style=\"margin:0 0 22px;\">\n    ${stat('Revenue', inr(d.revenue_24h))}${stat('Signups', d.signups_24h)}${stat('Published', d.published_24h)}\n    ${stat('New invites', d.invites_created_24h)}${stat('Views', d.views_24h)}${stat('RSVPs', d.rsvps_24h)}\n  </div>\n\n  <div style=\"margin:0 0 8px;font-weight:600;color:#1f1a19;\">Standing</div>\n  <div style=\"margin:0 0 22px;\">\n    ${stat('Revenue 30d', inr(d.revenue_30d))}${stat('All time', inr(d.revenue_all))}\n    ${stat('Commission owed', inr(d.commission_owed))}${stat('Drafts open', d.drafts_open)}\n    ${stat('Published total', d.published_total)}${stat('Signups 7d', d.signups_7d)}\n  </div>\n\n  ${top ? '<div style=\"margin:0 0 8px;font-weight:600;color:#1f1a19;\">Most viewed yesterday</div><ol style=\"margin:0;padding-left:20px;\">' + top + '</ol>' : ''}`;\n\nconst summary = 'revenue ' + inr(d.revenue_24h) + ', ' + d.signups_24h + ' signups, '\n  + d.published_24h + ' published, ' + d.views_24h + ' views';\n\nreturn { json: {\n  dedupe_key,\n  to: '',\n  stored: {\n    report_date: d.report_date,\n    dedupe_key,\n    revenue_24h: d.revenue_24h,\n    signups_24h: d.signups_24h,\n    published_24h: d.published_24h,\n    todo,\n    subject: 'Amantrika daily \\u2014 ' + inr(d.revenue_24h) + ', ' + d.signups_24h + ' signups, ' + d.published_24h + ' published',\n    whatsapp: 'Daily ' + d.report_date + ': ' + summary + '.'\n      + (todo.length ? ' Needs you: ' + todo.join('; ') + '.' : '') + ' ' + site + '/admin',\n    html: shell('Daily digest \\u00b7 ' + d.report_date, bodyHtml, 'Open admin', site + '/admin', null),\n    text: 'Amantrika daily \\u2014 ' + d.report_date + '\\n' + summary + '\\n' + todo.join('\\n') + '\\n' + site + '/admin',\n  },\n} };"
+      },
+      "id": "n0018",
+      "name": "Render alert",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        180,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "-- Claim before sending. Source of truth: n8n/sql/00-ledger-helpers.sql\nwith claimed as (\n  insert into automation.notifications\n    (workflow, kind, subject_type, subject_id, dedupe_key, channel, recipient_hash, payload)\n  values\n    ($1, $2, $3, nullif($4, '')::uuid, $5, $6, automation.hash_email(nullif($9, '')), $8::jsonb)\n  on conflict (dedupe_key) do nothing\n  returning id\n)\nselect\n  (select id from claimed)           as ledger_id,\n  (select count(*) from claimed) > 0 as did_claim,\n  $8::jsonb                          as payload,\n  -- Returned so the send node has an address. Deliberately not a column.\n  nullif($9, '')                     as recipient,\n  $7                                 as dedupe_key;",
+        "options": {
+          "queryReplacement": "={{ [ '02-owner-daily-digest', 'digest', 'system', '', $json.dedupe_key, 'whatsapp', $json.dedupe_key, JSON.stringify($json.stored), '' ] }}"
+        }
+      },
+      "id": "n0019",
+      "name": "Claim in ledger",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        400,
+        0
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "amantrika-postgres",
+          "name": "Amantrika Supabase (Postgres)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c0020",
+              "leftValue": "={{ $json.did_claim }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "n0021",
+      "name": "New only",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        620,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c0022",
+              "leftValue": "={{ $env.AMANTRIKA_DRY_RUN }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "n0023",
+      "name": "Dry run?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        840,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "update automation.notifications\nset status = 'skipped', payload = payload || $2::jsonb\nwhere id = $1::uuid\nreturning id, status;",
+        "options": {
+          "queryReplacement": "={{ [ $json.ledger_id, JSON.stringify({ dry_run: true }) ] }}"
+        }
+      },
+      "id": "n0024",
+      "name": "Mark skipped (dry run)",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        1080,
+        -140
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "amantrika-postgres",
+          "name": "Amantrika Supabase (Postgres)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v21.0/{{ $env.AMANTRIKA_WA_PHONE_NUMBER_ID }}/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": false,
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  messaging_product: 'whatsapp',\n  to: $env.AMANTRIKA_OWNER_WHATSAPP,\n  type: 'template',\n  template: {\n    name: $env.AMANTRIKA_WA_TEMPLATE || 'amantrika_ops_alert',\n    language: { code: 'en' },\n    components: [ { type: 'body', parameters: [ { type: 'text', text: $json.payload.whatsapp } ] } ]\n  }\n}) }}",
+        "options": {}
+      },
+      "id": "n0025",
+      "name": "Alert owner on WhatsApp",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1080,
+        100
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "amantrika-whatsapp",
+          "name": "Meta WhatsApp Cloud"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "update automation.notifications\nset status = 'sent', sent_at = now(), payload = payload || $2::jsonb\nwhere id = $1::uuid\nreturning id, status;",
+        "options": {
+          "queryReplacement": "={{ [ $('Claim in ledger').item.json.ledger_id, JSON.stringify({ delivered_at: $now.toISO(), channel: $json.channel || 'email' }) ] }}"
+        }
+      },
+      "id": "n0026",
+      "name": "Mark sent",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        1320,
+        20
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "amantrika-postgres",
+          "name": "Amantrika Supabase (Postgres)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.resend.com/emails",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameter": [
+            {
+              "name": "Idempotency-Key",
+              "value": "={{ $('Claim in ledger').item.json.dedupe_key }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  from: $env.AMANTRIKA_EMAIL_FROM,\n  to: [ $env.AMANTRIKA_OWNER_EMAIL ],\n  subject: $('Claim in ledger').item.json.payload.subject,\n  html: $('Claim in ledger').item.json.payload.html,\n  text: $('Claim in ledger').item.json.payload.text\n}) }}",
+        "options": {}
+      },
+      "id": "n0027",
+      "name": "Fall back to email",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1080,
+        300
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "amantrika-resend",
+          "name": "Resend API"
+        }
+      },
+      "onError": "continueErrorOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "update automation.notifications\nset status = 'sent', sent_at = now(), payload = payload || $2::jsonb\nwhere id = $1::uuid\nreturning id, status;",
+        "options": {
+          "queryReplacement": "={{ [ $('Claim in ledger').item.json.ledger_id, JSON.stringify({ delivered_at: $now.toISO(), channel: $json.channel || 'email' }) ] }}"
+        }
+      },
+      "id": "n0028",
+      "name": "Mark sent (email fallback)",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        1320,
+        240
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "amantrika-postgres",
+          "name": "Amantrika Supabase (Postgres)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "-- Left as 'failed', not deleted: the item is not retried on the next\n-- schedule. A failed nudge is not worth a retry storm. Delete the row by hand\n-- to force a resend. n8n/sql/00-ledger-helpers.sql has the runbook query.\nupdate automation.notifications\nset status = 'failed', error = left($2, 2000)\nwhere id = $1::uuid\nreturning id, status;",
+        "options": {
+          "queryReplacement": "={{ [ $('Claim in ledger').item.json.ledger_id, JSON.stringify($json.error ?? $json).slice(0, 1900) ] }}"
+        }
+      },
+      "id": "n0029",
+      "name": "Mark failed (both channels)",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        1320,
+        440
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "amantrika-postgres",
+          "name": "Amantrika Supabase (Postgres)"
+        }
+      },
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "connections": {
+    "03:30 UTC (09:00 IST)": {
+      "main": [
+        [
+          {
+            "node": "Gather yesterday's numbers",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gather yesterday's numbers": {
+      "main": [
+        [
+          {
+            "node": "Render alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Render alert": {
+      "main": [
+        [
+          {
+            "node": "Claim in ledger",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claim in ledger": {
+      "main": [
+        [
+          {
+            "node": "New only",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "New only": {
+      "main": [
+        [
+          {
+            "node": "Dry run?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Dry run?": {
+      "main": [
+        [
+          {
+            "node": "Mark skipped (dry run)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Alert owner on WhatsApp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Alert owner on WhatsApp": {
+      "main": [
+        [
+          {
+            "node": "Mark sent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Fall back to email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fall back to email": {
+      "main": [
+        [
+          {
+            "node": "Mark sent (email fallback)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Mark failed (both channels)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "timezone": "Asia/Kolkata"
+  },
+  "pinData": {},
+  "versionId": "1",
+  "meta": {
+    "instanceId": "amantrika"
+  },
+  "tags": [
+    {
+      "name": "amantrika"
+    },
+    {
+      "name": "owner"
+    }
+  ]
+}
