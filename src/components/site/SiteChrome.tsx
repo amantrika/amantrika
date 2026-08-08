@@ -59,8 +59,12 @@ const footerColumns = [
 
 export function SiteFooter() {
   return (
-    <footer className="mt-24 border-t border-ornate/30 bg-surface">
-      <div className="mx-auto max-w-6xl px-4 py-14">
+    <footer className="relative mt-24 overflow-hidden border-t border-ornate/30 bg-surface text-accent">
+      {/* The torana lattice from the mark, as a mask tinted by `text-accent`
+          above. Pure CSS — a marketing page should not ship JavaScript to draw
+          a background. See `.site-pattern` in globals.css. */}
+      <span aria-hidden className="site-pattern" />
+      <div className="relative mx-auto max-w-6xl px-4 py-14 text-foreground">
         <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-5">
           <div className="lg:col-span-1">
             <Link href="/" aria-label="Amantrika — home" className="inline-flex items-center gap-2.5 text-primary">

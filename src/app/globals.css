@@ -696,6 +696,65 @@ body {
 }
 .type-inherit-prose > p + p { margin-top: 0.5em; }
 
+/* ============ SITE BACKGROUND ============ */
+
+/*
+  The site's own background texture — the torana lattice from the mark.
+
+  A mask rather than a background-image, which is the whole reason this is
+  usable everywhere: the SVG supplies the *shape* and `currentColor` supplies
+  the colour, so one file serves every theme and both light and dark. A data-URI
+  background-image would have to bake in a hex and would need a second copy the
+  moment anything was tinted differently.
+
+  Costs no JavaScript, which is why it exists alongside `PatternBackground`
+  rather than replacing it: that component uses `useId` and is therefore a
+  Client Component, correct inside a themed invitation and wrong on a marketing
+  page that should ship none.
+
+  Usage — the parent needs `position: relative`, and the tile inherits its
+  colour, so tint with a text utility:
+
+      <section class="relative text-accent">
+        <span aria-hidden class="site-pattern"></span>
+        …content…
+      </section>
+*/
+.site-pattern {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-color: currentColor;
+  opacity: 0.05;
+  -webkit-mask-image: url("/brand/amantrika-lattice.svg");
+  mask-image: url("/brand/amantrika-lattice.svg");
+  -webkit-mask-size: 80px 80px;
+  mask-size: 80px 80px;
+  -webkit-mask-repeat: repeat;
+  mask-repeat: repeat;
+}
+
+/* Denser and fainter, for large empty grounds like a page header. */
+.site-pattern[data-scale="lg"] {
+  -webkit-mask-size: 128px 128px;
+  mask-size: 128px 128px;
+  opacity: 0.04;
+}
+
+/* Fades out downward so a patterned band can meet plain content without a seam. */
+.site-pattern[data-fade="bottom"] {
+  -webkit-mask-composite: source-in;
+  mask-composite: intersect;
+  -webkit-mask-image: url("/brand/amantrika-lattice.svg"),
+    linear-gradient(to bottom, #000 40%, transparent);
+  mask-image: url("/brand/amantrika-lattice.svg"),
+    linear-gradient(to bottom, #000 40%, transparent);
+  -webkit-mask-repeat: repeat, no-repeat;
+  mask-repeat: repeat, no-repeat;
+  -webkit-mask-size: 80px 80px, 100% 100%;
+  mask-size: 80px 80px, 100% 100%;
+}
+
 /* ============ ORNAMENT UTILITIES ============ */
 
 /* Double-line gold gradient border — the signature "ornate-border" token */

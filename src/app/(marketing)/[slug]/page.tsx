@@ -64,10 +64,22 @@ export default async function ContentPageRoute({ params }: Params) {
         ]}
       />
 
-      <div className={`mx-auto py-14 ${wide ? "w-full max-w-[90rem] px-0" : "max-w-6xl px-4"}`}>
+      <div
+        className={`relative mx-auto py-14 ${wide ? "w-full max-w-[90rem] px-0" : "max-w-6xl px-4"}`}
+      >
+        {/* Texture behind the title only, faded out before the prose starts —
+            a lattice running under body text is a readability problem. Tinted
+            by `text-accent` on the span itself so the surrounding column keeps
+            its own colour. */}
+        <span
+          aria-hidden
+          data-scale="lg"
+          data-fade="bottom"
+          className="site-pattern h-72 text-accent"
+        />
         {/* A wide page opens centred and framed, because it has no contents
             rail to anchor the eye — the header has to do that job itself. */}
-        <header className={wide ? "mx-auto max-w-3xl px-4 text-center" : "max-w-3xl"}>
+        <header className={`relative ${wide ? "mx-auto max-w-3xl px-4 text-center" : "max-w-3xl"}`}>
           <h1 className="type-display-lg text-primary">{fm.title}</h1>
           <p className="mt-4 type-body-lg text-muted">{fm.description}</p>
           {wide && <hr aria-hidden className="dhaga-rule mx-auto mt-8 w-40" />}
