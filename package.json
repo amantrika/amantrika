@@ -13,7 +13,9 @@
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:live": "./scripts/test.sh live",
-    "test:report": "playwright show-report"
+    "test:report": "playwright show-report",
+    "aws:status": "./scripts/aws-status.sh",
+    "aws:smoke": "tsx --conditions=react-server scripts/aws-smoke.ts"
   },
   "dependencies": {
     "@aws-sdk/client-cognito-identity-provider": "^3.1106.0",
@@ -58,6 +60,7 @@
     "eslint": "^9",
     "eslint-config-next": "^15",
     "tailwindcss": "^4",
+    "tsx": "^4.23.11",
     "typescript": "^5",
     "vitest": "^4.1.10"
   }
