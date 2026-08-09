@@ -34,14 +34,44 @@ export function cloudinaryUrl(imagePath: string, width = 800): string | null {
   return `https://res.cloudinary.com/${cloudinaryCloud}${withTransform}`;
 }
 
+/**
+ * Where a live preview of a design is served.
+ *
+ * A constant rather than an environment variable, deliberately. It is a stable
+ * first-party domain, and the failure modes are not symmetrical: a wrong
+ * constant is visible the first time anyone opens a preview, while a variable
+ * missing from a deployment is silent — which is exactly how the gallery
+ * shipped with a placeholder on every card when
+ * `NEXT_PUBLIC_CLOUDINARY_CLOUD` was absent from Vercel. One fewer thing that
+ * has to be right in two places.
+ */
+const PREVIEW_ORIGIN = "https://invite.amantrika.com";
+
+/**
+ * The live preview URL for a design.
+ *
+ * `identifier` is `atheme.id` — the legacy catalogue's own identifier, kept
+ * verbatim in that column precisely so it can be handed back to the legacy
+ * preview without a mapping table. Encoded even though every current id is a
+ * plain slug, because the ids come from a database row and not from this file.
+ */
+export function previewSiteUrl(identifier: string): string {
+  return `${PREVIEW_ORIGIN}/preview?theme=${encodeURIComponent(identifier)}`;
+}
+
 /** A gallery card, resolved for rendering. */
 export interface AthemeCard {
   id: string;
   name: string;
   /** Null when Cloudinary is not configured for this deployment. */
   imageUrl: string | null;
-  /** Full-resolution variant, for the preview dialog. */
+  /** Full-resolution variant — the fallback if the live preview cannot load. */
   previewUrl: string | null;
+  /**
+   * The live, interactive invitation shown inside the phone frame. Resolved
+   * here with the image URLs so no component ever assembles one itself.
+   */
+  previewHref: string;
   /** The `themes(id)` an invitation gets when this card is chosen. */
   renderThemeId: string;
   /**
@@ -68,6 +98,7 @@ export function toAthemeCards(
     name: row.name,
     imageUrl: cloudinaryUrl(row.image_path, 800),
     previewUrl: cloudinaryUrl(row.image_path, 1600),
+    previewHref: previewSiteUrl(row.id),
     renderThemeId: row.render_theme_id,
     isPremium: premiumThemeIds.has(row.render_theme_id),
   }));

@@ -20,7 +20,7 @@ import {
   FamilyTree, EventCalendar, VideoFrame, VideoHero, DecorativeBorder,
   SectionHeader, ThemedCard, ThemedHero, OurStorySection, ThemedOpening,
   Navbar, Breadcrumbs, SideNav, Pager, LayoutSection, SectionTitle, ThemedHeroVariant,
-  Loader, LoadingBlock,
+  Loader, LoadingBlock, PhoneFrame,
 } from "./registry-helpers";
 import type { NavItem } from "@/design-system/components";
 import { AmantrikaBadge, AmantrikaLogo, AmantrikaMark, AmantrikaWordmark } from "@/design-system/brand";
@@ -146,6 +146,28 @@ export const componentDocs: ComponentDoc[] = [
     category: "Signature",
     description: "Ornate radio cards, guest stepper, per-event checkboxes, theme meals. Persists to localStorage.",
     demos: [{ title: "Default", node: <RSVPForm events={couple.events} mealOptions={["Veg", "Jain", "Non-veg"]} /> }],
+  },
+  {
+    slug: "phone-frame",
+    title: "PhoneFrame",
+    category: "Signature",
+    description:
+      "A handset drawn around whatever you put in it — used for the live theme previews. The screen width is load-bearing: an iframe inside takes it as its viewport, so 390px means the invitation lays out exactly as it would on a phone. Below `sm` the casing collapses, because drawing a phone around something already being read on a phone just costs the content pixels.",
+    demos: [
+      {
+        title: "Default",
+        note: "390×844 — the iPhone 14/15 logical viewport.",
+        node: (
+          <PhoneFrame height="420px">
+            <div className="flex size-full flex-col items-center justify-center gap-2 bg-surface p-6 text-center">
+              <p className="type-overline">Save the date</p>
+              <p className="type-h2 text-primary">Aarav &amp; Meera</p>
+              <p className="type-caption">Anything can go in here — a preview, an iframe, a screenshot.</p>
+            </div>
+          </PhoneFrame>
+        ),
+      },
+    ],
   },
   {
     slug: "photo-frame",

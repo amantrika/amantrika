@@ -571,6 +571,14 @@ export function OnboardingClient({
               <AthemeGallery
                 cards={athemes}
                 selectedRenderThemeId={draft.themeId}
+                onPreview={(card) =>
+                  capture(EVENTS.atheme_previewed, {
+                    atheme_id: card.id,
+                    theme_id: card.renderThemeId,
+                    is_premium: card.isPremium,
+                    source: "builder",
+                  })
+                }
                 selectLabel="Use this design"
                 onSelect={(card) => {
                   patch({ themeId: card.renderThemeId });

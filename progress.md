@@ -254,6 +254,12 @@ couple's — marketing, dashboard, admin, auth, onboarding, checkout.
   shown as photographs of finished invitations — three badged premium, two
   included — with Preview and Select on each card. Verified rendering with real
   data 9 Aug 2026.
+- **Preview opens the real invitation inside a phone.** Clicking Preview (or the
+  card image) opens a dialog with `PhoneFrame` around an iframe of
+  `invite.amantrika.com/preview?theme={atheme.id}` — the legacy identifier, kept
+  verbatim in that column precisely so it can be handed back. It is the running
+  invitation, not a picture: the wax seal opens, the countdown ticks. Falls back
+  to the Cloudinary photograph if the frame has not loaded in seven seconds.
 - **Two tables on purpose.** `themes` is the rendering catalogue, where every row
   has a typed object in `src/themes/index.ts`. `atheme` is a shop window: a name
   and a picture. `atheme.render_theme_id` is a real foreign key deciding what an

@@ -13,6 +13,8 @@ import { SiteFooter, SiteHeader } from "@/components/site/SiteChrome";
 import { ThemePreviewCard } from "@/components/site/ThemePreviewCard";
 import { AthemeGallery } from "@/components/site/AthemeGallery";
 import type { AthemeCard } from "@/lib/themes/atheme";
+import { capture } from "@/lib/posthog/client";
+import { EVENTS } from "@/lib/posthog/events";
 import {
   HomeFaq,
   LatestBlogs,
@@ -278,6 +280,14 @@ export function LandingClient({
               <AthemeGallery
                 cards={athemes}
                 onSelect={chooseAtheme}
+                onPreview={(card) =>
+                  capture(EVENTS.atheme_previewed, {
+                    atheme_id: card.id,
+                    theme_id: card.renderThemeId,
+                    is_premium: card.isPremium,
+                    source: "landing",
+                  })
+                }
                 selectLabel="Select"
               />
             </div>

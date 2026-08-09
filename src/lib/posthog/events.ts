@@ -22,6 +22,8 @@ export const EVENTS = {
   onboarding_step_viewed: "onboarding_step_viewed",
   onboarding_occasion_chosen: "onboarding_occasion_chosen",
   onboarding_theme_previewed: "onboarding_theme_previewed",
+  /** A gallery design opened as a live preview, from the landing page or the builder. */
+  atheme_previewed: "atheme_previewed",
   onboarding_theme_chosen: "onboarding_theme_chosen",
   invite_slug_checked: "invite_slug_checked",
   invite_draft_saved: "invite_draft_saved",

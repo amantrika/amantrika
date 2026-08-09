@@ -19,6 +19,7 @@ export { EventTimelineItem } from "./EventTimelineItem";
 export { RSVPForm } from "./RSVPForm";
 export { BlessingsWall, MusicToggle, GiftBlock, MapEmbedPlaceholder } from "./wedding-extras";
 export { PhotoFrame } from "./PhotoFrame";
+export { PhoneFrame } from "./PhoneFrame";
 export { PhotoUploader } from "./PhotoUploader";
 export { Loader, LoadingBlock } from "./Loader";
 export type { LoaderSize } from "./Loader";
