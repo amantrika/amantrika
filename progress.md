@@ -501,6 +501,14 @@ safe. Give each agent its own worktree, or run them one at a time.
   than under the node. Anchor it to the node's own height, and hide the last
   one from the list (`[&>li:last-child_[data-thread]]:hidden`) — a step cannot
   know it is last.
+- **A stale `.next-*` directory silently breaks `tsc --noEmit` for everyone.**
+  Next writes its generated route types into the dist dir and *adds that dir to
+  `tsconfig.json`'s `include`* — so the globs accumulate, one per build dir any
+  agent has ever used. When a dir is left behind after a failed or abandoned
+  build, typecheck reports errors about routes that no longer exist
+  (`Cannot find module '.../keystatic/page.js'`) and they look like real
+  breakage in unrelated code. The fix is `rm -rf .next .next-*` and re-run;
+  the tsconfig entries are regenerated on the next build.
 - **`NEXT_DIST_DIR` isolates a second Next process.** Two `next dev`/`next build`
   runs in one checkout corrupt each other's `.next`. The e2e suite builds to
   `.next-e2e`; the other agent uses `.next-claude`. `.gitignore` ignores
