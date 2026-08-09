@@ -66,6 +66,58 @@ original failure. Clear it before retrying:
 npx sst unlock --stage dev
 ```
 
+## ⛔ CloudFront is blocked until AWS verifies the account
+
+Hit 10 Aug 2026 on the fourth deploy attempt, after everything else had built:
+
+```
+CloudFront: CreateDistributionWithTags — 403 AccessDenied
+Your account must be verified before you can add new CloudFront resources.
+To verify your account, please contact AWS Support.
+```
+
+This is not a permissions problem and not fixable in code. New AWS accounts
+cannot create CloudFront distributions until Support verifies them — an
+anti-abuse measure, since a CDN is the classic thing a fraudulent account spins
+up. PowerUserAccess, root, and every policy change are all irrelevant to it.
+
+**Only the account owner can clear it**, and it cannot be automated: the AWS
+Support API requires a paid support plan (`SubscriptionRequiredException` on
+Basic), so there is no CLI path.
+
+### How to clear it
+
+1. <https://console.aws.amazon.com/support/home#/case/create>
+2. Type **Account and billing** — free on the Basic plan. *(Technical support
+   would be the wrong queue and does cost money.)*
+3. Service **Account**, category **Other Account Issues**
+4. Paste the error verbatim, including the request id:
+   `RequestID: 4d7ff3b3-bbce-487c-89bb-d37d5274fc15`
+5. Say what it is for: a Next.js site on CloudFront + Lambda for a digital
+   invitations product.
+
+Usually cleared within a few hours to a day. Once it is, re-run the deploy —
+everything else is already built and SST will reuse it.
+
+### What did deploy before it stopped
+
+| Resource | State |
+| --- | --- |
+| S3 assets bucket `amantrika-dev-amantrikaassetsbucket-…` | created |
+| SST state + asset buckets | created |
+| CloudFront cache policy, CloudFront Function | created |
+| EventBridge cron rule | created |
+| CloudFront distribution | **blocked** |
+| Lambda server function | not reached |
+
+So the config itself works. Only the distribution is refused.
+
+### The workaround, if waiting is not acceptable
+
+**Amplify Hosting does not hit this**, because the CloudFront distribution
+belongs to AWS's own account rather than yours. `amplify.yml` is committed and
+ready; connecting the repo is a console step (see `aws/DECISIONS.md` §4).
+
 ## Deploying from GitHub
 
 The workflow runs on push to `main`, or manually. `workflow_dispatch` requires

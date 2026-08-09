@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 190 44" width="190" height="44" role="img" aria-label="Amantrika">
+  <title>Amantrika</title>
+  <!--
+    Single-colour lockup for anywhere the two-tone version can't go: a partner's
+    dark header, a stamp, an embroidered or printed one-ink reproduction.
+    Everything is `currentColor`, so inlined it takes the surrounding text
+    colour; used as an <img> it falls back to black — set `color` on the parent,
+    or edit the fallback below.
+  -->
+  <style>
+    svg { color: #6b1f2a; }
+    @media (prefers-color-scheme: dark) { svg { color: #f7e7c6; } }
+    .word {
+      font-family: "Cormorant Garamond", Cormorant, Georgia, "Times New Roman", serif;
+      font-size: 30px; font-weight: 600; letter-spacing: -0.01em;
+    }
+  </style>
+
+  <g transform="translate(2 5) scale(1.06)" stroke="currentColor" fill="none">
+    <path d="M5.4 27 L12.4 11.2 A4 4 0 0 1 19.6 11.2 L26.6 27"
+          stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" />
+    <path d="M9.8 20.6 H22.2" stroke-width="2.4" stroke-linecap="round" />
+    <circle cx="16" cy="5.4" r="2.4" fill="currentColor" stroke="none" />
+  </g>
+
+  <text class="word" x="45" y="29" fill="currentColor" textLength="133" lengthAdjust="spacingAndGlyphs">Amantrika</text>
+  <path d="M46 37c22-4 45 3 67-1s44-3 67 0" fill="none" stroke="currentColor"
+        stroke-width="1.8" stroke-linecap="round" />
+</svg>

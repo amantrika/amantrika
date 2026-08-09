@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "functions": {
+    "/api/cron/[job]": {
+      "maxDuration": 60
+    },
+    "/api/payments/webhook": {},
+    "/api/unsubscribe": {}
+  }
+}

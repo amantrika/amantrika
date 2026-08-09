@@ -83,7 +83,7 @@ so far is Aurora-specific.
 | **Cognito → SES email** | Cognito's built-in sender is capped at 50 emails/day and is not a production path. Must point at SES once SES leaves the sandbox. |
 | SES production access | Sandbox: 200/day, verified recipients only. Request not yet filed — it takes up to 24h, so file it early. |
 | S3 + CloudFront media | Not started |
-| SST / OpenNext hosting | First deploy attempted 9 Aug 2026 — see the bottom of this file |
+| **SST / OpenNext hosting** | **Blocked: AWS has not verified the account for CloudFront.** Everything else deployed; only the distribution is refused. Needs a free Account-and-billing support case — see `DEPLOY-AWS.md`. |
 | Cost Explorer + Cost Anomaly Detection | Cost Explorer has **no enable API** — it activates on first console visit, and the browser hit a sign-in page. Needs a human sign-in. Anomaly detection cannot be created until it is on. |
 | Free-tier usage alerts | Console-only billing preference |
 | Admin IAM user / IAM Identity Center | Decision pending — see below |
