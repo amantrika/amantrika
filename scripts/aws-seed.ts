@@ -29,6 +29,7 @@ import {
   slugGsi1Pk,
   SLUG_GSI1_SK,
   subEventSk,
+  themePk,
 } from "../src/lib/aws/keys";
 
 const WRITE = process.argv.includes("--write");
@@ -62,6 +63,8 @@ async function main() {
   const items: Record<string, unknown>[] = [];
   let subEventCount = 0;
   let assetCount = 0;
+  let planCount = 0;
+  let themeCount = 0;
 
   for (const e of events ?? []) {
     const now = new Date().toISOString();
@@ -154,6 +157,48 @@ async function main() {
       `  ${e.status.padEnd(9)} ${e.slug.padEnd(34)} ${(subs ?? []).length} sub-events, ${(assets ?? []).length} assets`
     );
   }
+
+  // Catalogue: plans and themes. Code remains the source of truth for how a
+  // theme behaves (CLAUDE.md §2.5); these rows decide what is *offered* and at
+  // what price, and startCheckout cannot work on the AWS stack without them.
+  const { data: plans } = await supabase.from("plans").select("*");
+  for (const p of plans ?? []) {
+    planCount++;
+    items.push({
+      PK: "PLAN",
+      SK: `CODE#${p.code}`,
+      _type: "plan",
+      code: p.code,
+      name: p.name,
+      priceInr: p.price_inr,
+      description: p.description ?? undefined,
+      features: p.features ?? [],
+      dodoProductId: p.dodo_product_id ?? undefined,
+      sortOrder: p.sort_order ?? 0,
+      isActive: p.is_active ?? true,
+      createdAt: p.created_at ?? new Date().toISOString(),
+      updatedAt: p.created_at ?? new Date().toISOString(),
+    });
+  }
+
+  const { data: themes } = await supabase.from("themes").select("*");
+  for (const t of themes ?? []) {
+    themeCount++;
+    items.push({
+      PK: themePk(t.id),
+      SK: META_SK,
+      _type: "theme",
+      id: t.id,
+      name: t.name,
+      tier: t.tier,
+      isActive: t.is_active ?? true,
+      sortOrder: t.sort_order ?? 0,
+      createdAt: t.created_at ?? new Date().toISOString(),
+      updatedAt: t.created_at ?? new Date().toISOString(),
+    });
+  }
+
+  console.log(`  catalogue: ${planCount} plans, ${themeCount} themes`);
 
   await writeAll(items);
 

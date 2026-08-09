@@ -1,5 +1,6 @@
 import "server-only";
 import {
+  DeleteCommand,
   GetCommand,
   PutCommand,
   QueryCommand,
@@ -15,6 +16,7 @@ import {
   ownerGsi2Sk,
   slugGsi1Pk,
   SLUG_GSI1_SK,
+  subEventSk,
   statsPk,
   daySk,
   todayIso,
@@ -398,4 +400,189 @@ export async function recordView(eventId: string, when: Date = new Date()): Prom
     );
 
   await Promise.all([bump(statsPk(eventId)), bump(GLOBAL_STATS_PK)]);
+}
+
+/* --------------------------------------------------- the builder's write path */
+
+/** Is this slug free? Checked on GSI1, the same index the guest read uses. */
+export async function isSlugAvailable(slug: string, excludeEventId?: string): Promise<boolean> {
+  const res = await ddb.send(
+    new QueryCommand({
+      TableName: tableName,
+      IndexName: "GSI1",
+      KeyConditionExpression: "GSI1PK = :pk AND GSI1SK = :sk",
+      ExpressionAttributeValues: { ":pk": slugGsi1Pk(slug), ":sk": SLUG_GSI1_SK },
+      Limit: 2,
+    })
+  );
+  const hits = (res.Items ?? []) as InviteItem[];
+  return hits.filter((i) => i.id !== excludeEventId).length === 0;
+}
+
+export interface SubEventInput {
+  key: string;
+  name: string;
+  startsAt?: string;
+  timeLabel?: string;
+  venue?: string;
+  address?: string;
+  dressCode?: string;
+}
+
+/**
+ * Replace an invitation's sub-events.
+ *
+ * Clear-and-reinsert, matching the Postgres version — correct and simple for a
+ * list of half a dozen ceremonies. The ownership check is done once, up front,
+ * because these items live under `EVENT#<id>` and carry no owner of their own:
+ * whoever can write the partition can write all of it.
+ *
+ * Not a transaction. DynamoDB offers one (`TransactWriteItems`, 100 items) and
+ * it is worth adopting if a partial write ever actually bites — but a failure
+ * here leaves a half-updated ceremony list that the next save corrects, which
+ * is a survivable state for a draft.
+ */
+export async function replaceSubEvents(
+  userId: string,
+  eventId: string,
+  subEvents: SubEventInput[]
+): Promise<boolean> {
+  const owner = await getInviteForOwner(userId, eventId);
+  if (!owner) return false;
+
+  const existing = await ddb.send(
+    new QueryCommand({
+      TableName: tableName,
+      KeyConditionExpression: "PK = :pk AND begins_with(SK, :sk)",
+      ExpressionAttributeValues: { ":pk": eventPk(eventId), ":sk": SK_PREFIX.subEvent },
+      ProjectionExpression: "SK",
+    })
+  );
+
+  for (const item of existing.Items ?? []) {
+    await ddb.send(
+      new DeleteCommand({ TableName: tableName, Key: { PK: eventPk(eventId), SK: item.SK } })
+    );
+  }
+
+  const now = new Date().toISOString();
+  for (const [i, s] of subEvents.entries()) {
+    const id = crypto.randomUUID();
+    // Same fallback as the seed script: a sub-event with no date would key as
+    // "SUBEVENT#undefined#…" and sort into a heap at the top.
+    const startsAt = s.startsAt ?? owner.mainDateTime ?? now;
+    await ddb.send(
+      new PutCommand({
+        TableName: tableName,
+        Item: {
+          PK: eventPk(eventId),
+          SK: subEventSk(startsAt, id),
+          _type: "subEvent",
+          id,
+          eventId,
+          key: s.key,
+          name: s.name,
+          startsAt: s.startsAt,
+          timeLabel: s.timeLabel,
+          venue: s.venue,
+          address: s.address,
+          dressCode: s.dressCode,
+          sortOrder: i,
+          createdAt: now,
+          updatedAt: now,
+        },
+      })
+    );
+  }
+
+  return true;
+}
+
+/**
+ * Create or update a draft from the builder.
+ *
+ * The slug is settable only at creation. `updateInvite` deliberately cannot
+ * touch it — a published slug is on hundreds of WhatsApp messages
+ * (`CLAUDE.md` §2.9) — and nothing here weakens that.
+ */
+export async function saveDraft(
+  userId: string,
+  input: {
+    eventId?: string;
+    slug: string;
+    title: string;
+    eventType: string;
+    themeId: string;
+    hosts: unknown;
+    hashtag?: string;
+    mainDateTime?: string;
+    city?: string;
+    story?: string;
+    permissions: unknown;
+    agentId?: string;
+  }
+): Promise<{ ok: true; eventId: string } | { ok: false; error: string }> {
+  const patch = {
+    title: input.title,
+    eventType: input.eventType,
+    themeId: input.themeId,
+    hosts: input.hosts,
+    hashtag: input.hashtag,
+    mainDateTime: input.mainDateTime,
+    city: input.city,
+    story: input.story,
+    permissions: input.permissions,
+  };
+
+  if (input.eventId) {
+    const ok = await updateInvite(userId, input.eventId, patch);
+    return ok
+      ? { ok: true, eventId: input.eventId }
+      : { ok: false, error: "Couldn't save your changes." };
+  }
+
+  const created = await createInvite(userId, {
+    title: input.title,
+    slug: input.slug,
+    eventType: input.eventType,
+    themeId: input.themeId,
+    timezone: "Asia/Kolkata",
+    planCode: "basic",
+    agentId: input.agentId,
+  });
+
+  // The fields `createInvite` does not take, applied in one follow-up write
+  // rather than widening its signature — creation stays the narrow, guarded
+  // operation it is.
+  await updateInvite(userId, created.id, patch);
+  return { ok: true, eventId: created.id };
+}
+
+/**
+ * Move a draft to published.
+ *
+ * Separate from `updateInvite` because status is a state change, not a field
+ * edit: `InvitePatch` deliberately cannot reach it, so no builder autosave can
+ * publish an invitation by accident. The condition enforces ownership in the
+ * same write.
+ */
+export async function publishInvite(userId: string, eventId: string): Promise<boolean> {
+  const now = new Date().toISOString();
+  try {
+    await ddb.send(
+      new UpdateCommand({
+        TableName: tableName,
+        Key: { PK: eventPk(eventId), SK: META_SK },
+        UpdateExpression:
+          "SET #status = :published, publishedAt = if_not_exists(publishedAt, :now), updatedAt = :now",
+        ConditionExpression: "ownerId = :owner",
+        ExpressionAttributeNames: { "#status": "status" },
+        ExpressionAttributeValues: { ":published": "published", ":now": now, ":owner": userId },
+      })
+    );
+    return true;
+  } catch (error) {
+    if ((error as { name?: string }).name === "ConditionalCheckFailedException") return false;
+    throw error;
+  }
 }

@@ -9,6 +9,7 @@ import { getPaymentProvider } from "@/lib/payments";
 import { computePrice } from "@/lib/pricing";
 import { siteUrl } from "@/lib/env";
 import { captureServer } from "@/lib/posthog/server";
+import { authProviderName } from "@/lib/auth/provider";
 import { log } from "@/lib/posthog/logger";
 import { EVENTS } from "@/lib/posthog/events";
 import { SHOWCASE_CONSENT_TEXT } from "@/lib/consent";
@@ -41,6 +42,11 @@ export async function checkSlug(
   const parsed = slugSchema.safeParse(slug);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message };
   if (RESERVED.has(parsed.data)) return { ok: true, data: { available: false } };
+
+  if (authProviderName() === "cognito") {
+    const { isSlugAvailable } = await import("@/lib/aws/repo/invites");
+    return { ok: true, data: { available: await isSlugAvailable(parsed.data, excludeEventId) } };
+  }
 
   const supabase = await createClient();
   let query = supabase.from("events").select("id").eq("slug", parsed.data).limit(1);
@@ -128,6 +134,57 @@ export async function saveDraft(input: DraftInput): Promise<ActionResult<{ event
   };
 
   let eventId = d.eventId;
+
+  // On the AWS stack the builder writes to DynamoDB. Without this branch the
+  // insert below runs with no Supabase session, RLS refuses it, and the user
+  // sees "Couldn't create your invitation." with nothing in the logs to explain
+  // why — the same failure shape as the dashboard leak, from the same cause.
+  if (authProviderName() === "cognito") {
+    const { saveDraft: saveDraftOnDynamo, replaceSubEvents: replaceSubEventsOnDynamo } =
+      await import("@/lib/aws/repo/invites");
+
+    const saved = await saveDraftOnDynamo(profile.id, {
+      eventId,
+      slug: d.slug,
+      title,
+      eventType: d.eventType,
+      themeId: d.themeId,
+      hosts: d.hosts,
+      hashtag: d.hashtag || undefined,
+      mainDateTime: toTimestamp(d.mainDate) ?? undefined,
+      city: d.city || undefined,
+      story: d.story || undefined,
+      permissions: {
+        showcase_consent: d.showcaseConsent,
+        showcase_anonymise: d.showcaseAnonymise,
+      },
+      agentId: profile.role === "agent" ? profile.id : undefined,
+    });
+
+    if (!saved.ok) return { ok: false, error: saved.error };
+
+    await replaceSubEventsOnDynamo(
+      profile.id,
+      saved.eventId,
+      d.subEvents.map((sub) => ({
+        key: sub.key,
+        name: sub.name,
+        startsAt: toTimestamp(sub.date) ?? undefined,
+        timeLabel: sub.time || undefined,
+        venue: sub.venue || undefined,
+        address: sub.address || undefined,
+        dressCode: sub.dressCode || undefined,
+      }))
+    );
+
+    // The consent audit trail is deliberately not written here: showcase_consents
+    // has no repository yet, and an append-only consent log with a silent gap is
+    // worse than one that plainly does not exist on this stack. Showcase consent
+    // is therefore not offered on AWS until that table is ported.
+
+    revalidatePath("/dashboard");
+    return { ok: true, data: { eventId: saved.eventId } };
+  }
 
   if (eventId) {
     const { error } = await supabase.from("events").update(row).eq("id", eventId);
@@ -286,6 +343,11 @@ export async function startCheckout(input: {
   if (!parsed.success) return { ok: false, error: "Something's off with that request." };
 
   const profile = await requireProfile("/onboarding");
+
+  if (authProviderName() === "cognito") {
+    return startCheckoutOnAws(profile.id, parsed.data);
+  }
+
   const supabase = await createClient();
 
   // Read under the caller's own grants, so RLS proves they own this invitation
@@ -438,4 +500,67 @@ export async function startCheckout(input: {
   });
 
   return { ok: true, data: { kind: "checkout", checkoutUrl: checkout.checkoutUrl } };
+}
+
+
+/**
+ * Publish on the AWS stack.
+ *
+ * Only the free path is implemented. A paid checkout writes an order and a
+ * payment ledger row, and neither has a repository yet — so rather than take
+ * someone's money and lose the record of it, a paid plan is refused outright.
+ * `CLAUDE.md` §2.3 makes the webhook the only source of payment truth, and a
+ * webhook with nowhere to write is worse than no checkout at all.
+ *
+ * The ownership check is `getInviteForOwner`, which is what RLS was doing in
+ * the Supabase branch above.
+ */
+async function startCheckoutOnAws(
+  userId: string,
+  input: { eventId: string; planCode: string }
+): Promise<ActionResult<CheckoutStart>> {
+  const { getInviteForOwner, updateInvite } = await import("@/lib/aws/repo/invites");
+  const { getPlan, getTheme } = await import("@/lib/aws/repo/catalogue");
+
+  const invite = await getInviteForOwner(userId, input.eventId);
+  if (!invite) return { ok: false, error: "We couldn't find that invitation." };
+
+  const plan = await getPlan(input.planCode);
+  if (!plan) return { ok: false, error: "That plan isn't available." };
+
+  // Same boundary as the Supabase branch: the theme is chosen before the plan,
+  // so this is the only place both are known. Read from the stored invitation,
+  // never from the request — this is a public endpoint.
+  const theme = await getTheme(invite.themeId);
+  if (theme?.tier === "premium" && plan.priceInr === 0) {
+    return {
+      ok: false,
+      error: `${theme.name} is a premium theme. Choose a paid plan, or pick a free theme to publish at no cost.`,
+    };
+  }
+
+  const price = computePrice({
+    plan: { code: plan.code, name: plan.name, price_inr: plan.priceInr },
+    eventDate: invite.mainDateTime ? new Date(invite.mainDateTime) : null,
+  });
+
+  if (price.final_price_inr !== 0) {
+    return {
+      ok: false,
+      error:
+        "Paid plans aren't available on this backend yet. Publish free for now, or switch STACK back to vercel.",
+    };
+  }
+
+  const published = await publishInvite(userId, invite.id);
+  if (!published) return { ok: false, error: "Couldn't publish your invitation." };
+
+  revalidatePath("/dashboard");
+  return { ok: true, data: { kind: "published", slug: invite.slug } };
+}
+
+/** Status is not on `InvitePatch` — publishing is a state change, not an edit. */
+async function publishInvite(userId: string, eventId: string): Promise<boolean> {
+  const { publishInvite: publish } = await import("@/lib/aws/repo/invites");
+  return publish(userId, eventId);
 }
