@@ -45,6 +45,12 @@
     ".next-build/types/**/*.ts"
   ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    // SST's config depends on ambient globals ($config, sst, aws) that only
+    // exist after `sst install` writes .sst/platform, which is gitignored. Any
+    // clean checkout — CI, Amplify, a new machine — therefore cannot typecheck
+    // it, and CI failed on exactly that. SST validates its own config at deploy
+    // time, so excluding it here loses nothing real.
+    "sst.config.ts"
   ]
 }
