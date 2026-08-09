@@ -1,0 +1,37 @@
+# AWS Amplify Hosting build spec.
+#
+# Only used if you connect this repo in the Amplify console. The alternative
+# path — GitHub Actions + SST, in .github/workflows/deploy-aws.yml — needs no
+# console step but does need an IAM role. Pick one; running both would mean two
+# deployments of the same commit fighting over the same domain.
+#
+# UNVERIFIED: no Amplify app exists yet, so this spec has never run a build.
+#
+# Amplify injects environment variables from the console (App settings →
+# Environment variables). STACK=aws is the one that matters: it makes the
+# deployed app use DynamoDB, Cognito and SES rather than Supabase and Resend.
+
+version: 1
+frontend:
+  phases:
+    preBuild:
+      commands:
+        # `npm ci` not `npm install`: a lockfile-respecting install is the only
+        # kind that makes a CI build reproducible.
+        - npm ci
+    build:
+      commands:
+        # Fail before deploying rather than after. A type error caught here
+        # costs ninety seconds; caught in production it costs a rollback.
+        - npx tsc --noEmit
+        - npm run test:unit
+        - npm run build
+  artifacts:
+    # Amplify's Next.js SSR support reads the standard .next output.
+    baseDirectory: .next
+    files:
+      - "**/*"
+  cache:
+    paths:
+      - node_modules/**/*
+      - .next/cache/**/*

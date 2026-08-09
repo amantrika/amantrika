@@ -2,19 +2,22 @@ import "server-only";
 import { AwsDataProvider } from "@/lib/data/aws-provider";
 import { SupabaseDataProvider } from "@/lib/data/supabase-provider";
 import type { DataProvider, DataProviderName } from "@/lib/data/provider";
+import { resolveProvider } from "@/lib/stack";
 
 export * from "@/lib/data/provider";
 
 let instance: DataProvider | null = null;
 
 /**
- * Which backend is live. `supabase` unless explicitly told otherwise — the
- * default must be the thing that is known to work, so that a missing or
- * mistyped variable degrades to production behaviour rather than to an empty
- * database.
+ * Which backend is live.
+ *
+ * Derived from `STACK` unless `DATA_PROVIDER` overrides it — see `lib/stack.ts`
+ * for why both exist. Either way the fallback is `supabase`, because a missing
+ * or mistyped variable must degrade to the thing that is known to work rather
+ * than to an empty database.
  */
 export function dataProviderName(): DataProviderName {
-  return process.env.DATA_PROVIDER === "aws" ? "aws" : "supabase";
+  return resolveProvider(process.env.DATA_PROVIDER, { vercel: "supabase", aws: "aws" });
 }
 
 /**

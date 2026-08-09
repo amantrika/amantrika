@@ -1,6 +1,7 @@
 import "server-only";
 import { emailFrom } from "@/lib/env";
 import { resend } from "@/lib/email/client";
+import { resolveProvider } from "@/lib/stack";
 
 export type SendEmailInput = {
   to: string | string[];
@@ -29,6 +30,15 @@ export type SendEmailResult =
  * Never logs a recipient address — those are guest PII (operating rule 12).
  */
 export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult> {
+  // Follows STACK, overridable with EMAIL_PROVIDER. Still the *one* way this
+  // app sends mail — the rule that retired the n8n side-car (CLAUDE.md §1)
+  // survives the migration precisely because the seam is here and not at the
+  // call sites.
+  if (resolveProvider(process.env.EMAIL_PROVIDER, { vercel: "resend", aws: "ses" }) === "ses") {
+    const { sendViaSes } = await import("@/lib/email/ses");
+    return sendViaSes(input);
+  }
+
   const { to, subject, html, text, replyTo, idempotencyKey, unsubscribeUrl } = input;
 
   try {

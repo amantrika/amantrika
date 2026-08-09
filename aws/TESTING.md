@@ -1,15 +1,38 @@
 # How to test the switch
 
-There is now one environment variable that decides which backend serves
-invitations:
+**One variable chooses the whole stack.**
 
 ```
-DATA_PROVIDER=supabase   # default — the live behaviour
-DATA_PROVIDER=aws        # DynamoDB
+STACK=vercel   # Vercel + Supabase + Resend + Cloudinary   (default, live)
+STACK=aws      # Lambda/CloudFront + DynamoDB + Cognito + SES + S3
 ```
 
-Unset or mistyped means `supabase`. That direction is deliberate: a typo should
+Unset or mistyped means `vercel`. That direction is deliberate: a bad value must
 degrade to the thing that works, not to an empty database.
+
+Verified 9 Aug 2026:
+
+| `STACK` | data | auth | email |
+| --- | --- | --- | --- |
+| unset | supabase | supabase | resend |
+| `vercel` | supabase | supabase | resend |
+| `aws` | **aws** | **cognito** | **ses** |
+| `typo` | supabase | supabase | resend |
+
+And with both dev servers running, every surface answers on both stacks —
+invitation 200/200, login 200/200, `/dashboard` 307→login on both, homepage
+200/200, and the Google button correctly hidden only on `aws`.
+
+### The per-service overrides still exist
+
+`DATA_PROVIDER`, `AUTH_PROVIDER` and `EMAIL_PROVIDER` override `STACK`
+individually, and an override always wins. They are not for normal use — they
+exist so one half of the migration can be tested against the other, for example
+Cognito sessions reading Supabase data:
+
+```bash
+STACK=aws DATA_PROVIDER=supabase npm run dev
+```
 
 ---
 

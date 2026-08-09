@@ -1,4 +1,5 @@
 import "server-only";
+import { resolveProvider } from "@/lib/stack";
 
 /**
  * Which identity system is live.
@@ -14,5 +15,5 @@ import "server-only";
 export type AuthProviderName = "supabase" | "cognito";
 
 export function authProviderName(): AuthProviderName {
-  return process.env.AUTH_PROVIDER === "cognito" ? "cognito" : "supabase";
+  return resolveProvider(process.env.AUTH_PROVIDER, { vercel: "supabase", aws: "cognito" });
 }
