@@ -13,9 +13,7 @@
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:live": "./scripts/test.sh live",
-    "test:report": "playwright show-report",
-    "ai:check": "node scripts/ai-check.mjs",
-    "ai:try": "node scripts/ai-try.mjs"
+    "test:report": "playwright show-report"
   },
   "dependencies": {
     "@opentelemetry/api-logs": "^0.221.0",

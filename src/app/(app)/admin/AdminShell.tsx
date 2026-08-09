@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import {
-  BarChart3, Bot, CalendarDays, CreditCard, Images, Lightbulb, Sparkles, Users,
+  BarChart3, CalendarDays, CreditCard, Images, Lightbulb, Sparkles, Users,
   type LucideIcon,
 } from "lucide-react";
 import { Badge } from "@/design-system/components";
@@ -33,7 +33,6 @@ const groups: { heading: string; items: NavItem[] }[] = [
       { href: "/admin/users", label: "People", icon: Users },
       { href: "/admin/invitations", label: "Invitations", icon: CalendarDays },
       { href: "/admin/plans", label: "Plans", icon: CreditCard },
-      { href: "/admin/ai", label: "AI", icon: Bot },
     ],
   },
   {

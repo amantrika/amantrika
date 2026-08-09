@@ -58,7 +58,7 @@ something must never cost a guest their navigation.
 | `content/` | MDX loading and rendering |
 | `seo/` | Metadata and JSON-LD builders |
 | `posthog/` | Analytics: client, server, logs, event catalogue |
-| `email/`, `ai/` | Transactional mail, AI features |
+| `email/` | Transactional mail |
 
 ### The three Supabase clients — this distinction matters
 

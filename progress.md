@@ -27,9 +27,11 @@ built and working; the money itself is untested end to end.
    redirect URIs in Google Cloud. Google SSO works locally and fails on the live
    domain only, which is the kind of bug that is invisible until a real person
    hits it.
-4. **Rotate the OpenRouter key.** Scrubbed from git history and never pushed to
-   GitHub, but it sat in a local repo, two agents' context windows and a stash.
-   Never pushed is not the same as never seen.
+4. **Delete the OpenRouter key** at openrouter.ai/settings/keys. The AI modules
+   were removed on 9 Aug 2026 so nothing uses it, but it sat in a local repo, two
+   agents' context windows and a stash. Never pushed is not the same as never
+   seen, and an unused key that spends prepaid credit should be revoked rather
+   than left to rot.
 
 Items 1–3 need a human with dashboard access. No agent can do them.
 
@@ -264,11 +266,25 @@ couple's — marketing, dashboard, admin, auth, onboarding, checkout.
   in `NEXT_PUBLIC_CLOUDINARY_CLOUD`. `f_auto,q_auto,w_800` serves ~40KB WebP in
   place of the ~990KB source PNG.
 
+### Removed
+- **~~AI / OpenRouter~~ removed 9 Aug 2026** at the owner's request. Gone
+  entirely: `src/lib/ai/` (provider interface, OpenRouter client, model tiers,
+  tasks, disabled fallback), `/api/ai/*`, the `/admin/ai` console and its nav
+  entry, `scripts/ai-check.mjs` and `ai-try.mjs`, `tests/unit/ai-tasks.test.ts`
+  (14 tests), `open-router.md`, and the `hasOpenRouterKey`/`openRouterApiKey`
+  helpers in `src/lib/env.ts`.
+  - It came out cleanly because nothing in the product ever imported it — the
+    only edges were one admin nav link and the test file. No feature regressed.
+  - **No npm dependency was involved.** The OpenRouter client was hand-written
+    with `fetch`, so there was nothing to uninstall.
+  - `OPENROUTER_API_KEY` and `AI_MODEL_*` are out of `.env.example`. Delete the
+    key at openrouter.ai — see §0 item 4.
+
 ### Content
 - Blog, content pages, `llms.txt`, markdown twins, RSS, JSON-LD *(built by the
   other agent)*.
 - `/changelog` and `/roadmap` as MDX.
-- Dodo payments, entitlements, watermark plumbing, AI console *(other agent)*.
+- Dodo payments, entitlements, watermark plumbing *(other agent)*.
 
 ### Lifecycle email & scheduling
 - **The scheduler is in the app**, not a side-car: `src/app/api/cron/[job]`,
@@ -429,10 +445,15 @@ incoming request headers. Fixed 8 Aug 2026.
 
 **A live OpenRouter key reached `.env.example` twice.** Removed in `7eb3a94`,
 then written back an hour later by a concurrent `git add -A`. That file is
-tracked and the repo has a GitHub remote. It has been moved to `.env.local`
-(gitignored) and the template restored. **The key `sk-or-v1-aa1802…` was never
-committed the second time, but it did sit in the working tree — rotate it if
-that is not already done.** The first key was reported revoked; confirm.
+tracked and the repo has a GitHub remote. **The key `sk-or-v1-aa1802…` was never
+committed the second time, but it did sit in the working tree — delete it at
+openrouter.ai if that is not already done.** The first key was reported revoked;
+confirm. The AI modules that used it were removed on 9 Aug 2026, so the key is
+now unused as well as exposed — that lowers the urgency, not the requirement.
+
+Kept here after the removal because the lesson outlives the code: `.env.example`
+is **tracked**, so a real value in it is a published value, and `git add -A` with
+two agents in one tree will happily undo the fix.
 
 **Two agents, one working tree.** A concurrent `npm install` once wiped installed
 packages mid-task; migration timestamps have interleaved and needed
