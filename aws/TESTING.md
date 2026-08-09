@@ -142,6 +142,50 @@ switching back is always available.
 
 ---
 
+## Testing signup on Cognito
+
+**Signup is not on the toggle.** `DATA_PROVIDER` covers invitation reads only —
+the signup *form* in the browser still goes to Supabase Auth in both modes,
+because the session layer (middleware, `getUser`, every dashboard) has not been
+ported. Wiring the form to Cognito before that exists would sign someone in and
+then show them a logged-out app.
+
+What *is* testable today is the whole Cognito flow, from the terminal, against
+the real pool with a real email:
+
+```bash
+set -a; source .env.local; set +a
+npx tsx --conditions=react-server scripts/aws-auth-test.ts you@example.com 'YourPassw0rd'
+```
+
+It signs up, waits for you to paste the 6-digit code Cognito emails you,
+confirms, signs in, creates the profile in DynamoDB and reads it back. Nothing
+is mocked.
+
+Delete the test user afterwards:
+
+```bash
+aws cognito-idp admin-delete-user \
+  --user-pool-id ap-southeast-1_lkjHBiWu1 --username you@example.com
+```
+
+**Cognito's built-in email sender is capped at 50 messages a day** and is not a
+production path. It is fine for this test and must be replaced by SES before
+launch.
+
+### Two things worth knowing about this flow
+
+- **`SECRET_HASH` is mandatory.** The app client has a secret, so every call
+  carries an HMAC of the username and client id. Omit it and Cognito replies
+  "Unable to verify secret hash for client", which reads like a broken pool
+  rather than a missing parameter. Handled in `src/lib/aws/auth/cognito.ts`.
+- **Nothing creates a profile automatically.** In Postgres a trigger on
+  `auth.users` guaranteed a profile existed. Cognito has no hook into DynamoDB,
+  so `ensureProfile()` is called by the app and is idempotent — a user who
+  somehow lacks a profile gets one on their next sign-in rather than a
+  permanently broken dashboard. That is weaker than a trigger, and deliberately
+  so documented.
+
 ## What the switch does *not* cover
 
 Be clear about this before concluding "AWS works":
