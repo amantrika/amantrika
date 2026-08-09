@@ -74,13 +74,16 @@ so far is Aurora-specific.
 
 | What | Blocker / state |
 | --- | --- |
-| **The other 16 entities** | Only invitations have a repository. Profiles, RSVPs, sub-events, guests, assets, wishes, orders, payments, agents, commissions, feature requests, showcase, themes, admin allowlist all still need porting. |
-| **73 Supabase call sites across 60 files** | Untouched. The app still runs entirely on Supabase; nothing is wired to DynamoDB yet. |
-| **Cognito wiring** | Pool and client exist, but no sign-up, sign-in, session, middleware or callback code. Google federation not configured (needs a Cognito domain + Google client). |
+| **The other 15 entities** | Invitations and profiles have repositories. RSVPs, sub-events, guests, assets, wishes, orders, payments, agents, commissions, feature requests, showcase, themes and the admin allowlist still need porting. |
+| **Most of the 73 Supabase call sites** | The guest invitation read, sign-in/sessions and the dashboard list are ported. Everything else — the builder, guest lists, RSVPs, stats, showcase, marketing — is still Supabase in both stacks. |
+| **Google federation** | Not configured on the pool. The button is hidden on the AWS stack rather than starting a Supabase OAuth flow the app cannot read. |
+| **Partner/agent signup** | Refused on the AWS stack: the agent and referral records have no repository, and losing a referral silently is worse than declining. |
+| **SNS bounce subscriber** | The topic and event destination exist; **nothing is subscribed**, so bounces are recorded and acted on by nobody. |
+| **View tracking** | `/api/track` still writes to Supabase on both stacks — the DynamoDB counters do not replicate its dedup semantics, and porting it would silently change what "a view" means. |
 | **Cognito → SES email** | Cognito's built-in sender is capped at 50 emails/day and is not a production path. Must point at SES once SES leaves the sandbox. |
 | SES production access | Sandbox: 200/day, verified recipients only. Request not yet filed — it takes up to 24h, so file it early. |
 | S3 + CloudFront media | Not started |
-| SST / OpenNext hosting | Not started |
+| SST / OpenNext hosting | First deploy attempted 9 Aug 2026 — see the bottom of this file |
 | Cost Explorer + Cost Anomaly Detection | Cost Explorer has **no enable API** — it activates on first console visit, and the browser hit a sign-in page. Needs a human sign-in. Anomaly detection cannot be created until it is on. |
 | Free-tier usage alerts | Console-only billing preference |
 | Admin IAM user / IAM Identity Center | Decision pending — see below |
@@ -113,20 +116,25 @@ which is fractions of a cent.
 
 ## The honest state of the migration
 
-**The app has not moved.** Everything in `src/app/` still reads and writes
-Supabase, still authenticates through Supabase Auth, and still deploys to
-Vercel. What exists is a foundation — table, pool, repository pattern, and a
-passing proof that the authorization model works — not a migration.
+**Some of the app has moved; most has not.** `STACK=aws` genuinely serves the
+guest invitation from DynamoDB, signs people in through Cognito and sends
+through SES — verified in a browser. But the builder, guest lists, RSVPs, stats,
+showcase and the whole marketing site are still Supabase on both stacks, media
+still comes from Supabase Storage, and **production still runs on Vercel with
+`STACK=vercel`.**
 
 The order that remains:
 
-1. Port the remaining 16 entities into `src/lib/aws/repo/`
-2. Cognito sign-up / sign-in / session / middleware, replacing `@supabase/ssr`
-3. Rewrite the 73 call sites, surface by surface, starting with `/i/[slug]`
-4. SES (file production access first — 24h lead time)
-5. S3 + CloudFront for media
-6. SST / OpenNext, then the DNS cutover at Vercel
-7. Seed the 12 themes and 5 gallery rows; re-create the 7 test accounts
+1. Port the remaining 15 entities into `src/lib/aws/repo/`
+2. Rewrite the remaining call sites, surface by surface — **auditing each for the
+   unfiltered-read pattern**, where RLS was doing the filtering and nothing in
+   the code was
+3. File SES production access (24h lead time) and point Cognito's sender at SES
+4. Subscribe something to the bounce topic
+5. S3 + CloudFront for media — until this lands, `STACK=aws` still serves
+   photographs from Supabase Storage
+6. Finish the deploy, then the DNS change at Vercel
+7. Seed the 12 themes and 5 gallery rows
 
 Step 3 is the bulk of it. There is no shortcut and no partial state that is
 safe to ship — an invitation half on Supabase and half on DynamoDB is worse
