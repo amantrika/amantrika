@@ -29,6 +29,12 @@ done here, it does not exist in AWS. Keep it that way.
 | **GitHub OIDC + deploy role** | `amantrika-github-deploy`, trusts `repo:amantrika/amantrika:*`, PowerUserAccess (not Administrator) | $0 |
 | **Repo secrets** | 12 secrets set via `gh`; workflow reads the `STACK` repo variable | — |
 | **The `STACK` switch** | `STACK=vercel\|aws` picks data, auth and email together | — |
+| **S3 media bucket `amantrika-media`** | Private, versioned, CORS for presigned PUTs, cold→IA after a year, aborts stale multipart uploads. Keys: `invites/<eventId>/{photos,video,audio,documents}/` | per GB |
+| **Amplify Hosting** | App `d13njc1yveny1`, branch `aws-migration`, GitHub-connected — every push builds and deploys | per build minute + GB |
+| **Custom domain** | `amantrika-aws.imswarnil.com`, `AVAILABLE` | — |
+| **Amplify service role** | `amantrika-amplify-service` — trusts `amplify.amazonaws.com` with SourceAccount/SourceArn conditions, carries the scoped `amantrika-runtime` policy | $0 |
+| **Password reset** | `/forgot` + `/reset`, Cognito code on AWS, Supabase link on Vercel | — |
+| **Demo account** | `demo@gmail.com` / `Demo@123` — published invitation, 3 ceremonies, 3 photos in S3. `scripts/aws-demo-data.ts --clean` removes it. **Delete before real customer data exists.** | — |
 
 Everything above was verified by reading it back from the API, and the
 repository layer by `scripts/aws-smoke.ts` against the real table: 11 checks,
@@ -88,6 +94,23 @@ so far is Aurora-specific.
 | Free-tier usage alerts | Console-only billing preference |
 | Admin IAM user / IAM Identity Center | Decision pending — see below |
 | **Point-in-time recovery on the table** | **Off. Launch blocker.** Turn on before the first real customer. |
+
+## Traps found the hard way (deployment)
+
+1. **Amplify env vars are build-time only.** Next.js server code reads
+   `process.env` at runtime in the SSR compute, which does not inherit them. An
+   "all-AWS" deploy silently ran on `STACK=vercel` defaults. `amplify.yml` now
+   writes `.env.production`. The tell was the Google button being visible and a
+   DynamoDB-only invitation 404ing — the site otherwise looked healthy.
+2. **A role's trust policy is not its permissions.** `amantrika-github-deploy`
+   trusts only GitHub OIDC, so Amplify could not assume it — four builds failed
+   on that alone.
+3. **CloudFront in your own account needs AWS to verify the account.** Amplify
+   sidesteps it because its distribution lives in AWS's account.
+4. **SST cannot read `aws login` credentials**; `aws configure export-credentials
+   --format env` bridges it, and those expire in ~30 minutes.
+5. **A green build is not a working deploy.** Job 7 succeeded and served the
+   wrong backend. Always load a page that can only work if the change took.
 
 ## ⚠️ You are operating as root
 
