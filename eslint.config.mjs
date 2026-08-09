@@ -19,7 +19,22 @@ const eslintConfig = [
       "test-results/**",
       "blob-report/**",
       "next-env.d.ts",
+      // SST's generated provider types and the timestamped config files it
+      // writes during a deploy. Linting them is not merely noisy — the temp
+      // configs are deleted as the deploy proceeds, so ESLint fails outright
+      // with ENOENT on a file that existed when it globbed and is gone by the
+      // time it reads it.
+      ".sst/**",
+      // OpenNext's build output — the Lambda bundles SST deploys.
+      ".open-next/**",
     ],
+  },
+  {
+    // SST requires the triple-slash reference: its global types (`$config`,
+    // `sst`, `aws`, `$interpolate`) are ambient and an `import` would not
+    // declare them. The rule is right in general and wrong for this one file.
+    files: ["sst.config.ts"],
+    rules: { "@typescript-eslint/triple-slash-reference": "off" },
   },
 ];
 

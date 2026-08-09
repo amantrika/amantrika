@@ -86,7 +86,10 @@ async function cognitoMiddleware(request: NextRequest, protectedRoute: boolean) 
 
   const access = request.cookies.get(SESSION_COOKIES.ACCESS)?.value;
   let user = access ? await verifyAccessToken(access) : null;
-  let response = NextResponse.next({ request });
+  // `const`: refreshed tokens are written onto this response's cookie jar in
+  // place, never by replacing the response — unlike the Supabase branch above,
+  // which has to rebuild it because `setAll` can fire more than once.
+  const response = NextResponse.next({ request });
 
   if (!user) {
     const refresh = request.cookies.get(SESSION_COOKIES.REFRESH)?.value;
