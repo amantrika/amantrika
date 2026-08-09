@@ -123,7 +123,14 @@ export async function signUp(_prev: AuthState, formData: FormData): Promise<Auth
   }
 
   revalidatePath("/", "layout");
-  redirect(homeFor(role));
+  // Someone who picked a design on the landing page arrives here with that
+  // choice in `next`. Sending them to the dashboard instead would ask them to
+  // choose it a second time. Validated as a relative path — same rule as
+  // `signInWithGoogle` — so a crafted link cannot turn signup into an open
+  // redirect.
+  const next = String(formData.get("next") ?? "");
+  const safeNext = next.startsWith("/") && !next.startsWith("//") ? next : "";
+  redirect(safeNext || homeFor(role));
 }
 
 /**

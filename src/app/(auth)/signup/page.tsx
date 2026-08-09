@@ -14,12 +14,15 @@ export const metadata: Metadata = {
 export default async function SignUpPage({
   searchParams,
 }: {
-  searchParams: Promise<{ ref?: string; as?: string }>;
+  searchParams: Promise<{ ref?: string; as?: string; next?: string }>;
 }) {
   const profile = await getProfile();
   if (profile) redirect(homeFor(profile.role));
 
-  const { ref, as } = await searchParams;
+  const { ref, as, next } = await searchParams;
+  // Relative paths only, so a crafted `?next=//evil.example` cannot make signup
+  // an open redirect. Same check as the login page.
+  const safeNext = next && next.startsWith("/") && !next.startsWith("//") ? next : "";
 
   return (
     <AuthShell
@@ -34,11 +37,12 @@ export default async function SignUpPage({
         </>
       }
     >
-      <GoogleButton label="Sign up with Google" />
+      <GoogleButton next={safeNext} label="Sign up with Google" />
       <AuthDivider />
       <SignUpForm
         referralCode={ref ?? ""}
         initialRole={as === "agent" ? "agent" : "host"}
+        next={safeNext}
       />
     </AuthShell>
   );

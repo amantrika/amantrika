@@ -13,9 +13,12 @@ const roleOptions = [
 export function SignUpForm({
   referralCode,
   initialRole,
+  next = "",
 }: {
   referralCode: string;
   initialRole: "host" | "agent";
+  /** Where to land after signing up. Already validated as relative by the page. */
+  next?: string;
 }) {
   const [state, action, pending] = useActionState<AuthState, FormData>(signUp, {});
   const [role, setRole] = useState<string>(initialRole);
@@ -35,6 +38,7 @@ export function SignUpForm({
         </p>
       </div>
       <input type="hidden" name="role" value={role} />
+      <input type="hidden" name="next" value={next} />
 
       <Input label="Full name" name="fullName" autoComplete="name" required />
       <Input label="Email" name="email" type="email" autoComplete="email" required />

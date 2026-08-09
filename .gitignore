@@ -55,3 +55,6 @@ next-env.d.ts
 /test-results
 /blob-report
 /playwright/.cache
+
+# Output from the graphify analysis tool — 2.2MB of regenerable cache.
+/graphify-out/

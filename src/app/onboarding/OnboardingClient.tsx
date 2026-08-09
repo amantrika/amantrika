@@ -10,6 +10,8 @@ import {
   Button, Card, DatePicker, Divider, Input, PetalRain, PhotoUploader,
   Select, Stepper, Textarea, TimePicker, WaxSeal, type UploadedAsset,
 } from "@/design-system/components";
+import { AthemeGallery } from "@/components/site/AthemeGallery";
+import type { AthemeCard } from "@/lib/themes/atheme";
 import { eventTypeLabels, subEventPresets } from "@/lib/invites/invite";
 import { capture } from "@/lib/posthog/client";
 import { EVENTS } from "@/lib/posthog/events";
@@ -123,14 +125,27 @@ export function OnboardingClient({
   plans,
   themeCatalogue,
   isAgent,
+  athemes = [],
+  initialThemeId,
 }: {
   plans: PlanRow[];
   /** Offered themes with their tier. Empty only before the migration is applied. */
   themeCatalogue: ThemeRow[];
   isAgent: boolean;
+  /** The photographed designs, shown above the picker. */
+  athemes?: AthemeCard[];
+  /**
+   * A theme chosen on the landing page, already checked against the catalogue
+   * by the server. Overrides a saved draft: arriving with `?theme=` is a fresh,
+   * explicit choice, and honouring a stale localStorage draft over it would
+   * silently discard the thing the visitor just clicked.
+   */
+  initialThemeId?: string;
 }) {
   const [step, setStep] = useState(0);
-  const [draft, setDraft] = useState<Draft>(emptyDraft);
+  const [draft, setDraft] = useState<Draft>(
+    initialThemeId ? { ...emptyDraft, themeId: initialThemeId } : emptyDraft
+  );
   const [eventId, setEventId] = useState<string | null>(null);
   const [assets, setAssets] = useState<UploadedAsset[]>([]);
   const [slugState, setSlugState] = useState<"idle" | "checking" | "ok" | "taken" | "invalid">("idle");
@@ -152,13 +167,27 @@ export function OnboardingClient({
     try {
       const saved = window.localStorage.getItem(DRAFT_KEY);
       if (saved) {
-        setDraft({ ...emptyDraft, ...(JSON.parse(saved) as Partial<Draft>) });
+        setDraft({
+          ...emptyDraft,
+          ...(JSON.parse(saved) as Partial<Draft>),
+          // A theme picked from the gallery a moment ago beats one saved in a
+          // draft from a previous visit.
+          ...(initialThemeId ? { themeId: initialThemeId } : {}),
+        });
         resumed = true;
       }
     } catch {
       // Corrupt draft: start fresh rather than trapping the user on a broken form.
     }
-    capture(EVENTS.onboarding_started, { resumed_draft: resumed, is_agent: isAgent });
+    capture(EVENTS.onboarding_started, {
+      resumed_draft: resumed,
+      is_agent: isAgent,
+      // Whether the builder was entered from the gallery, and with which
+      // design — the one number that says if that section is doing any work.
+      from_gallery: Boolean(initialThemeId),
+    });
+    // Runs once on mount; `initialThemeId` is fixed for the life of the page.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAgent]);
 
   // One event per step reached — this is the drop-off funnel.
@@ -523,6 +552,44 @@ export function OnboardingClient({
         )}
 
         {/* THEME — asked last, previewed with the host's own details */}
+        {step === STEP.theme && athemes.length > 0 && (
+          /*
+            The gallery sits above the picker rather than replacing it. They are
+            two ways of answering the same question and neither is redundant:
+            these are photographs of finished invitations, which is what most
+            couples recognise, while the picker below renders *their* details in
+            each theme, which is what actually decides it. Someone who arrived
+            from the landing page sees their choice already marked here.
+          */
+          <section className="mb-12">
+            <h2 className="text-center type-h2 text-primary">Start from one of our designs</h2>
+            <p className="mx-auto mt-2 max-w-xl text-center type-body text-muted">
+              Pick one to apply it, then see it below with your own names and photographs — or skip
+              this and browse every theme.
+            </p>
+            <div className="mt-8">
+              <AthemeGallery
+                cards={athemes}
+                selectedRenderThemeId={draft.themeId}
+                selectLabel="Use this design"
+                onSelect={(card) => {
+                  patch({ themeId: card.renderThemeId });
+                  const chosen = getTheme(card.renderThemeId);
+                  capture(EVENTS.onboarding_theme_chosen, {
+                    theme_id: card.renderThemeId,
+                    religion_tag: chosen.religionTag,
+                    event_type: draft.eventType,
+                    // Distinguishes the gallery from the picker below, so the
+                    // two can be compared rather than guessed at.
+                    source: "gallery",
+                    atheme_id: card.id,
+                  });
+                }}
+              />
+            </div>
+            <Divider className="mt-12" />
+          </section>
+        )}
         {step === STEP.theme && (
           <ThemeChooser
             themes={filteredThemes}
@@ -535,6 +602,7 @@ export function OnboardingClient({
                 theme_id: t.id,
                 religion_tag: t.religionTag,
                 event_type: draft.eventType,
+                source: "picker",
               });
             }}
           />

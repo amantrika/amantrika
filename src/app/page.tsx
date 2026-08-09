@@ -3,7 +3,8 @@ import { getProfile, homeFor } from "@/lib/auth";
 import { LandingClient } from "./LandingClient";
 import type { HomePostSummary } from "@/components/site/HomeSections";
 import { getAllPosts } from "@/lib/content/blog";
-import { getCachedPlans } from "@/lib/cache";
+import { getCachedAthemes, getCachedPlans, getCachedThemes } from "@/lib/cache";
+import { toAthemeCards } from "@/lib/themes/atheme";
 import { JsonLd } from "@/lib/seo/json-ld";
 import { faqJsonLd, organizationJsonLd, websiteJsonLd } from "@/lib/seo/jsonld";
 import { pageMetadata } from "@/lib/seo/metadata";
@@ -46,13 +47,23 @@ export const metadata: Metadata = pageMetadata({
 });
 
 export default async function LandingPage() {
-  // All three in parallel rather than the session first and the data after it.
-  // Plans come from a shared cache, so a visitor almost never waits on Postgres.
-  const [profile, plans, posts] = await Promise.all([
+  // All in parallel rather than the session first and the data after it. Plans,
+  // themes and the gallery all come from a shared cache, so a visitor almost
+  // never waits on Postgres.
+  const [profile, plans, posts, athemes, themeCatalogue] = await Promise.all([
     getProfile(),
     getCachedPlans(),
     getAllPosts(),
+    getCachedAthemes(),
+    getCachedThemes(),
   ]);
+
+  // Tier is read from the catalogue and joined here, so the gallery card can say
+  // "premium" without app code holding a list of which themes those are.
+  const premiumThemeIds = new Set(
+    themeCatalogue.filter((t) => t.tier === "premium").map((t) => t.id)
+  );
+  const athemeCards = toAthemeCards(athemes, premiumThemeIds);
 
   // Only the serialisable fields cross into the client component.
   const latestPosts: HomePostSummary[] = posts.slice(0, 3).map((post) => ({
@@ -75,6 +86,7 @@ export default async function LandingPage() {
         dashboardHref={profile ? homeFor(profile.role) : "/login"}
         latestPosts={latestPosts}
         faq={homepageFaq}
+        athemes={athemeCards}
       />
     </>
   );

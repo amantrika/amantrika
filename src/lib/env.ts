@@ -43,6 +43,20 @@ export const posthogProxyPath = "/ingest";
 
 export const analyticsEnabled = posthogKey.length > 0;
 
+/**
+ * Cloudinary cloud holding the theme-gallery photographs.
+ *
+ * The `atheme` rows store delivery paths without a cloud name — see the comment
+ * on that migration — so this is what turns a row into a URL. Public by
+ * necessity: the browser fetches the image. It is an account identifier, not a
+ * credential; the API secret is not in this repo and must not be.
+ *
+ * Empty is a legitimate state (a fork, a preview without the account), and
+ * `cloudinaryUrl()` returns null rather than throwing, so a missing cloud costs
+ * the gallery and nothing else.
+ */
+export const cloudinaryCloud = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD ?? "";
+
 /** Server-only. Throws if imported into a client bundle. */
 export function serviceRoleKey(): string {
   if (typeof window !== "undefined") {

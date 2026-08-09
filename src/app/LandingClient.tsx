@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import {
   BarChart3, Check, ImageUp, Link2, MessageSquareHeart, Palette, Users, Wand2,
@@ -10,6 +11,8 @@ import { Badge, Button, Card, Divider, Envelope } from "@/design-system/componen
 import { fadeUpStagger, staggerContainer } from "@/design-system/motion/presets";
 import { SiteFooter, SiteHeader } from "@/components/site/SiteChrome";
 import { ThemePreviewCard } from "@/components/site/ThemePreviewCard";
+import { AthemeGallery } from "@/components/site/AthemeGallery";
+import type { AthemeCard } from "@/lib/themes/atheme";
 import {
   HomeFaq,
   LatestBlogs,
@@ -72,6 +75,7 @@ export function LandingClient({
   dashboardHref,
   latestPosts = [],
   faq = [],
+  athemes = [],
 }: {
   plans: PlanRow[];
   signedIn: boolean;
@@ -80,7 +84,26 @@ export function LandingClient({
   latestPosts?: HomePostSummary[];
   /** Same items the page emits as FAQPage structured data. */
   faq?: { q: string; a: string }[];
+  /** The photographed designs. Empty when Cloudinary is not configured. */
+  athemes?: AthemeCard[];
 }) {
+  const router = useRouter();
+
+  /**
+   * Choosing a design from the landing page carries it into the builder rather
+   * than only starting one. `?theme=` takes the *render* theme id, because that
+   * is what the draft and eventually `events.theme_id` hold — the gallery card
+   * is a picture, and it stops existing the moment the choice is made.
+   *
+   * Someone signed out goes to signup with the same parameter on the `next`
+   * URL, so the choice survives the round trip through auth. Losing it there
+   * would mean asking a couple to pick their design twice.
+   */
+  const chooseAtheme = (card: AthemeCard) => {
+    const target = `/onboarding?theme=${encodeURIComponent(card.renderThemeId)}`;
+    router.push(signedIn ? target : `/signup?next=${encodeURIComponent(target)}`);
+  };
+
   return (
     // `type-chrome` is the brand's own pairing (Marcellus over Mulish). The
     // theme preview cards below re-scope themselves with `data-theme`, so they
@@ -242,6 +265,24 @@ export function LandingClient({
             </Card>
           </div>
         </section>
+
+        {/* the gallery — finished invitations, photographed */}
+        {athemes.length > 0 && (
+          <section id="designs" className="mx-auto max-w-6xl px-4 py-20">
+            <h2 className="text-center type-display-lg text-primary">Our invitation designs</h2>
+            <p className="mx-auto mt-3 max-w-xl text-center type-body-lg text-muted">
+              Five designs, shown as your guests will actually see them — on a phone. Preview any of
+              them full size, then pick one and start building.
+            </p>
+            <div className="mt-10">
+              <AthemeGallery
+                cards={athemes}
+                onSelect={chooseAtheme}
+                selectLabel="Select"
+              />
+            </div>
+          </section>
+        )}
 
         {/* themes */}
         <section className="bg-surface py-20">
