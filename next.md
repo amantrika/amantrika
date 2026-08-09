@@ -57,6 +57,20 @@ No agent can do these. They need dashboard access.
 | 2 | **Register the Dodo webhook** → `https://amantrika.imswarnil.com/api/payments/webhook` | Without it a customer pays and their invitation **never publishes**. The route is live and correctly rejects malformed posts — it is simply never called. |
 | 3 | **Add `https://amantrika.imswarnil.com/auth/callback`** to Google Cloud authorised redirect URIs | Google SSO works locally and fails on the live domain only. Invisible until a real person hits it. |
 | 4 | **Rotate the OpenRouter key** at openrouter.ai/settings/keys | Scrubbed from git history and never pushed to GitHub, but it sat in a local repo, two agents' contexts and a stash. |
+| 5 | **Add `NEXT_PUBLIC_CLOUDINARY_CLOUD` to Vercel**, then redeploy | The theme gallery is live and every card shows "Preview unavailable". The variable is in `.env.local` and `.env.example` but was never added to the deployment, so `cloudinaryUrl()` returns null in production. |
+
+**#5 in full.** The value is `dxedclcqu` — a Cloudinary *cloud name*, which is
+publishable by design: it appears in the URL of every image the browser fetches.
+It is not the API secret, which this app does not use and must never hold.
+
+```bash
+vercel env add NEXT_PUBLIC_CLOUDINARY_CLOUD production   # paste: dxedclcqu
+vercel env add NEXT_PUBLIC_CLOUDINARY_CLOUD preview      # same value
+vercel --prod                                            # env only applies to a new build
+```
+
+An agent was blocked from running the first command by the permission
+classifier, which is the right default for writing deployment configuration.
 
 **When #1 is done**, also open `/receipts/[orderId]` for that order. The receipt
 page is built and deployed but has never rendered with real data, because no

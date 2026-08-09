@@ -349,6 +349,20 @@ couple's — marketing, dashboard, admin, auth, onboarding, checkout.
 
 ## ⚠️ Known issues
 
+**The theme gallery is live with no images.** Deployed 9 Aug 2026 and rendering:
+the section, all five names, and the premium badges are correct on
+<https://amantrika.imswarnil.com>. Every card shows "Preview unavailable"
+because `NEXT_PUBLIC_CLOUDINARY_CLOUD` exists in `.env.local` and `.env.example`
+but was never added to Vercel, so `cloudinaryUrl()` returns null in production
+and the component correctly renders a placeholder rather than a broken image.
+Fix is `next.md` §0 item 5 — add the variable and redeploy. The images
+themselves are fine; all five return 200 from Cloudinary.
+
+**Worth noting for next time:** this is the second deployment-only failure in
+two days, after the Google OAuth redirect URI. Local `.env.local` and
+`.env.example` agreeing tells you nothing about what the deployment actually
+has. `vercel env ls` is the check.
+
 **~~Keystatic~~ removed 9 Aug 2026, because it deleted content.** It is gone —
 config, routes, middleware gate, flag, both dependencies. Recorded here because
 the *reason* matters more than the removal: its MDX field re-serialises the
