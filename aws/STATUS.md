@@ -22,7 +22,13 @@ done here, it does not exist in AWS. Keep it that way.
 | **DynamoDB table `amantrika`** | Single table, `PAY_PER_REQUEST`, GSI1 + GSI2, TTL on `expiresAt`, deletion protection on | **$0 idle** — per-request only |
 | **Cognito user pool `amantrika`** | `ap-southeast-1_lkjHBiWu1`, Essentials tier, email sign-in, email auto-verify, 8-char minimum to match the existing signup form | $0 to 10,000 MAU |
 | **Cognito app client `amantrika-web`** | `7nah01uo2pnbdhvpca83flrd0d`, confidential (has a secret), auth-code flow, callbacks for prod + localhost | $0 |
-| **Repository layer** | `src/lib/aws/` — client, key builders, types, invitations repo | — |
+| **Repository layer** | `src/lib/aws/` — client, key builders, types, invitations + profiles repos | — |
+| **Cognito auth** | Sign-up, confirmation code, sign-in, sessions, middleware refresh, profiles | $0 |
+| **SES templates** | `amantrika-welcome`, `amantrika-payment-receipt`, `amantrika-rsvp-received` — pushed from `src/lib/email/templates.ts` | $0.10/1000 sent |
+| **SNS bounce topic** | `amantrika-email-events` + config set `amantrika-default`, on BOUNCE/COMPLAINT/DELIVERY_DELAY/REJECT. **Nothing is subscribed yet** — bounces are recorded and acted on by nobody | $0 |
+| **GitHub OIDC + deploy role** | `amantrika-github-deploy`, trusts `repo:amantrika/amantrika:*`, PowerUserAccess (not Administrator) | $0 |
+| **Repo secrets** | 12 secrets set via `gh`; workflow reads the `STACK` repo variable | — |
+| **The `STACK` switch** | `STACK=vercel\|aws` picks data, auth and email together | — |
 
 Everything above was verified by reading it back from the API, and the
 repository layer by `scripts/aws-smoke.ts` against the real table: 11 checks,
