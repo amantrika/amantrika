@@ -164,59 +164,6 @@ type PlansTable = Replace<
   }
 >;
 
-/**
- * `atheme` — declared here instead of coming from generation, and **only until
- * the migration is applied**.
- *
- * `supabase/migrations/20260809093641_atheme_gallery.sql` has not been pushed.
- * Verified against the live database, which answers `PGRST205: Could not find
- * the table 'public.atheme'`. Generation reads the live schema, so the table is
- * absent from `types.generated.ts`, `supabase.from("atheme")` does not typecheck
- * and **the whole project failed to build** — nothing could be deployed at all,
- * including work unrelated to this feature.
- *
- * Declaring it through the same `Replace` layer the jsonb columns use is the
- * least-bad unblock: the shape is transcribed from that migration's DDL, it sits
- * in one place rather than as casts at each call site, and the query builder,
- * `Row<"atheme">` and every caller then behave exactly as they will once the
- * table is real.
- *
- * **This block is temporary.** Apply the migration, run the `supabase gen types`
- * command at the top of this file, then delete it — leaving it in place means a
- * schema and a type that can drift with nothing to catch it. Until then the
- * gallery is empty at runtime and `getCachedAthemes` logs why.
- */
-type AthemeTable = {
-  Row: {
-    id: string;
-    name: string;
-    image_path: string;
-    render_theme_id: string;
-    is_active: boolean;
-    sort_order: number;
-    created_at: string;
-  };
-  Insert: {
-    id: string;
-    name: string;
-    image_path: string;
-    render_theme_id: string;
-    is_active?: boolean;
-    sort_order?: number;
-    created_at?: string;
-  };
-  Update: {
-    id?: string;
-    name?: string;
-    image_path?: string;
-    render_theme_id?: string;
-    is_active?: boolean;
-    sort_order?: number;
-    created_at?: string;
-  };
-  Relationships: [];
-};
-
 type Functions = Generated["public"]["Functions"];
 
 /** The two roll-up RPCs return jsonb; give callers the real object. */
@@ -235,7 +182,7 @@ export type Database = Replace<
     public: Replace<
       Generated["public"],
       {
-        Tables: Replace<Tables, { events: EventsTable; plans: PlansTable; atheme: AthemeTable }>;
+        Tables: Replace<Tables, { events: EventsTable; plans: PlansTable }>;
         Functions: RefinedFunctions;
       }
     >;

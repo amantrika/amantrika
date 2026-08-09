@@ -247,6 +247,23 @@ couple's — marketing, dashboard, admin, auth, onboarding, checkout.
   while watermarked. `/showcase` now goes through `pageMetadata()` like the
   rest, so it has a canonical too.
 
+### Theme gallery (`atheme`)
+- **Live on the landing page and in the builder's theme step.** Five designs
+  shown as photographs of finished invitations — three badged premium, two
+  included — with Preview and Select on each card. Verified rendering with real
+  data 9 Aug 2026.
+- **Two tables on purpose.** `themes` is the rendering catalogue, where every row
+  has a typed object in `src/themes/index.ts`. `atheme` is a shop window: a name
+  and a picture. `atheme.render_theme_id` is a real foreign key deciding what an
+  invitation is actually built with, so a card can never send a host to
+  something the guest page cannot draw.
+- A choice made on the landing page survives signup — carried in `?theme=` via
+  `next`, validated as a relative path, and checked against the catalogue before
+  it can reach `events.theme_id`.
+- Images are Cloudinary; rows store the path without the cloud name, which lives
+  in `NEXT_PUBLIC_CLOUDINARY_CLOUD`. `f_auto,q_auto,w_800` serves ~40KB WebP in
+  place of the ~990KB source PNG.
+
 ### Content
 - Blog, content pages, `llms.txt`, markdown twins, RSS, JSON-LD *(built by the
   other agent)*.
@@ -331,32 +348,6 @@ couple's — marketing, dashboard, admin, auth, onboarding, checkout.
 ---
 
 ## ⚠️ Known issues
-
-**The theme gallery is built and invisible — the migration was never applied.**
-`atheme` does not exist in the database; the live API answers `PGRST205: Could
-not find the table 'public.atheme'`. Everything above it is finished — the
-table, RLS and five seeded rows in
-`supabase/migrations/20260809093641_atheme_gallery.sql`, the cached read, the
-Cloudinary URL builder, `AthemeGallery`, and both call sites on the landing page
-and in the builder's theme step. It renders nothing because the query returns
-nothing.
-
-Two consequences were fixed on 9 Aug 2026 rather than left:
-
-- **The project did not build at all.** `supabase.from("atheme")` cannot
-  typecheck against a generated schema that has no such table, so every
-  deployment was blocked, including work unrelated to this feature.
-  `src/lib/supabase/types.ts` now declares the table through the same `Replace`
-  layer the jsonb columns use. **That block is temporary and says so** — delete
-  it once the migration is applied and types are regenerated.
-- **The failure was silent.** `getCachedAthemes` discarded the Postgrest error,
-  so a missing table, a wrong RLS policy and an empty catalogue all rendered as
-  "no gallery". It logs the error now and still degrades to hiding the section.
-
-What is verified: all five Cloudinary images resolve, and the
-`f_auto,q_auto,w_800` transform returns ~40KB WebP instead of the ~990KB source
-PNG. Applying the migration is item 5 in `next.md` §0 — it needs the database
-password.
 
 **~~Keystatic~~ removed 9 Aug 2026, because it deleted content.** It is gone —
 config, routes, middleware gate, flag, both dependencies. Recorded here because
@@ -501,6 +492,25 @@ safe. Give each agent its own worktree, or run them one at a time.
   than under the node. Anchor it to the node's own height, and hide the last
   one from the list (`[&>li:last-child_[data-thread]]:hidden`) — a step cannot
   know it is last.
+- **`PGRST205` means either a missing table or a stale schema cache — the error
+  alone cannot tell you which.** PostgREST answers `Could not find the table
+  'public.x' in the schema cache` in both cases: a table that genuinely does not
+  exist, and one that exists in Postgres but has not been picked up yet (which
+  resolves on its own within minutes). **Check `supabase migration list
+  --linked` before concluding anything** — it reads the migration history rather
+  than a cache, and the remote column is empty for a migration that was never
+  applied.
+  - For the record, in the `atheme` case it was **not** a stale cache: the
+    remote column was empty, `supabase db push` applied the migration on
+    9 Aug 2026, and the five rows were then readable through the anon key. An
+    earlier note here claimed the opposite; it was wrong.
+- **The Supabase CLI is authenticated on this machine.** The access token is in
+  the macOS keychain, not in `~/.supabase/` or an env var, so looking for a file
+  or `$SUPABASE_ACCESS_TOKEN` finds nothing and proves nothing. `supabase
+  projects list`, `db push` and `gen types` all work against the linked project
+  with no password prompt. Run commands with `< /dev/null` so a prompt fails
+  fast instead of hanging for the full timeout — that hang is what made this
+  look like missing credentials.
 - **A stale `.next-*` directory silently breaks `tsc --noEmit` for everyone.**
   Next writes its generated route types into the dist dir and *adds that dir to
   `tsconfig.json`'s `include`* — so the globs accumulate, one per build dir any

@@ -183,6 +183,44 @@ export type Database = {
           },
         ]
       }
+      atheme: {
+        Row: {
+          created_at: string
+          id: string
+          image_path: string
+          is_active: boolean
+          name: string
+          render_theme_id: string
+          sort_order: number
+        }
+        Insert: {
+          created_at?: string
+          id: string
+          image_path: string
+          is_active?: boolean
+          name: string
+          render_theme_id: string
+          sort_order?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          image_path?: string
+          is_active?: boolean
+          name?: string
+          render_theme_id?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "atheme_render_theme_id_fkey"
+            columns: ["render_theme_id"]
+            isOneToOne: false
+            referencedRelation: "themes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       badge_clicks: {
         Row: {
           country: string | null
