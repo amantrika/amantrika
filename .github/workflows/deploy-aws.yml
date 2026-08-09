@@ -1,7 +1,7 @@
 name: Deploy to AWS
 
-# UNVERIFIED — this workflow has never run. It needs the OIDC role and the
-# repository secrets below to exist first; see aws/DEPLOY-AWS.md.
+# The OIDC role and repository secrets exist (created 9 Aug 2026). The workflow
+# itself has still never completed a run — see aws/STATUS.md before trusting it.
 #
 # Runs alongside Vercel rather than instead of it. Both deploy from `main`
 # during the migration, so there is always a working site while the AWS one is
@@ -68,6 +68,8 @@ jobs:
           PAYMENT_PROVIDER: ${{ secrets.PAYMENT_PROVIDER }}
           PAYMENT_WEBHOOK_SECRET: ${{ secrets.PAYMENT_WEBHOOK_SECRET }}
           NEXT_PUBLIC_CLOUDINARY_CLOUD: ${{ secrets.NEXT_PUBLIC_CLOUDINARY_CLOUD }}
-          # Which backend the deployed site reads. Left on supabase until the
-          # deployed site itself has been checked — one change at a time.
-          DATA_PROVIDER: ${{ vars.DATA_PROVIDER || 'supabase' }}
+          # Which stack the deployed site runs. Defaults to vercel (Supabase +
+          # Resend) so the first deploy changes ONE thing — where the app runs —
+          # not two. Flip the repo variable to `aws` once the deployed site has
+          # been clicked through, so a failure has one possible cause.
+          STACK: ${{ vars.STACK || 'vercel' }}
