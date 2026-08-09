@@ -9,6 +9,7 @@ import { captureServer } from "@/lib/posthog/server";
 import { log } from "@/lib/posthog/logger";
 import { EVENTS } from "@/lib/posthog/events";
 import type { AssetKind } from "@/lib/supabase/types";
+import { authProviderName } from "@/lib/auth/provider";
 
 export interface AssetResult {
   ok: boolean;
@@ -38,9 +39,29 @@ export async function registerAsset(input: z.input<typeof registerSchema>): Prom
   if (!parsed.success) return { ok: false, error: "That upload looked malformed." };
   const a = parsed.data;
 
+  if (authProviderName() === "cognito") {
+    const profile = await requireProfile();
+    const { registerAsset: register } = await import("@/lib/aws/repo/assets");
+    // On S3 the key is `invites/<eventId>/<kind>/<assetId>.<ext>`, so the asset
+    // id is the filename — the uploader already knows it from the ticket.
+    const assetId = a.storagePath.split("/").pop()?.split(".")[0] ?? crypto.randomUUID();
+    const result = await register(profile.id, {
+      eventId: a.eventId,
+      assetId,
+      storageKey: a.storagePath,
+      kind: a.kind === "photo" ? "photo" : a.kind === "video" ? "video" : "document",
+      caption: a.caption,
+      fileName: a.fileName,
+    });
+    if (!result.ok) return { ok: false, error: result.error };
+    revalidatePath("/dashboard");
+    return { ok: true, assetId: result.assetId };
+  }
+
   if (!a.storagePath.startsWith(`${a.eventId}/`)) {
     return { ok: false, error: "That file doesn't belong to this invitation." };
   }
+
 
   const supabase = await createClient();
 

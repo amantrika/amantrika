@@ -5,6 +5,7 @@ import { ImagePlus, Trash2, Upload } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { ASSET_BUCKET, assetUrl } from "@/lib/invites/invite";
 import { deleteAsset, registerAsset } from "@/lib/invites/asset-actions";
+import { createUploadTicket } from "@/lib/invites/upload-actions";
 import { capture } from "@/lib/posthog/client";
 import { EVENTS } from "@/lib/posthog/events";
 import { Button } from "./Button";
@@ -40,6 +41,17 @@ export function PhotoUploader({
   const [error, setError] = useState<string | null>(null);
   const [, startTransition] = useTransition();
 
+  /**
+   * Which storage this browser should upload to.
+   *
+   * `STACK` is server-only and cannot be read here, so the stack is mirrored
+   * into a NEXT_PUBLIC_ variable for the one client component that needs it.
+   * It is not a secret — it names which of two public upload endpoints to use —
+   * but it does have to be set wherever STACK is, or uploads silently go to the
+   * wrong backend.
+   */
+  const useS3 = process.env.NEXT_PUBLIC_STACK === "aws";
+
   async function handleFiles(fileList: FileList | null) {
     if (!fileList?.length) return;
     const files = Array.from(fileList);
@@ -68,21 +80,65 @@ export function PhotoUploader({
 
     for (const [i, file] of files.entries()) {
       const ext = file.name.split(".").pop()?.toLowerCase() ?? "jpg";
-      const storagePath = `${eventId}/${crypto.randomUUID()}.${ext}`;
+      let storagePath = `${eventId}/${crypto.randomUUID()}.${ext}`;
 
-      const { error: uploadError } = await supabase.storage
-        .from(ASSET_BUCKET)
-        .upload(storagePath, file, { cacheControl: "31536000", upsert: false });
-
-      if (uploadError) {
-        capture(EVENTS.asset_upload_failed, {
-          event_id: eventId,
-          stage: "storage",
-          size_kb: Math.round(file.size / 1024),
-          mime_type: file.type,
+      if (useS3) {
+        // AWS stack: ask the server for a short-lived presigned URL and PUT
+        // straight to S3. The file never passes through a Lambda — a 200MB
+        // video would be slow, would blow the request payload limit, and would
+        // be billed as compute for what is really a network transfer.
+        const ticket = await createUploadTicket({
+          eventId,
+          contentType: file.type,
+          sizeBytes: file.size,
+          originalName: file.name,
         });
-        setError(`Couldn't upload ${file.name}. ${uploadError.message}`);
-        break;
+
+        if (!ticket.ok) {
+          capture(EVENTS.asset_upload_failed, {
+            event_id: eventId,
+            stage: "ticket",
+            size_kb: Math.round(file.size / 1024),
+            mime_type: file.type,
+          });
+          setError(ticket.error);
+          break;
+        }
+
+        const put = await fetch(ticket.url, {
+          method: "PUT",
+          body: file,
+          // Must match the Content-Type the URL was signed for, or S3 rejects it.
+          headers: { "content-type": file.type },
+        });
+
+        if (!put.ok) {
+          capture(EVENTS.asset_upload_failed, {
+            event_id: eventId,
+            stage: "storage",
+            size_kb: Math.round(file.size / 1024),
+            mime_type: file.type,
+          });
+          setError(`Couldn't upload ${file.name}.`);
+          break;
+        }
+
+        storagePath = ticket.key;
+      } else {
+        const { error: uploadError } = await supabase.storage
+          .from(ASSET_BUCKET)
+          .upload(storagePath, file, { cacheControl: "31536000", upsert: false });
+
+        if (uploadError) {
+          capture(EVENTS.asset_upload_failed, {
+            event_id: eventId,
+            stage: "storage",
+            size_kb: Math.round(file.size / 1024),
+            mime_type: file.type,
+          });
+          setError(`Couldn't upload ${file.name}. ${uploadError.message}`);
+          break;
+        }
       }
 
       const dimensions = await readDimensions(file);
@@ -97,8 +153,11 @@ export function PhotoUploader({
       });
 
       if (!result.ok || !result.assetId) {
-        // Roll back the orphaned object so Storage doesn't drift from the table.
-        await supabase.storage.from(ASSET_BUCKET).remove([storagePath]);
+        // Roll back the orphaned object so storage doesn't drift from the table.
+        // On S3 the object is left for the lifecycle rule: the browser holds no
+        // delete capability, and minting one to clean up would be a wider grant
+        // than the upload itself.
+        if (!useS3) await supabase.storage.from(ASSET_BUCKET).remove([storagePath]);
         capture(EVENTS.asset_upload_failed, {
           event_id: eventId,
           stage: "register",
