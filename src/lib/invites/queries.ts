@@ -1,6 +1,7 @@
 import "server-only";
-import { createClient, createPublicClient } from "@/lib/supabase/server";
-import { toInviteView, type InviteView } from "@/lib/invites/invite";
+import { createClient } from "@/lib/supabase/server";
+import { getDataProvider } from "@/lib/data";
+import type { InviteView } from "@/lib/invites/invite";
 import { demoInvite, isDemoSlug } from "@/lib/invites/demo";
 import type {
   AgentStats,
@@ -16,32 +17,20 @@ import type {
 
 /**
  * A published invite by slug, or null if it doesn't exist / isn't published.
- * Falls back to the bundled showcase invites so the marketing links keep working
- * on a fresh database.
+ *
+ * **This is the switch point for the AWS migration.** The read itself now lives
+ * behind `getDataProvider()`, so `DATA_PROVIDER=aws` moves this whole route to
+ * DynamoDB without any caller — the page, `generateMetadata`, the cache —
+ * knowing anything changed.
+ *
+ * The demo fallback stays here rather than inside either provider: the bundled
+ * showcase invitations are not data, they are fixtures, and they must keep the
+ * marketing links working on both backends and on an empty database.
  */
 export async function getPublishedInvite(slug: string): Promise<InviteView | null> {
-  // Session-less on purpose. This runs inside `getCachedInvite`'s
-  // `unstable_cache`, and Next throws outright if a cached function touches
-  // `cookies()` — which is what `createClient()` does. The read is the same for
-  // every guest and only ever returns published rows, so anon RLS is the right
-  // grant anyway.
-  const supabase = createPublicClient();
-
-  const { data: event } = await supabase
-    .from("events")
-    .select("*")
-    .eq("slug", slug)
-    .eq("status", "published")
-    .maybeSingle();
-
-  if (!event) return isDemoSlug(slug) ? demoInvite(slug) : null;
-
-  const [{ data: subEvents }, { data: assets }] = await Promise.all([
-    supabase.from("sub_events").select("*").eq("event_id", event.id).order("sort_order"),
-    supabase.from("assets").select("*").eq("event_id", event.id).order("sort_order"),
-  ]);
-
-  return toInviteView(event as EventRow, (subEvents ?? []) as SubEventRow[], (assets ?? []) as AssetRow[]);
+  const found = await getDataProvider().getPublishedInvite(slug);
+  if (found) return found;
+  return isDemoSlug(slug) ? demoInvite(slug) : null;
 }
 
 export async function getBlessings(eventId: string): Promise<BlessingRow[]> {

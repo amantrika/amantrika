@@ -1,6 +1,7 @@
 import "server-only";
 import { unstable_cache } from "next/cache";
 import { createPublicClient } from "@/lib/supabase/server";
+import { dataProviderName } from "@/lib/data";
 import { assetUrl } from "@/lib/invites/invite";
 import type { AthemeRow, EventType, PlanRow, ThemeRow } from "@/lib/supabase/types";
 
@@ -207,12 +208,17 @@ export const getCachedShowcaseTypes = unstable_cache(
  * to see it, and a stale guestbook reads as the site having lost their message.
  */
 export function getCachedInvite(slug: string) {
+  // The provider name is part of the cache key. Without it, flipping
+  // DATA_PROVIDER would appear to do nothing for up to five minutes — you would
+  // be reading a cached Supabase result while believing you were testing
+  // DynamoDB, which is the most misleading possible outcome of a switch.
+  const provider = dataProviderName();
   return unstable_cache(
     async () => {
       const { getPublishedInvite } = await import("@/lib/invites/queries");
       return getPublishedInvite(slug);
     },
-    ["invite", slug],
+    ["invite", slug, provider],
     { revalidate: 300, tags: [CACHE_TAGS.invite, inviteTag(slug)] }
   )();
 }

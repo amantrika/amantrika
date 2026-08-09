@@ -83,15 +83,23 @@ export interface SubEventItem extends BaseItem {
   _type: "subEvent";
   id: string;
   eventId: string;
+  /**
+   * The stable per-event identifier ("haldi", "mehndi") that the timeline
+   * components key on — NOT the row id. The Postgres mapper exposed `key` as
+   * the view's `id`, and the components rely on it, so the same must happen
+   * here. Getting this wrong is invisible until a theme animates the wrong
+   * section.
+   */
+  key: string;
   name: string;
-  startsAt: string;
-  endsAt?: string;
-  venueName?: string;
-  venueAddress?: string;
-  lat?: number;
-  lng?: number;
+  startsAt?: string;
+  /** Free text the host typed ("7:00 PM"); overrides the formatted time. */
+  timeLabel?: string;
+  venue?: string;
+  address?: string;
   dressCode?: string;
-  note?: string;
+  mapUrl?: string;
+  sortOrder: number;
 }
 
 export interface RsvpItem extends BaseItem {
@@ -109,6 +117,22 @@ export interface RsvpItem extends BaseItem {
   phone?: string;
   message?: string;
   subEventIds?: string[];
+}
+
+export interface AssetItem extends BaseItem {
+  _type: "asset";
+  id: string;
+  eventId: string;
+  kind: "photo" | "video" | "document";
+  /**
+   * Path within the media bucket, never a full URL — the same indirection the
+   * `atheme` rows already use for Cloudinary. Storing the host would mean an
+   * UPDATE over every row the day the CDN changes; storing the path means an
+   * environment variable.
+   */
+  storagePath: string;
+  caption?: string;
+  sortOrder: number;
 }
 
 export interface WishItem extends BaseItem {

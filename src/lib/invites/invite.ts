@@ -62,7 +62,10 @@ export function assetUrl(storagePath: string): string {
   return `${env.supabaseUrl}/storage/v1/object/public/${ASSET_BUCKET}/${storagePath}`;
 }
 
-const defaultSettings: Required<Pick<EventSettings, "rsvpEnabled" | "blessingsEnabled" | "showCountdown">> = {
+/** Exported so the AWS data provider applies exactly the same defaults. Two
+ *  mappers disagreeing about whether RSVP is on by default is the kind of
+ *  divergence a provider switch is supposed to make impossible. */
+export const defaultSettings: Required<Pick<EventSettings, "rsvpEnabled" | "blessingsEnabled" | "showCountdown">> = {
   rsvpEnabled: true,
   blessingsEnabled: true,
   showCountdown: true,
@@ -110,7 +113,10 @@ function toInviteSubEvent(s: SubEventRow): InviteSubEvent {
   };
 }
 
-function formatTime(iso: string | null): string {
+/** Exported so the AWS provider formats times identically. Two mappers that
+ *  disagree about "7:00 PM" vs an ISO string is exactly the drift the parity
+ *  script in scripts/aws-parity.ts exists to catch. */
+export function formatTime(iso: string | null): string {
   if (!iso) return "";
   return new Date(iso).toLocaleTimeString("en-IN", {
     hour: "numeric",

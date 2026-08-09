@@ -58,3 +58,7 @@ next-env.d.ts
 
 # Output from the graphify analysis tool — 2.2MB of regenerable cache.
 /graphify-out/
+
+# SST: generated provider types and per-stage state. `sst install` recreates
+# .sst/platform locally; committing it makes every machine fight over versions.
+/.sst/

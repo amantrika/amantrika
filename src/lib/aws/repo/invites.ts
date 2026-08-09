@@ -20,7 +20,7 @@ import {
   todayIso,
   GLOBAL_STATS_PK,
 } from "@/lib/aws/keys";
-import type { InviteItem, InviteStatus, SubEventItem } from "@/lib/aws/repo/types";
+import type { AssetItem, InviteItem, InviteStatus, SubEventItem } from "@/lib/aws/repo/types";
 
 /**
  * Invitations — reads and writes.
@@ -59,6 +59,7 @@ import type { InviteItem, InviteStatus, SubEventItem } from "@/lib/aws/repo/type
 export async function getPublishedInviteBySlug(slug: string): Promise<{
   invite: PublicInvite;
   subEvents: PublicSubEvent[];
+  assets: AssetItem[];
 } | null> {
   const found = await ddb.send(
     new QueryCommand({
@@ -79,20 +80,28 @@ export async function getPublishedInviteBySlug(slug: string): Promise<{
   // A draft is not a 404 in the database, but it must be one to a guest.
   if (meta.status !== "published" && meta.status !== "paid") return null;
 
+  // One query for the whole partition, then split by sort-key prefix. Sub-events
+  // and assets arrive together because they share a partition — the property
+  // that makes this route cheaper here than it was in Postgres, where they were
+  // two more round trips.
   const partition = await ddb.send(
     new QueryCommand({
       TableName: tableName,
-      KeyConditionExpression: "PK = :pk AND begins_with(SK, :sk)",
-      ExpressionAttributeValues: {
-        ":pk": eventPk(meta.id),
-        ":sk": SK_PREFIX.subEvent,
-      },
+      KeyConditionExpression: "PK = :pk AND SK > :meta",
+      ExpressionAttributeValues: { ":pk": eventPk(meta.id), ":meta": META_SK },
     })
   );
 
-  const subEvents = ((partition.Items ?? []) as SubEventItem[]).map(toPublicSubEvent);
+  const items = partition.Items ?? [];
+  const subEvents = items
+    .filter((i) => String(i.SK).startsWith(SK_PREFIX.subEvent))
+    .map((i) => toPublicSubEvent(i as SubEventItem));
+  const assets = items
+    .filter((i) => String(i.SK).startsWith(SK_PREFIX.asset))
+    .map((i) => i as AssetItem)
+    .sort((a, b) => a.sortOrder - b.sortOrder);
 
-  return { invite: toPublicInvite(meta), subEvents };
+  return { invite: toPublicInvite(meta), subEvents, assets };
 }
 
 /**
@@ -121,19 +130,26 @@ export interface PublicInvite {
   settings: unknown;
   status: InviteStatus;
   publishedAt?: string;
+  /**
+   * Included deliberately, despite being guest-facing. `entitlementsFor()` reads
+   * it to decide the watermark, the OG image and whether `Event` JSON-LD is
+   * emitted — the structural paywall of `CLAUDE.md` §2.2. Omitting it here
+   * would silently give every invitation the free tier's treatment.
+   */
+  planCode: string;
 }
 
 export interface PublicSubEvent {
   id: string;
+  key: string;
   name: string;
-  startsAt: string;
-  endsAt?: string;
-  venueName?: string;
-  venueAddress?: string;
-  lat?: number;
-  lng?: number;
+  startsAt?: string;
+  timeLabel?: string;
+  venue?: string;
+  address?: string;
   dressCode?: string;
-  note?: string;
+  mapUrl?: string;
+  sortOrder: number;
 }
 
 function toPublicInvite(item: InviteItem): PublicInvite {
@@ -155,21 +171,22 @@ function toPublicInvite(item: InviteItem): PublicInvite {
     settings: item.settings,
     status: item.status,
     publishedAt: item.publishedAt,
+    planCode: item.planCode,
   };
 }
 
 function toPublicSubEvent(item: SubEventItem): PublicSubEvent {
   return {
     id: item.id,
+    key: item.key,
     name: item.name,
     startsAt: item.startsAt,
-    endsAt: item.endsAt,
-    venueName: item.venueName,
-    venueAddress: item.venueAddress,
-    lat: item.lat,
-    lng: item.lng,
+    timeLabel: item.timeLabel,
+    venue: item.venue,
+    address: item.address,
     dressCode: item.dressCode,
-    note: item.note,
+    mapUrl: item.mapUrl,
+    sortOrder: item.sortOrder,
   };
 }
 

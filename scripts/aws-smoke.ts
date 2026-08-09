@@ -22,7 +22,7 @@ import {
   updateInvite,
 } from "../src/lib/aws/repo/invites";
 
-const OWNER = "smoke-owner-" + Math.floor(Number(process.hrtime.bigint() % 1000000n));
+const OWNER = `smoke-owner-${process.pid}-${process.hrtime()[1]}`;
 const INTRUDER = "smoke-intruder";
 const slug = `smoke-${OWNER}`;
 

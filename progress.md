@@ -76,10 +76,21 @@ budget, account-wide S3 Block Public Access, the DynamoDB table `amantrika`, a
 Cognito user pool and app client, and the repository foundation in
 `src/lib/aws/`. `scripts/aws-smoke.ts` passes 11 checks against the real table.
 
-**Everything in `src/app/` still runs on Supabase and still deploys to Vercel.**
-73 Supabase call sites across 60 files are untouched, 16 of 17 entities have no
-repository yet, and no Cognito auth code exists. Do not read the presence of
-`src/lib/aws/` as the migration being underway in the app.
+**There is now a switch.** `DATA_PROVIDER=supabase|aws` (default `supabase`)
+decides where a published invitation is read from — the same shape as
+`PAYMENT_PROVIDER`. It is verified: `scripts/aws-parity.ts` reports all five
+published invitations identical across both backends, and with `hosts` changed
+in DynamoDB alone the page renders "DYNAMO & PROOF" on `aws` and "a & c" on
+`supabase`. **`aws/TESTING.md` is the guide — read it before testing**, because
+`unstable_cache` persists to disk and will happily serve you the other
+backend's cached result.
+
+**The switch covers exactly one thing: the guest invitation read.** Sign-in,
+dashboards, RSVPs, wishes, orders, view tracking, photographs and the entire
+marketing site are still Supabase in both modes. 16 of 17 entities have no
+repository, no Cognito auth code exists, and the app still deploys to Vercel.
+`sst.config.ts` and `.github/workflows/deploy-aws.yml` exist but **have never
+been run**.
 
 Two decisions worth not relitigating: **DNS stays on Vercel** and the domain
 stays `amantrika.imswarnil.com`, so Route 53 is unused and the AWS side has no

@@ -1,0 +1,171 @@
+# How to test the switch
+
+There is now one environment variable that decides which backend serves
+invitations:
+
+```
+DATA_PROVIDER=supabase   # default — the live behaviour
+DATA_PROVIDER=aws        # DynamoDB
+```
+
+Unset or mistyped means `supabase`. That direction is deliberate: a typo should
+degrade to the thing that works, not to an empty database.
+
+---
+
+## The trap that will waste your afternoon
+
+**`unstable_cache` persists to disk under the dist directory, and it survives a
+restart.** Flip `DATA_PROVIDER`, restart, and for up to five minutes you can be
+served a result cached under the *other* provider — believing you are testing
+DynamoDB while reading Postgres.
+
+This bit during the very first test of the switch. Two mitigations are in place:
+
+1. The provider name is part of the cache key (`src/lib/cache.ts`), so the two
+   backends can no longer share a cache entry.
+2. But the entry for *your* provider still persists across restarts. So when
+   testing a data change, clear the cache:
+
+```bash
+rm -rf .next .next-awstest .next-pgtest
+```
+
+If a test result surprises you, clear the cache and repeat before believing it.
+
+---
+
+## 1. Prove the two backends agree (30 seconds, no server)
+
+The strongest test, and the one to run after any change to either provider. It
+fetches every published invitation through both and diffs the resulting view
+field by field.
+
+```bash
+set -a; source .env.local; set +a
+npx tsx --conditions=react-server scripts/aws-parity.ts
+```
+
+Expected:
+
+```
+5 identical, 0 differing, 0 missing on one side.
+```
+
+Anything else names the field that drifted. This already caught two real bugs —
+sub-events mapped from columns that do not exist, and dates formatted as raw ISO
+strings where the components expect `2026-08-15` and `7:00 PM`.
+
+## 2. Prove the repository's authorization holds (10 seconds)
+
+```bash
+npm run aws:smoke
+```
+
+Eleven checks against the real table. The two that matter:
+
+```
+ok   NON-OWNER IS REFUSED (this is the RLS replacement)
+ok   NON-OWNER CANNOT UPDATE
+```
+
+Run this after touching anything in `src/lib/aws/repo/`. It is the only thing
+standing where 55 RLS policies used to.
+
+## 3. Run the app on each backend, side by side
+
+```bash
+rm -rf .next-awstest .next-pgtest
+set -a; source .env.local; set +a
+
+DATA_PROVIDER=aws      NEXT_DIST_DIR=.next-awstest npx next dev -p 3111 &
+DATA_PROVIDER=supabase NEXT_DIST_DIR=.next-pgtest  npx next dev -p 3112 &
+```
+
+Then open the same invitation on both and compare:
+
+- <http://localhost:3111/invite/a-weds-c> — DynamoDB
+- <http://localhost:3112/invite/a-weds-c> — Supabase
+
+Separate `NEXT_DIST_DIR` values are required, not optional: two `next dev`
+processes in one checkout corrupt each other's build directory (see
+`next.config.ts`).
+
+## 4. Prove it is *really* reading DynamoDB
+
+Parity passing means the two agree; it does not prove the switch is wired. To
+prove that, change something in DynamoDB only and watch one side move:
+
+```bash
+EID=$(aws dynamodb query --table-name amantrika --index-name GSI1 \
+  --key-condition-expression "GSI1PK = :p AND GSI1SK = :s" \
+  --expression-attribute-values '{":p":{"S":"SLUG#a-weds-c"},":s":{"S":"EVENT"}}' \
+  --query 'Items[0].id.S' --output text)
+
+aws dynamodb update-item --table-name amantrika \
+  --key "{\"PK\":{\"S\":\"EVENT#$EID\"},\"SK\":{\"S\":\"META\"}}" \
+  --update-expression "SET hosts = :h" \
+  --expression-attribute-values \
+    '{":h":{"L":[{"M":{"name":{"S":"DYNAMO"}}},{"M":{"name":{"S":"PROOF"}}}]}}'
+```
+
+Clear the caches, restart both servers, and the page titles should read:
+
+```
+DATA_PROVIDER=aws       →  <title>DYNAMO &amp; PROOF · Amantrika</title>
+DATA_PROVIDER=supabase  →  <title>a &amp; c · Amantrika</title>
+```
+
+That is the actual observed output, not an illustration.
+
+Put it back afterwards — the seed script is idempotent and restores from
+Supabase:
+
+```bash
+npx tsx --conditions=react-server scripts/aws-seed.ts --write
+```
+
+**Note the field.** The page title is built from `hosts`, not `title` — changing
+`title` proves nothing, because it is not rendered. An inconclusive test that
+looks like a passing one is worse than no test.
+
+## 5. Re-seed after Supabase changes
+
+```bash
+npx tsx --conditions=react-server scripts/aws-seed.ts           # dry run
+npx tsx --conditions=react-server scripts/aws-seed.ts --write   # commit
+```
+
+Idempotent — every item is keyed deterministically, so running it twice
+produces the same table. It is a **copy**: Supabase is never modified, so
+switching back is always available.
+
+---
+
+## What the switch does *not* cover
+
+Be clear about this before concluding "AWS works":
+
+| Still Supabase in both modes | Why |
+| --- | --- |
+| **Sign-in and every dashboard** | Cognito has a pool but no auth code |
+| **RSVPs, wishes, orders, payments** | No repositories yet |
+| **View tracking** (`/api/track`) | Counters are defined but the dedup semantics differ; porting it would silently change what "a view" means |
+| **Photographs** | `assetUrl()` still builds a Supabase Storage URL — with `DATA_PROVIDER=aws` the data is DynamoDB but the images are not |
+| **The whole marketing site, showcase, themes** | Read through `src/lib/cache.ts`, untouched |
+
+`DATA_PROVIDER=aws` currently switches **one thing: the guest invitation read.**
+That is a real, verified milestone and it is nowhere near the whole product.
+
+## Deploying to AWS — not yet verified
+
+`sst.config.ts` and `.github/workflows/deploy-aws.yml` exist and typecheck, but
+**neither has ever been run.** They need, first:
+
+1. An OIDC role for GitHub Actions (`AWS_DEPLOY_ROLE_ARN`)
+2. The repository secrets listed in the workflow
+3. `npx sst deploy --stage dev` succeeding once, by hand, from your machine
+
+Until then Vercel remains the only real deployment, and the workflow is a
+proposal rather than a pipeline. Treat the first `sst deploy` as an experiment
+that will probably need two or three attempts.
