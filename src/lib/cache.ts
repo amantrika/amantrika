@@ -2,7 +2,7 @@ import "server-only";
 import { unstable_cache } from "next/cache";
 import { createPublicClient } from "@/lib/supabase/server";
 import { assetUrl } from "@/lib/invites/invite";
-import type { EventType, PlanRow, ThemeRow } from "@/lib/supabase/types";
+import type { AthemeRow, EventType, PlanRow, ThemeRow } from "@/lib/supabase/types";
 
 /**
  * Cached reads for data that is public and changes rarely.
@@ -69,6 +69,46 @@ export const getCachedThemes = unstable_cache(
     return (data ?? []) as ThemeRow[];
   },
   ["themes:active"],
+  { revalidate: 3600, tags: [CACHE_TAGS.themes] }
+);
+
+/**
+ * The theme gallery: the five Amantrika designs shown as photographs, on the
+ * landing page and at the top of the builder's theme step.
+ *
+ * Separate from `getCachedThemes` because it answers a different question. That
+ * one is "what can be rendered"; this one is "what is on display". A row here
+ * points at a row there through `render_theme_id`, which is what makes a
+ * gallery card selectable without inventing a theme the guest page cannot draw.
+ *
+ * Shares the `themes` cache tag: the two are edited together — repointing a
+ * card at a different theme, or withdrawing the theme underneath a card, should
+ * not leave one of them stale for an hour.
+ */
+export const getCachedAthemes = unstable_cache(
+  async (): Promise<AthemeRow[]> => {
+    const supabase = createPublicClient();
+    const { data, error } = await supabase
+      .from("atheme")
+      .select("*")
+      .eq("is_active", true)
+      .order("sort_order");
+
+    // An empty gallery renders as nothing at all, which is right when there is
+    // genuinely nothing to show and indistinguishable from failure when there
+    // is. Discarding the error made a missing table, a wrong RLS policy and an
+    // empty catalogue look identical — and the table being missing is exactly
+    // the state this shipped in. Degrade to no gallery, but say why.
+    if (error) {
+      console.error("atheme read failed — gallery hidden", {
+        code: error.code,
+        message: error.message,
+      });
+      return [];
+    }
+    return (data ?? []) as AthemeRow[];
+  },
+  ["atheme:active"],
   { revalidate: 3600, tags: [CACHE_TAGS.themes] }
 );
 

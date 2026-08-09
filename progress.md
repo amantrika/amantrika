@@ -103,6 +103,29 @@ another identity is rejected by Vercel on Hobby, which fails the deploy.
   - Free set is one theme per faith, deliberately — charging a Muslim or Sikh
     family for the only theme that fits their wedding would be an ugly way to
     make money.
+- **The theme gallery (`atheme`) is a second, display-only table.** The five
+  designs Amantrika actually sells — Timeless Charm, Classic Elegance, Modern
+  Chic, Eternal Grace, Indian Touch — imported from `themes.csv` as a name plus
+  a Cloudinary photograph. They have **no renderer**: no entry in
+  `src/themes/index.ts`, no `[data-theme]` block. That is why they are not rows
+  in `themes`, which would have broken `theme-catalogue.test.ts`.
+  - `atheme.render_theme_id` is a real FK into `themes` and is what an
+    invitation is actually built with. Selecting "Classic Elegance" sets
+    `theme_id = 'cathedral-white'`. The mappings were chosen by looking at the
+    five photographs against the registry's layouts — they are documented row by
+    row in the migration.
+  - Shown on the landing page (`#designs`) and above the picker in the builder's
+    theme step, both via `AthemeGallery`. Image, name, Preview (full-size modal)
+    and Select.
+  - Landing-page Select carries the choice as `/onboarding?theme=<render id>`,
+    validated server-side against the catalogue before it reaches the client. A
+    signed-out visitor goes through `/signup?next=…`, so `signUp` now honours a
+    relative `next` the way login already did.
+  - Three of the five map to premium themes; the card says so.
+  - `tests/unit/atheme-gallery.test.ts` catches a card pointing at a theme the
+    registry cannot draw.
+  - Images need `NEXT_PUBLIC_CLOUDINARY_CLOUD` (`dxedclcqu`). Unset, the whole
+    section is omitted rather than rendering broken images.
 - **RSVP and the guestbook are paid features.** `rsvp` and `blessingWall` are
   false on `free`. Enforced in `InviteBody` (section not rendered) *and* in the
   Server Actions (the actual boundary — a Server Action is a public endpoint).
@@ -308,6 +331,32 @@ couple's — marketing, dashboard, admin, auth, onboarding, checkout.
 ---
 
 ## ⚠️ Known issues
+
+**The theme gallery is built and invisible — the migration was never applied.**
+`atheme` does not exist in the database; the live API answers `PGRST205: Could
+not find the table 'public.atheme'`. Everything above it is finished — the
+table, RLS and five seeded rows in
+`supabase/migrations/20260809093641_atheme_gallery.sql`, the cached read, the
+Cloudinary URL builder, `AthemeGallery`, and both call sites on the landing page
+and in the builder's theme step. It renders nothing because the query returns
+nothing.
+
+Two consequences were fixed on 9 Aug 2026 rather than left:
+
+- **The project did not build at all.** `supabase.from("atheme")` cannot
+  typecheck against a generated schema that has no such table, so every
+  deployment was blocked, including work unrelated to this feature.
+  `src/lib/supabase/types.ts` now declares the table through the same `Replace`
+  layer the jsonb columns use. **That block is temporary and says so** — delete
+  it once the migration is applied and types are regenerated.
+- **The failure was silent.** `getCachedAthemes` discarded the Postgrest error,
+  so a missing table, a wrong RLS policy and an empty catalogue all rendered as
+  "no gallery". It logs the error now and still degrades to hiding the section.
+
+What is verified: all five Cloudinary images resolve, and the
+`f_auto,q_auto,w_800` transform returns ~40KB WebP instead of the ~990KB source
+PNG. Applying the migration is item 5 in `next.md` §0 — it needs the database
+password.
 
 **~~Keystatic~~ removed 9 Aug 2026, because it deleted content.** It is gone —
 config, routes, middleware gate, flag, both dependencies. Recorded here because

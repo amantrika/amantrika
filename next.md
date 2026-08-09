@@ -57,6 +57,18 @@ No agent can do these. They need dashboard access.
 | 2 | **Register the Dodo webhook** → `https://amantrika.imswarnil.com/api/payments/webhook` | Without it a customer pays and their invitation **never publishes**. The route is live and correctly rejects malformed posts — it is simply never called. |
 | 3 | **Add `https://amantrika.imswarnil.com/auth/callback`** to Google Cloud authorised redirect URIs | Google SSO works locally and fails on the live domain only. Invisible until a real person hits it. |
 | 4 | **Rotate the OpenRouter key** at openrouter.ai/settings/keys | Scrubbed from git history and never pushed to GitHub, but it sat in a local repo, two agents' contexts and a stash. |
+| 5 | **Apply the atheme migration** — `npx supabase db push`, then regenerate types | The theme gallery is fully built and shows **nothing**: `atheme` does not exist in the database. Confirmed against the live API — `PGRST205: Could not find the table 'public.atheme'`. The CLI prompts for the database password, which no agent has. |
+
+**#5 in full**, because there is a second half that is easy to forget:
+
+```bash
+npx supabase db push                       # applies 20260809093641_atheme_gallery.sql
+npx supabase gen types typescript --linked > src/lib/supabase/types.generated.ts
+```
+
+Then delete the temporary `AthemeTable` block in `src/lib/supabase/types.ts` —
+it is a hand-written stand-in for the generated table and says so. Leaving it
+means a schema and a type that can drift with nothing to catch it.
 
 **When #1 is done**, also open `/receipts/[orderId]` for that order. The receipt
 page is built and deployed but has never rendered with real data, because no
@@ -159,6 +171,25 @@ publishes a *sanitised clone* and deliberately never identifies the family.
 Quoting someone by name needs its **own** consent — agreeing to be featured
 anonymously is not agreeing to be quoted. Add a separate
 `permissions.testimonial_consent` and a separate admin queue, or drop it.
+
+---
+
+## 4a. Testing is deferred — decided 9 Aug 2026
+
+**Do not write or run tests, and do not build automation, until the feature set
+is complete.** Testing happens in one pass at the end, across everything. This
+is the owner's call, made 9 Aug 2026.
+
+What that means in practice: the suites are still in the repo and still run
+(`npx vitest run`, `npx playwright test`) — nothing was deleted, so nothing has
+to be rebuilt later. They are simply not part of the loop right now. Verify work
+by running it: load the page, drive the flow, read the response.
+
+The trade is worth stating plainly so the last stage is not a surprise. Two of
+the worst bugs found so far — the `/invite/[slug]` 500 and Keystatic deleting
+content — were caught by running the thing, not by a test. But the e2e suite
+would have caught the first one instantly, and it was skipped. When the final
+testing pass happens, that is the gap it needs to close.
 
 ---
 
