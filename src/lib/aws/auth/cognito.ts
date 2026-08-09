@@ -2,7 +2,9 @@ import "server-only";
 import { createHmac } from "node:crypto";
 import {
   CognitoIdentityProviderClient,
+  ConfirmForgotPasswordCommand,
   ConfirmSignUpCommand,
+  ForgotPasswordCommand,
   InitiateAuthCommand,
   ResendConfirmationCodeCommand,
   SignUpCommand,
@@ -110,6 +112,56 @@ export async function cognitoResendCode(email: string): Promise<AuthResult<true>
         ClientId: cognitoClientId(),
         SecretHash: secretHash(email),
         Username: email,
+      })
+    );
+    return { ok: true, data: true };
+  } catch (e) {
+    return failure(e);
+  }
+}
+
+/**
+ * Start a password reset. Cognito emails a six-digit code.
+ *
+ * Always reports success, even for an address that does not exist. Cognito's
+ * own `UserNotFoundException` would otherwise turn this form into an account
+ * enumeration oracle — type an address, learn whether it is registered. The
+ * pool has `PreventUserExistenceErrors` on for the same reason.
+ */
+export async function cognitoForgotPassword(email: string): Promise<AuthResult<true>> {
+  try {
+    await client.send(
+      new ForgotPasswordCommand({
+        ClientId: cognitoClientId(),
+        SecretHash: secretHash(email),
+        Username: email,
+      })
+    );
+    return { ok: true, data: true };
+  } catch (e) {
+    const name = (e as { name?: string }).name;
+    // Genuinely nothing to tell them apart from rate limiting, which is real
+    // feedback rather than a leak.
+    if (name === "UserNotFoundException" || name === "InvalidParameterException") {
+      return { ok: true, data: true };
+    }
+    return failure(e);
+  }
+}
+
+export async function cognitoConfirmForgotPassword(
+  email: string,
+  code: string,
+  newPassword: string
+): Promise<AuthResult<true>> {
+  try {
+    await client.send(
+      new ConfirmForgotPasswordCommand({
+        ClientId: cognitoClientId(),
+        SecretHash: secretHash(email),
+        Username: email,
+        ConfirmationCode: code,
+        Password: newPassword,
       })
     );
     return { ok: true, data: true };

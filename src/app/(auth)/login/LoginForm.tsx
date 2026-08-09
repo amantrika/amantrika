@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState } from "react";
 import { Button, Input } from "@/design-system/components";
 import { signIn, type AuthState } from "../actions";
@@ -26,6 +27,11 @@ export function LoginForm({ next }: { next: string }) {
         autoComplete="current-password"
         required
       />
+      <p className="text-right text-sm">
+        <Link href="/forgot" className="text-muted underline underline-offset-4 hover:text-primary">
+          Forgotten your password?
+        </Link>
+      </p>
       <FormMessage error={state.error} notice={state.notice} />
       <Button type="submit" className="w-full" loading={pending}>
         Sign in

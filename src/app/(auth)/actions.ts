@@ -302,3 +302,56 @@ export async function resendCode(_prev: AuthState, formData: FormData): Promise<
   const result = await cognitoResendCode(email);
   return result.ok ? { notice: `A new code is on its way to ${email}.` } : { error: result.error };
 }
+
+
+/* ---------------------------------------------------------- password reset */
+
+/**
+ * Ask for a reset. Cognito emails a six-digit code; Supabase emails a link.
+ *
+ * Reports the same thing whether or not the address exists. A form that says
+ * "no such account" is an account enumeration oracle — it lets anyone check
+ * which of a list of addresses is registered here, which is exactly what a
+ * credential-stuffing run wants to know first.
+ */
+export async function requestPasswordReset(
+  _prev: AuthState,
+  formData: FormData
+): Promise<AuthState> {
+  const parsed = emailSchema.safeParse(formData.get("email"));
+  if (!parsed.success) return { error: "Enter a valid email address." };
+  const email = parsed.data;
+
+  if (authProviderName() === "cognito") {
+    const { cognitoForgotPassword } = await import("@/lib/aws/auth/cognito");
+    const result = await cognitoForgotPassword(email);
+    if (!result.ok) return { error: result.error };
+    redirect(`/reset?email=${encodeURIComponent(email)}`);
+  }
+
+  const supabase = await createClient();
+  await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${siteUrl}/auth/callback?next=/dashboard`,
+  });
+
+  return { notice: `If ${email} has an account, a reset link is on its way.` };
+}
+
+/** Finish a Cognito reset: code plus the new password. */
+export async function resetPassword(_prev: AuthState, formData: FormData): Promise<AuthState> {
+  const email = String(formData.get("email") ?? "");
+  const code = String(formData.get("code") ?? "").trim();
+  const password = String(formData.get("password") ?? "");
+
+  if (!email || !/^\d{6}$/.test(code)) {
+    return { error: "Enter the six-digit code from your email." };
+  }
+  const pw = passwordSchema.safeParse(password);
+  if (!pw.success) return { error: firstError(pw.error) };
+
+  const { cognitoConfirmForgotPassword } = await import("@/lib/aws/auth/cognito");
+  const result = await cognitoConfirmForgotPassword(email, code, pw.data);
+  if (!result.ok) return { error: result.error };
+
+  redirect(`/login?reset=1&email=${encodeURIComponent(email)}`);
+}
