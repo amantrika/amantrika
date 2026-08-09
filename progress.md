@@ -65,6 +65,37 @@ Accounts for Supabase, Vercel and GitHub are **dedicated to Amantrika**, separat
 from any personal ones. Git commits are authored as `Amantrika` — a commit from
 another identity is rejected by Vercel on Hobby, which fails the deploy.
 
+### An AWS migration has started. The app has NOT moved.
+
+Decided 9 Aug 2026: leave Supabase, Vercel, Resend and Cloudinary entirely for
+AWS. `aws/` holds the plan; **`aws/STATUS.md` is the authoritative record of
+what actually exists** — read it before assuming anything is there.
+
+Built so far, and verified: account `477977196441` (`ap-southeast-1`), a $5
+budget, account-wide S3 Block Public Access, the DynamoDB table `amantrika`, a
+Cognito user pool and app client, and the repository foundation in
+`src/lib/aws/`. `scripts/aws-smoke.ts` passes 11 checks against the real table.
+
+**Everything in `src/app/` still runs on Supabase and still deploys to Vercel.**
+73 Supabase call sites across 60 files are untouched, 16 of 17 entities have no
+repository yet, and no Cognito auth code exists. Do not read the presence of
+`src/lib/aws/` as the migration being underway in the app.
+
+Two decisions worth not relitigating: **DNS stays on Vercel** and the domain
+stays `amantrika.imswarnil.com`, so Route 53 is unused and the AWS side has no
+fixed monthly cost. And the database is **DynamoDB, not Aurora** — the AWS Free
+plan forbids Aurora's Data API, which was the only way to use Aurora without a
+~$32/month NAT gateway. That forced a relational-to-single-table redesign;
+`aws/DATA-MODEL.md` is mandatory reading before writing any query, because
+there are no joins, no `group by`, and no RLS — **authorization now lives
+entirely in `src/lib/aws/repo/`**.
+
+Two conclusions in it are worth knowing without reading it: there is no blogging
+engine to migrate (posts are MDX compiled at build), and the database/auth move
+off Supabase is deliberately parked — it is an auth rewrite plus every data call
+in `src/`, and no AWS Postgres is both compatible with this schema and free when
+idle. See `aws/DECISIONS.md` for the open questions.
+
 ---
 
 ## ✅ Shipped
