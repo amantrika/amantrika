@@ -3,6 +3,7 @@ import { SESv2Client, SendEmailCommand } from "@aws-sdk/client-sesv2";
 import { awsRegion } from "@/lib/aws/env";
 import { emailFrom } from "@/lib/env";
 import type { SendEmailInput, SendEmailResult } from "@/lib/email/send";
+import type { TemplateData } from "@/lib/email/templates";
 
 const client = new SESv2Client({ region: awsRegion, maxAttempts: 3 });
 
@@ -61,5 +62,43 @@ export async function sendViaSes(input: SendEmailInput): Promise<SendEmailResult
     // Subject, never recipient: addresses are guest PII (CLAUDE.md §2.12).
     console.error(`[email] SES send failed (${subject}): ${err.name} — ${err.message}`);
     return { ok: false, error: err.message ?? "SES send failed" };
+  }
+}
+
+/**
+ * Send one of the templates in `templates.ts`, rendered by SES.
+ *
+ * Typed against `TemplateData` so a missing placeholder is a compile error.
+ * Without it SES renders the gap as an empty string — "Namaste ," is delivered,
+ * nothing is logged, and the first you hear of it is a customer.
+ *
+ * Resend has no equivalent, so this path is AWS-only by nature. That is fine:
+ * the *decision* to send lives at the call site, which still goes through
+ * `sendEmail()` when it needs to work on both stacks.
+ */
+export async function sendTemplatedEmail<K extends keyof TemplateData>(
+  template: K,
+  to: string | string[],
+  data: TemplateData[K]
+): Promise<SendEmailResult> {
+  try {
+    const res = await client.send(
+      new SendEmailCommand({
+        FromEmailAddress: emailFrom,
+        Destination: { ToAddresses: Array.isArray(to) ? to : [to] },
+        Content: {
+          Template: {
+            TemplateName: template,
+            TemplateData: JSON.stringify(data),
+          },
+        },
+      })
+    );
+    return { ok: true, id: res.MessageId ?? "" };
+  } catch (e) {
+    const err = e as { name?: string; message?: string };
+    // Template name, never recipient — addresses are guest PII.
+    console.error(`[email] SES template send failed (${template}): ${err.name} — ${err.message}`);
+    return { ok: false, error: err.message ?? "SES template send failed" };
   }
 }
