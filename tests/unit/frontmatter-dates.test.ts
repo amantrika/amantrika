@@ -6,10 +6,10 @@ import { pageFrontmatterSchema, postFrontmatterSchema } from "@/lib/content/sche
  * Dates in frontmatter, both ways they can legitimately be written.
  *
  * YAML has a native date type. `updatedAt: 2026-08-08` is parsed into a `Date`;
- * `updatedAt: "2026-08-08"` stays a string. Both are valid, both occur in
- * `content/`, and Keystatic's date field writes the unquoted one — which took
- * /about, /contact, /how-it-works, /roadmap and /changelog down with "Invalid
- * input" the first time a page was saved through the editor.
+ * `updatedAt: "2026-08-08"` stays a string. Both are valid and both occur in
+ * `content/`. Accepting only the quoted form took /about, /contact,
+ * /how-it-works, /roadmap and /changelog down with "Invalid input" the first
+ * time something rewrote their frontmatter unquoted.
  *
  * The parse goes through gray-matter rather than handing Zod a literal, because
  * the bug lived in the gap between the YAML parser and the schema. A test that

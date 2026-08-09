@@ -17,10 +17,9 @@ import { authorKeys } from "../../../content/authors";
  * The `preprocess` is not defensive padding — it is required. YAML has a native
  * date type, so an unquoted `updatedAt: 2026-08-08` is parsed into a `Date`
  * before Zod ever sees it, while a quoted `"2026-08-08"` stays a string. Both
- * spellings are valid YAML and both are written by hand in this repo, and
- * Keystatic's date field emits the unquoted form — which took five content
- * pages down with "Invalid input" the first time a page was saved through the
- * editor.
+ * spellings are valid YAML, both are written by hand in this repo, and anything
+ * that rewrites frontmatter tends to emit the unquoted form — which took five
+ * content pages down with "Invalid input" the first time it happened.
  *
  * Normalised in UTC deliberately. `toISOString()` on a Date built from a bare
  * YAML date is midnight UTC, so slicing the first ten characters returns the
@@ -47,10 +46,9 @@ export const categories = [
 export type Category = (typeof categories)[number];
 
 /**
- * Page layouts. Exported as an array rather than inlined into the enum because
- * `keystatic.config.ts` builds its layout dropdown from this — the editor and
- * the validator have to offer the same set, and a comment asking two files to
- * agree is not a mechanism. Adding one here is what makes it selectable.
+ * Page layouts. Kept as a named array rather than inlined into the enum so the
+ * set has one home: anything that needs to offer or check a layout reads it
+ * from here rather than retyping the three strings.
  */
 export const pageLayouts = ["prose", "legal", "wide"] as const;
 
@@ -67,9 +65,7 @@ export const postFrontmatterSchema = z
     /**
      * Optional, because the filename is what the URL is actually built from and
      * the loader fills this in from it. Write it and it must match — a
-     * disagreement is an error, not a silent preference. Keystatic encodes the
-     * slug in the filename and writes no `slug` key, which is why declaring it
-     * cannot be mandatory.
+     * disagreement is an error, not a silent preference.
      */
     slug: z
       .string()

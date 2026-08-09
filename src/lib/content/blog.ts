@@ -112,8 +112,8 @@ async function readPost(file: string): Promise<Post> {
     );
   }
   // The filename is the URL, so it is the authority. Declaring `slug` is
-  // optional — Keystatic writes the slug as the filename and no frontmatter key
-  // — but declaring it *differently* is a mistake worth stopping the build for.
+  // optional, but declaring it *differently* is a mistake worth stopping the
+  // build for.
   if (parsed.data.slug && parsed.data.slug !== filename) {
     throw new Error(
       `content/blog/${file}: slug "${parsed.data.slug}" must match the filename "${filename}". ` +

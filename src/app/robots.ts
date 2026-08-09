@@ -22,7 +22,6 @@ const PRIVATE = [
   "/invite", // guest invitations — private links, never indexed
   "/checkout",
   "/md/", // markdown twins; the HTML page is the canonical one
-  "/keystatic", // the content editor; 404s off localhost, but say so anyway
 ];
 
 export default function robots(): MetadataRoute.Robots {

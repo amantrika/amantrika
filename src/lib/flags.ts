@@ -32,15 +32,3 @@ export function designSystemAllowed(host: string | null | undefined): boolean {
   return designSystemForced || isLocalHost(host);
 }
 
-/**
- * The Keystatic editor, same rule and a stronger reason.
- *
- * It is configured with `storage: { kind: "local" }`, so it edits files in a
- * checkout. On a deployment there is no writable repo behind the process and
- * every save would fail — an admin UI that cannot work, on a public origin, is
- * pure surface area. There is deliberately no `SHOW_` escape hatch: unlike the
- * design-system docs, there is no version of this worth sharing from a preview.
- */
-export function keystaticAllowed(host: string | null | undefined): boolean {
-  return isLocalHost(host);
-}

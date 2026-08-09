@@ -225,27 +225,6 @@ couple's — marketing, dashboard, admin, auth, onboarding, checkout.
   rest, so it has a canonical too.
 
 ### Content
-- **Keystatic at `/keystatic`** — an editing UI for the MDX already in the repo.
-  Not a CMS in the usual sense: no database, no content API. It reads and writes
-  the same files in `content/`, so Zod still validates at read time, a malformed
-  post still fails the build, and the markdown twins, RSS, sitemap and JSON-LD
-  still derive from the filesystem. `project-overview.md` §2.10 stands.
-  - **Local only.** Storage is `local`, so it edits a checkout; on a deployment
-    there is no writable repo and every save would fail. `src/middleware.ts`
-    404s both `/keystatic` and `/api/keystatic/*` off a local host, and there is
-    no `SHOW_` escape hatch — unlike the design-system docs, no version of this
-    is worth sharing from a preview.
-  - `keystatic.config.ts` **must mirror `src/lib/content/schema.ts`**. The UI
-    validates as you type, Zod validates at build; if they disagree the editor
-    saves a post that then breaks the build. `categories` and `pageLayouts` are
-    imported from the schema so they cannot drift — do the same for any new
-    enum rather than retyping the values.
-  - Frontmatter `slug` is now **optional and derived from the filename**, which
-    is what the URL was always built from. Keystatic writes the slug as the
-    filename and no frontmatter key. Declaring a *different* slug is still a
-    hard error.
-  - The editor bundle (~1 MB) sits only on its own route. Verified against a
-    build with the routes removed: the guest invitation loads none of it.
 - Blog, content pages, `llms.txt`, markdown twins, RSS, JSON-LD *(built by the
   other agent)*.
 - `/changelog` and `/roadmap` as MDX.
@@ -329,6 +308,22 @@ couple's — marketing, dashboard, admin, auth, onboarding, checkout.
 ---
 
 ## ⚠️ Known issues
+
+**~~Keystatic~~ removed 9 Aug 2026, because it deleted content.** It is gone —
+config, routes, middleware gate, flag, both dependencies. Recorded here because
+the *reason* matters more than the removal: its MDX field re-serialises the
+whole file on save and silently drops any block it cannot round-trip. Two
+reproductions, different components — saving `/about` deleted a
+`<SplitFeature>` and the three paragraphs inside it; saving a post deleted one
+of two `<Callout>`s. No error anywhere. Both were reverted with
+`git checkout`; `content/` is unchanged.
+
+It also could not open *any* of the twelve entries as shipped, because
+`fields.mdx` refuses a file containing a component it has not been declared.
+Declaring them fixed opening and thereby exposed the save bug — fixing the first
+half is what enabled the damage. **If a structured editor over `content/` is
+ever proposed again, the acceptance test is: open a file, save it unchanged,
+confirm `git diff` is empty.**
 
 **`/invite/[slug]` and `/roadmap` were returning 500 in production — fixed and
 deployed 8 Aug 2026.** Verified live: `/invite/swarnil-weds-prachi` and

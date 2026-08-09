@@ -162,6 +162,18 @@ anonymously is not agreeing to be quoted. Add a separate
 
 ---
 
+## 4b. Content editing — decided 9 Aug 2026
+
+There is no editor and there should not be one until the round-trip is proven.
+Keystatic was added and removed within a day: it silently deleted blocks on save
+(details in `progress.md` § Known issues and `learning/CHANGELOG.md`). MDX in
+`content/` is edited in a text editor.
+
+If you revisit this, the bar is a save that produces an empty `git diff` on
+every existing file, not an editor that opens them.
+
+---
+
 ## 5. Smaller, safe wins
 
 - **Look at the dashboard and admin signed in.** They were restyled on 8 Aug 2026

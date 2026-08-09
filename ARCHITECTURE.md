@@ -159,17 +159,14 @@ a diff, and prose belongs in version control. `content/pages/changelog.mdx` and
 feature-request board beneath it, because half the page is our plan and half is
 everyone else's.
 
-**Editing that MDX has a UI: `/keystatic`**, configured in `keystatic.config.ts`
-and served by `src/app/keystatic/` and `src/app/api/keystatic/`. It is an editor,
-not a CMS — it writes the same files, and everything downstream reads the
-filesystem exactly as before. Two rules follow from that:
-
-- It is **local only**, gated in middleware. Local storage means it edits a
-  checkout, so on a deployment it could not work even if it were reachable.
-- `keystatic.config.ts` and `src/lib/content/schema.ts` describe the same
-  frontmatter and must agree. Import shared values (`categories`, `pageLayouts`)
-  rather than retyping them; the failure mode of drift is the editor cheerfully
-  saving something the build rejects.
+**There is no editing UI, and that was tried.** A Keystatic editor was added on
+8 Aug 2026 and removed the next day. It read `content/` correctly, but its MDX
+field re-serialises the whole file on save and **silently dropped blocks it
+could not round-trip** — one save deleted a `<SplitFeature>` and three
+paragraphs of the About page; another deleted a `<Callout>` from a post. No
+error, in the UI or the console. A structured editor over a document format this
+repo already treats as source is a trade that only pays if the round-trip is
+exact, and it was not. MDX is edited in a text editor.
 
 ---
 
@@ -177,8 +174,8 @@ filesystem exactly as before. Two rules follow from that:
 
 Three layers guard the same thing, deliberately:
 
-1. **Middleware** — redirects signed-out visitors, hides the design system and
-   the Keystatic editor off localhost.
+1. **Middleware** — redirects signed-out visitors and hides the design system
+   off localhost.
 2. **Page guards** — `requireRole(...)` sends the wrong role somewhere useful.
 3. **RLS** — the real boundary. A forged session still reads nothing.
 
