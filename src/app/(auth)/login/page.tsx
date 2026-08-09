@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { AuthShell } from "../AuthShell";
+import { authProviderName } from "@/lib/auth/provider";
 import { LoginForm } from "./LoginForm";
 import { AuthDivider, GoogleButton } from "../GoogleButton";
 import { getProfile, homeFor } from "@/lib/auth";
@@ -21,6 +22,10 @@ export default async function LoginPage({
 
   const { next } = await searchParams;
 
+  // Google federation is not configured on the Cognito pool yet, and the
+  // Supabase OAuth flow would mint a session this backend cannot read.
+  const showGoogle = authProviderName() === "supabase";
+
   return (
     <AuthShell
       title="Welcome back"
@@ -34,8 +39,12 @@ export default async function LoginPage({
         </>
       }
     >
-      <GoogleButton next={next} label="Sign in with Google" />
-      <AuthDivider />
+      {showGoogle && (
+        <>
+          <GoogleButton next={next} label="Sign in with Google" />
+          <AuthDivider />
+        </>
+      )}
       <LoginForm next={next && next.startsWith("/") ? next : ""} />
     </AuthShell>
   );

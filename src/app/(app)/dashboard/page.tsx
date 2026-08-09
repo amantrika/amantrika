@@ -20,7 +20,7 @@ const statusTone = {
 
 export default async function DashboardPage() {
   const profile = await requireProfile("/dashboard");
-  const events = await listManagedEvents();
+  const events = await listManagedEvents(profile.id);
 
   return (
     <DashboardShell

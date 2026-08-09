@@ -186,13 +186,72 @@ launch.
   permanently broken dashboard. That is weaker than a trigger, and deliberately
   so documented.
 
+## Testing the whole signed-in app on AWS
+
+There are now **two** switches, and they move independently:
+
+```
+DATA_PROVIDER=aws     # invitation reads from DynamoDB
+AUTH_PROVIDER=cognito # sign-in, sessions and profiles from Cognito
+```
+
+Separate on purpose. They fail in completely different ways, and collapsing
+them into one variable would force an all-or-nothing cutover of two systems.
+
+```bash
+rm -rf .next-cog
+set -a; source .env.local; set +a
+AUTH_PROVIDER=cognito DATA_PROVIDER=aws NEXT_DIST_DIR=.next-cog npx next dev -p 3210
+```
+
+A confirmed test account already exists in the pool:
+
+```
+host@amantrika.test / TestPass123
+```
+
+Delete it when you are done:
+
+```bash
+aws cognito-idp admin-delete-user \
+  --user-pool-id ap-southeast-1_lkjHBiWu1 --username host@amantrika.test
+```
+
+Verified in a browser on 9 Aug 2026, end to end: sign-in redirects to
+`/dashboard`, the header shows the email and role read from **DynamoDB**,
+`/dashboard` while signed out redirects to `/login`, and `/invite/a-weds-c`
+renders from **DynamoDB**.
+
+### The bug this test caught — worth understanding
+
+The first run showed **six invitations on the dashboard of a user who owns
+none**.
+
+`listManagedEvents()` had no `where` clause. That was correct under Supabase:
+RLS restricted it inside the database, and adding an owner filter would have
+broken the agent and admin views, which are meant to see more than their own
+rows. But with `AUTH_PROVIDER=cognito` there is no Supabase session, so the
+**anonymous** grant applied instead — and the anon policy permits reading
+published events.
+
+Nothing about the code looked wrong, because **the filtering was never in the
+code**. No type error could have caught it, and no unit test was watching. It
+took loading the page as a real user.
+
+That is the whole risk of leaving RLS, in one concrete example. Every query that
+looks unfiltered needs checking against the same question: *what was doing the
+filtering, and does it still exist?*
+
 ## What the switch does *not* cover
 
 Be clear about this before concluding "AWS works":
 
 | Still Supabase in both modes | Why |
 | --- | --- |
-| **Sign-in and every dashboard** | Cognito has a pool but no auth code |
+| ~~Sign-in~~ | **Ported.** `AUTH_PROVIDER=cognito` |
+| Google sign-in | Federation not configured on the pool — the button is hidden in Cognito mode rather than starting a Supabase flow the app cannot read |
+| Partner/agent signup | Refused in Cognito mode: the agent and referral records have no repository, and dropping a referral silently is worse than declining |
+| Everything else on a dashboard (guest lists, RSVPs, stats, the builder) | Still Supabase queries |
 | **RSVPs, wishes, orders, payments** | No repositories yet |
 | **View tracking** (`/api/track`) | Counters are defined but the dedup semantics differ; porting it would silently change what "a view" means |
 | **Photographs** | `assetUrl()` still builds a Supabase Storage URL — with `DATA_PROVIDER=aws` the data is DynamoDB but the images are not |

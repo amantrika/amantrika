@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { AuthShell } from "../AuthShell";
+import { authProviderName } from "@/lib/auth/provider";
 import { SignUpForm } from "./SignUpForm";
 import { AuthDivider, GoogleButton } from "../GoogleButton";
 import { getProfile, homeFor } from "@/lib/auth";
@@ -24,6 +25,10 @@ export default async function SignUpPage({
   // an open redirect. Same check as the login page.
   const safeNext = next && next.startsWith("/") && !next.startsWith("//") ? next : "";
 
+  // Google federation is not configured on the Cognito pool yet, and the
+  // Supabase OAuth flow would mint a session this backend cannot read.
+  const showGoogle = authProviderName() === "supabase";
+
   return (
     <AuthShell
       title="Begin your invitation"
@@ -37,8 +42,12 @@ export default async function SignUpPage({
         </>
       }
     >
-      <GoogleButton next={safeNext} label="Sign up with Google" />
-      <AuthDivider />
+      {showGoogle && (
+        <>
+          <GoogleButton next={safeNext} label="Sign up with Google" />
+          <AuthDivider />
+        </>
+      )}
       <SignUpForm
         referralCode={ref ?? ""}
         initialRole={as === "agent" ? "agent" : "host"}

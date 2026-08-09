@@ -1,6 +1,7 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import { getDataProvider } from "@/lib/data";
+import { authProviderName } from "@/lib/auth/provider";
 import type { InviteView } from "@/lib/invites/invite";
 import { demoInvite, isDemoSlug } from "@/lib/invites/demo";
 import type {
@@ -45,14 +46,108 @@ export async function getBlessings(eventId: string): Promise<BlessingRow[]> {
   return (data ?? []) as BlessingRow[];
 }
 
-/** Events the caller can manage — RLS already restricts this to owner/agent/admin. */
-export async function listManagedEvents(): Promise<EventRow[]> {
+/**
+ * Events the caller can manage.
+ *
+ * ## Read this before removing the `userId` argument
+ *
+ * Under Supabase this function deliberately has no `where` clause: RLS
+ * restricts it to owner/agent/admin inside the database, and adding an explicit
+ * owner filter here would break the agent and admin views, which are supposed
+ * to see more than their own rows.
+ *
+ * That is safe *only while a Supabase session exists*. With `AUTH_PROVIDER=cognito`
+ * there is none, so the anonymous grant applies instead — and the anon policy
+ * permits reading published events. The result was a dashboard that showed
+ * every host's invitations to any signed-in user. It was caught in a browser
+ * test, not by a type error, because nothing about the code looks wrong: the
+ * filtering was never in the code.
+ *
+ * So on the Cognito path the query is owner-scoped explicitly, in the
+ * repository, where authorization now lives.
+ */
+export async function listManagedEvents(userId?: string): Promise<EventRow[]> {
+  if (authProviderName() === "cognito") {
+    // No user means no rows. Failing closed matters more here than convenience:
+    // the alternative was returning everyone's invitations.
+    if (!userId) return [];
+    const { listInvitesForOwner } = await import("@/lib/aws/repo/invites");
+    const items = await listInvitesForOwner(userId);
+    return items.map(inviteItemToEventRow);
+  }
+
   const supabase = await createClient();
   const { data } = await supabase
     .from("events")
     .select("*")
     .order("updated_at", { ascending: false });
   return (data ?? []) as EventRow[];
+}
+
+/**
+ * DynamoDB item → the Postgres row shape the dashboard components still expect.
+ *
+ * Temporary by design: it exists so the surfaces can move before their view
+ * models do. It should be deleted when the dashboard is ported properly.
+ */
+function inviteItemToEventRow(item: {
+  id: string;
+  ownerId: string;
+  agentId?: string;
+  slug: string;
+  status: string;
+  title: string;
+  eventType: string;
+  themeId: string;
+  city?: string;
+  timezone: string;
+  mainDateTime?: string;
+  hashtag?: string;
+  story?: string;
+  coverAssetId?: string;
+  hosts: unknown;
+  hotels: unknown;
+  storyMoments: unknown;
+  settings: unknown;
+  permissions: unknown;
+  planCode: string;
+  publishedAt?: string;
+  isShowcased: boolean;
+  showcaseTags: string[];
+  showcasedAt?: string;
+  showcaseSourceId?: string;
+  createdAt: string;
+  updatedAt: string;
+}): EventRow {
+  return {
+    id: item.id,
+    owner_id: item.ownerId,
+    agent_id: item.agentId ?? null,
+    slug: item.slug,
+    status: item.status,
+    title: item.title,
+    event_type: item.eventType,
+    theme_id: item.themeId,
+    city: item.city ?? null,
+    timezone: item.timezone,
+    main_datetime: item.mainDateTime ?? null,
+    hashtag: item.hashtag ?? null,
+    story: item.story ?? null,
+    cover_asset_id: item.coverAssetId ?? null,
+    hosts: item.hosts,
+    hotels: item.hotels,
+    story_moments: item.storyMoments,
+    settings: item.settings,
+    permissions: item.permissions,
+    plan_code: item.planCode,
+    published_at: item.publishedAt ?? null,
+    is_showcased: item.isShowcased,
+    showcase_tags: item.showcaseTags,
+    showcased_at: item.showcasedAt ?? null,
+    showcase_source_id: item.showcaseSourceId ?? null,
+    created_at: item.createdAt,
+    updated_at: item.updatedAt,
+  } as EventRow;
 }
 
 export async function getManagedEvent(id: string): Promise<EventRow | null> {

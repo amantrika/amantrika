@@ -23,7 +23,7 @@ export default async function AgentPage() {
 
   const [stats, events, agentResult, clientsResult, commissionsResult] = await Promise.all([
     getAgentStats(profile.id),
-    listManagedEvents(),
+    listManagedEvents(profile.id),
     supabase.from("agents").select("*").eq("id", profile.id).maybeSingle(),
     supabase.from("profiles").select("*").eq("referred_by", profile.id),
     supabase

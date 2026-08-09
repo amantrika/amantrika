@@ -9,6 +9,7 @@ import { siteUrl } from "@/lib/env";
 import { captureServer, emailDomain } from "@/lib/posthog/server";
 import { log } from "@/lib/posthog/logger";
 import { EVENTS } from "@/lib/posthog/events";
+import { authProviderName } from "@/lib/auth/provider";
 
 export interface AuthState {
   error?: string;
@@ -45,6 +46,8 @@ export async function signIn(_prev: AuthState, formData: FormData): Promise<Auth
     });
 
   if (!parsed.success) return { error: firstError(parsed.error) };
+
+  if (authProviderName() === "cognito") return cognitoSignInAction(parsed.data, formData);
 
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithPassword(parsed.data);
@@ -83,6 +86,10 @@ export async function signUp(_prev: AuthState, formData: FormData): Promise<Auth
 
   if (!parsed.success) return { error: firstError(parsed.error) };
   const { email, password, fullName, phone, role, agencyName, referralCode } = parsed.data;
+
+  if (authProviderName() === "cognito") {
+    return cognitoSignUpAction({ email, password, fullName, role });
+  }
 
   const supabase = await createClient();
   const { data, error } = await supabase.auth.signUp({
@@ -170,6 +177,13 @@ export async function signInWithGoogle(next?: string): Promise<AuthState> {
 }
 
 export async function signOut(): Promise<void> {
+  if (authProviderName() === "cognito") {
+    const { clearSession } = await import("@/lib/aws/auth/session");
+    await clearSession();
+    revalidatePath("/", "layout");
+    redirect("/");
+  }
+
   const supabase = await createClient();
   const {
     data: { user },
@@ -180,4 +194,111 @@ export async function signOut(): Promise<void> {
   await supabase.auth.signOut();
   revalidatePath("/", "layout");
   redirect("/");
+}
+
+
+/* ------------------------------------------------------------------ Cognito */
+
+/**
+ * Cognito sign-up.
+ *
+ * Ends at a confirmation *code* rather than a magic link — Cognito's default,
+ * and a real behavioural difference from Supabase. The form therefore has to
+ * send people to /confirm to type six digits, which is why this returns a
+ * redirect instead of the "check your email" notice the Supabase branch uses.
+ *
+ * `phone`, `agencyName` and `referralCode` are accepted by the form but not yet
+ * stored: the partner records they feed live in tables with no repository yet.
+ * Dropping them silently would lose a referral, so agents are refused for now
+ * rather than half-registered.
+ */
+async function cognitoSignUpAction(input: {
+  email: string;
+  password: string;
+  fullName: string;
+  role: "host" | "agent";
+}): Promise<AuthState> {
+  if (input.role === "agent") {
+    return {
+      error:
+        "Partner signup isn't available on the new backend yet. Please sign up as a host for now.",
+    };
+  }
+
+  const { cognitoSignUp } = await import("@/lib/aws/auth/cognito");
+  const result = await cognitoSignUp(input);
+
+  if (!result.ok) {
+    log.warn("cognito signup failed", { reason: result.code });
+    return { error: result.error };
+  }
+
+  redirect(`/confirm?email=${encodeURIComponent(input.email)}`);
+}
+
+async function cognitoSignInAction(
+  creds: { email: string; password: string },
+  formData: FormData
+): Promise<AuthState> {
+  const { cognitoSignIn } = await import("@/lib/aws/auth/cognito");
+  const result = await cognitoSignIn(creds.email, creds.password);
+
+  if (!result.ok) {
+    // An unconfirmed account is the one failure worth being specific about:
+    // "wrong password" would send someone hunting for a typo when the fix is
+    // sitting in their inbox.
+    if (result.code === "UserNotConfirmedException") {
+      redirect(`/confirm?email=${encodeURIComponent(creds.email)}`);
+    }
+    return { error: result.error };
+  }
+
+  const { setSession } = await import("@/lib/aws/auth/session");
+  await setSession(result.data, creds.email);
+
+  const { ensureProfile } = await import("@/lib/aws/repo/profiles");
+  const profile = await ensureProfile({ userId: subFrom(result.data.IdToken), email: creds.email });
+
+  revalidatePath("/", "layout");
+  const next = String(formData.get("next") ?? "");
+  redirect(next.startsWith("/") && !next.startsWith("//") ? next : homeFor(profile.role));
+}
+
+/**
+ * The `sub` out of an id token, without verifying it.
+ *
+ * Safe only because this token came straight from Cognito over TLS moments ago
+ * — it was never in the browser's hands. Anywhere a token arrives from a client
+ * it must be verified instead; see `verifyAccessToken` in aws/auth/session.ts.
+ */
+function subFrom(idToken: string | undefined): string {
+  if (!idToken) throw new Error("Cognito returned no id token");
+  const payload = JSON.parse(Buffer.from(idToken.split(".")[1], "base64").toString());
+  return payload.sub as string;
+}
+
+/** Confirm a sign-up with the six-digit code Cognito emailed. */
+export async function confirmSignUp(_prev: AuthState, formData: FormData): Promise<AuthState> {
+  const email = String(formData.get("email") ?? "");
+  const code = String(formData.get("code") ?? "").trim();
+
+  if (!email || !/^\d{6}$/.test(code)) {
+    return { error: "Enter the six-digit code from your email." };
+  }
+
+  const { cognitoConfirmSignUp } = await import("@/lib/aws/auth/cognito");
+  const result = await cognitoConfirmSignUp(email, code);
+  if (!result.ok) return { error: result.error };
+
+  redirect(`/login?confirmed=1&email=${encodeURIComponent(email)}`);
+}
+
+/** Send the code again, for the inbox where the first one did not arrive. */
+export async function resendCode(_prev: AuthState, formData: FormData): Promise<AuthState> {
+  const email = String(formData.get("email") ?? "");
+  if (!email) return { error: "Enter your email address." };
+
+  const { cognitoResendCode } = await import("@/lib/aws/auth/cognito");
+  const result = await cognitoResendCode(email);
+  return result.ok ? { notice: `A new code is on its way to ${email}.` } : { error: result.error };
 }
