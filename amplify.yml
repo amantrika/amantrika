@@ -1,33 +1,65 @@
 # AWS Amplify Hosting build spec.
 #
-# Only used if you connect this repo in the Amplify console. The alternative
-# path — GitHub Actions + SST, in .github/workflows/deploy-aws.yml — needs no
-# console step but does need an IAM role. Pick one; running both would mean two
-# deployments of the same commit fighting over the same domain.
-#
-# UNVERIFIED: no Amplify app exists yet, so this spec has never run a build.
-#
-# Amplify injects environment variables from the console (App settings →
-# Environment variables). STACK=aws is the one that matters: it makes the
-# deployed app use DynamoDB, Cognito and SES rather than Supabase and Resend.
+# Used by the app connected in the Amplify console. The GitHub Actions + SST
+# path in .github/workflows/deploy-aws.yml is the alternative; run one, not
+# both, or two deployments of the same commit fight over the domain.
 
 version: 1
 frontend:
   phases:
     preBuild:
       commands:
-        # `npm ci` not `npm install`: a lockfile-respecting install is the only
-        # kind that makes a CI build reproducible.
+        # `npm ci` not `npm install`: only a lockfile-respecting install makes a
+        # CI build reproducible.
         - npm ci
+
+        # ------------------------------------------------------------------
+        # Write the environment into .env.production.
+        #
+        # This is not belt-and-braces, it is required. Amplify injects console
+        # environment variables into the *build*, and Next.js server code reads
+        # process.env at *runtime* in the SSR compute — which does not inherit
+        # them. Without this the deployed site silently runs on defaults.
+        #
+        # It cost a full deploy to find, and the symptom was misleading: the
+        # site served fine, but STACK fell back to `vercel`, so an all-AWS build
+        # quietly used Supabase. The tell was the Google sign-in button being
+        # visible, which only happens on the Supabase auth path.
+        #
+        # Next.js loads .env.production automatically in a production build, so
+        # writing the file is enough — nothing needs to read it explicitly.
+        # ------------------------------------------------------------------
+        - |
+          {
+            echo "STACK=${STACK}"
+            echo "NEXT_PUBLIC_STACK=${NEXT_PUBLIC_STACK}"
+            echo "NEXT_PUBLIC_SITE_URL=${NEXT_PUBLIC_SITE_URL}"
+            echo "AMANTRIKA_TABLE=${AMANTRIKA_TABLE}"
+            echo "AMANTRIKA_MEDIA_BUCKET=${AMANTRIKA_MEDIA_BUCKET}"
+            echo "COGNITO_USER_POOL_ID=${COGNITO_USER_POOL_ID}"
+            echo "COGNITO_CLIENT_ID=${COGNITO_CLIENT_ID}"
+            echo "COGNITO_CLIENT_SECRET=${COGNITO_CLIENT_SECRET}"
+            echo "NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}"
+            echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}"
+            echo "SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}"
+            echo "NEXT_PUBLIC_CLOUDINARY_CLOUD=${NEXT_PUBLIC_CLOUDINARY_CLOUD}"
+            echo "PAYMENT_PROVIDER=${PAYMENT_PROVIDER}"
+            echo "PAYMENT_WEBHOOK_SECRET=${PAYMENT_WEBHOOK_SECRET}"
+            echo "CRON_SECRET=${CRON_SECRET}"
+            echo "EMAIL_FROM=${EMAIL_FROM}"
+          } > .env.production
+        # Names only — never the values, which include the Supabase service-role
+        # key and the Cognito client secret. Build logs are not a secret store.
+        - echo "Wrote .env.production with:" && cut -d= -f1 .env.production | tr '\n' ' '
     build:
       commands:
-        # Fail before deploying rather than after. A type error caught here
-        # costs ninety seconds; caught in production it costs a rollback.
+        # Fail before deploying rather than after. Ninety seconds here beats a
+        # rollback. `tsc` excludes sst.config.ts, which needs SST's generated
+        # types that a clean checkout does not have.
         - npx tsc --noEmit
         - npm run test:unit
         - npm run build
   artifacts:
-    # Amplify's Next.js SSR support reads the standard .next output.
     baseDirectory: .next
     files:
       - "**/*"
