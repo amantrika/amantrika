@@ -527,6 +527,22 @@ safe. Give each agent its own worktree, or run them one at a time.
   than under the node. Anchor it to the node's own height, and hide the last
   one from the list (`[&>li:last-child_[data-thread]]:hidden`) — a step cannot
   know it is last.
+- **`vercel --prod` deploys the working directory, not the commit.** It uploads
+  whatever is on disk, so in a checkout two agents share it can ship someone
+  else's uncommitted, unreviewed work — and it builds cleanly and looks fine,
+  because their change compiles. It happened on 9 Aug 2026: a `--prod` run to
+  pick up a new environment variable also carried a half-finished feature
+  removal that existed only in the working tree. **To ship a commit, push to
+  `main`** and let the integration build it. To rebuild an existing deployment
+  against new env vars — the only reason `--prod` was reached for — use
+  `vercel redeploy <url> --target production`, which rebuilds *that* source with
+  the current environment and touches nothing else.
+- **An env var that exists in `.env.local` and `.env.example` may not exist in
+  the deployment.** `NEXT_PUBLIC_CLOUDINARY_CLOUD` was in both and in neither
+  Vercel environment, so the theme gallery shipped showing "Preview unavailable"
+  on every card. Nothing failed — the code degrades on purpose. Second
+  deployment-only failure in two days, after the Google OAuth redirect URI.
+  `vercel env ls` is the check.
 - **`PGRST205` means either a missing table or a stale schema cache — the error
   alone cannot tell you which.** PostgREST answers `Could not find the table
   'public.x' in the schema cache` in both cases: a table that genuinely does not
