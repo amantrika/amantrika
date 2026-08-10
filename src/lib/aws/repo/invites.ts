@@ -586,3 +586,16 @@ export async function publishInvite(userId: string, eventId: string): Promise<bo
     throw error;
   }
 }
+
+/** Sub-events for one invitation, in display order. No ownership check: this
+ *  is the same data the guest page already serves publicly. */
+export async function getSubEventsForEvent(eventId: string): Promise<SubEventItem[]> {
+  const res = await ddb.send(
+    new QueryCommand({
+      TableName: tableName,
+      KeyConditionExpression: "PK = :pk AND begins_with(SK, :sk)",
+      ExpressionAttributeValues: { ":pk": eventPk(eventId), ":sk": SK_PREFIX.subEvent },
+    })
+  );
+  return ((res.Items ?? []) as SubEventItem[]).sort((a, b) => a.sortOrder - b.sortOrder);
+}

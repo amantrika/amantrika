@@ -132,6 +132,8 @@ export interface AssetItem extends BaseItem {
    */
   storagePath: string;
   caption?: string;
+  /** The name the host uploaded, kept for display only — never used as a key. */
+  fileName?: string;
   sortOrder: number;
 }
 

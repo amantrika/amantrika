@@ -35,6 +35,19 @@ export async function getPublishedInvite(slug: string): Promise<InviteView | nul
 }
 
 export async function getBlessings(eventId: string): Promise<BlessingRow[]> {
+  if (authProviderName() === "cognito") {
+    const { listApprovedWishes } = await import("@/lib/aws/repo/guest");
+    const wishes = await listApprovedWishes(eventId);
+    return wishes.map((w) => ({
+      id: w.id,
+      event_id: w.eventId,
+      name: w.name,
+      message: w.message,
+      is_approved: w.isApproved,
+      created_at: w.createdAt,
+    })) as BlessingRow[];
+  }
+
   const supabase = await createClient();
   const { data } = await supabase
     .from("blessings")
@@ -150,13 +163,39 @@ function inviteItemToEventRow(item: {
   } as EventRow;
 }
 
-export async function getManagedEvent(id: string): Promise<EventRow | null> {
+export async function getManagedEvent(id: string, userId?: string): Promise<EventRow | null> {
+  if (authProviderName() === "cognito") {
+    if (!userId) return null;
+    const { getInviteForOwner } = await import("@/lib/aws/repo/invites");
+    const item = await getInviteForOwner(userId, id);
+    return item ? inviteItemToEventRow(item) : null;
+  }
+
   const supabase = await createClient();
   const { data } = await supabase.from("events").select("*").eq("id", id).maybeSingle();
   return (data as EventRow) ?? null;
 }
 
 export async function getSubEvents(eventId: string): Promise<SubEventRow[]> {
+  if (authProviderName() === "cognito") {
+    const { getSubEventsForEvent } = await import("@/lib/aws/repo/invites");
+    const subs = await getSubEventsForEvent(eventId);
+    return subs.map((s) => ({
+      id: s.id,
+      event_id: s.eventId,
+      key: s.key,
+      name: s.name,
+      starts_at: s.startsAt ?? null,
+      time_label: s.timeLabel ?? null,
+      venue: s.venue ?? null,
+      address: s.address ?? null,
+      dress_code: s.dressCode ?? null,
+      map_url: s.mapUrl ?? null,
+      sort_order: s.sortOrder,
+      created_at: s.createdAt,
+    })) as SubEventRow[];
+  }
+
   const supabase = await createClient();
   const { data } = await supabase
     .from("sub_events")
@@ -166,7 +205,27 @@ export async function getSubEvents(eventId: string): Promise<SubEventRow[]> {
   return (data ?? []) as SubEventRow[];
 }
 
-export async function getAssets(eventId: string): Promise<AssetRow[]> {
+export async function getAssets(eventId: string, userId?: string): Promise<AssetRow[]> {
+  if (authProviderName() === "cognito") {
+    if (!userId) return [];
+    const { listAssets } = await import("@/lib/aws/repo/assets");
+    const assets = await listAssets(userId, eventId);
+    return assets.map((a) => ({
+      id: a.id,
+      event_id: a.eventId,
+      kind: a.kind,
+      storage_path: a.storagePath,
+      file_name: a.fileName ?? null,
+      mime_type: null,
+      size_bytes: null,
+      width: null,
+      height: null,
+      caption: a.caption ?? null,
+      sort_order: a.sortOrder,
+      created_at: a.createdAt,
+    })) as unknown as AssetRow[];
+  }
+
   const supabase = await createClient();
   const { data } = await supabase
     .from("assets")
@@ -177,6 +236,10 @@ export async function getAssets(eventId: string): Promise<AssetRow[]> {
 }
 
 export async function getGuests(eventId: string): Promise<GuestRow[]> {
+  // Named guest lists (per-guest links) have no repository on AWS yet. Empty is
+  // the honest answer — the feature is absent, not broken.
+  if (authProviderName() === "cognito") return [];
+
   const supabase = await createClient();
   const { data } = await supabase
     .from("guests")
@@ -186,7 +249,31 @@ export async function getGuests(eventId: string): Promise<GuestRow[]> {
   return (data ?? []) as GuestRow[];
 }
 
-export async function getRsvps(eventId: string): Promise<RsvpRow[]> {
+/**
+ * RSVPs carry phone numbers, so on the AWS stack this is owner-scoped
+ * explicitly — RLS is not there to do it. `userId` is optional only because
+ * every existing caller predates it; without one, the AWS path returns nothing
+ * rather than everything.
+ */
+export async function getRsvps(eventId: string, userId?: string): Promise<RsvpRow[]> {
+  if (authProviderName() === "cognito") {
+    if (!userId) return [];
+    const { listRsvps } = await import("@/lib/aws/repo/guest");
+    const rsvps = await listRsvps(userId, eventId);
+    return rsvps.map((r) => ({
+      id: r.id,
+      event_id: r.eventId,
+      guest_id: null,
+      guest_name: r.guestName,
+      attending: r.attending,
+      headcount: r.headcount,
+      meal: r.meal ?? null,
+      message: r.message ?? null,
+      sub_event_keys: r.subEventKeys,
+      created_at: r.createdAt,
+    })) as RsvpRow[];
+  }
+
   const supabase = await createClient();
   const { data } = await supabase
     .from("rsvps")
@@ -208,13 +295,42 @@ const emptyStats: EventStats = {
   badge_clicks: 0,
 };
 
-export async function getEventStats(eventId: string): Promise<EventStats> {
+export async function getEventStats(eventId: string, userId?: string): Promise<EventStats> {
+  if (authProviderName() === "cognito") {
+    if (!userId) return emptyStats;
+    const { eventTotals } = await import("@/lib/aws/repo/guest");
+    const t = await eventTotals(userId, eventId);
+    if (!t) return emptyStats;
+    return {
+      total_views: t.views,
+      unique_viewers: t.views,
+      views_7d: t.views,
+      guests: t.headcount,
+      rsvp_yes: t.rsvpYes,
+      rsvp_no: t.rsvpNo,
+      rsvp_maybe: t.rsvpMaybe,
+      blessings: t.wishes,
+      badge_clicks: 0,
+    };
+  }
+
   const supabase = await createClient();
   const { data } = await supabase.rpc("event_stats", { p_event_id: eventId });
   return (data as EventStats) ?? emptyStats;
 }
 
-export async function getViewsByDay(eventId: string, days = 14): Promise<ViewsByDay[]> {
+export async function getViewsByDay(
+  eventId: string,
+  days = 14,
+  userId?: string
+): Promise<ViewsByDay[]> {
+  if (authProviderName() === "cognito") {
+    if (!userId) return [];
+    const { viewsByDay } = await import("@/lib/aws/repo/guest");
+    const rows = await viewsByDay(userId, eventId);
+    return rows.slice(-days).map((r) => ({ day: r.day, views: r.views })) as ViewsByDay[];
+  }
+
   const supabase = await createClient();
   const { data } = await supabase.rpc("event_views_by_day", {
     p_event_id: eventId,

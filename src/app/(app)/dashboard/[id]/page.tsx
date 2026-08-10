@@ -33,18 +33,18 @@ export default async function EventDashboardPage({
   const { id } = await params;
   const profile = await requireProfile(`/dashboard/${id}`);
 
-  const event = await getManagedEvent(id);
+  const event = await getManagedEvent(id, profile.id);
   if (!event) notFound();
 
   const supabase = await createClient();
 
   const [stats, viewsByDay, guests, rsvps, subEvents, assets, blessingsResult] = await Promise.all([
-    getEventStats(event.id),
-    getViewsByDay(event.id, 14),
+    getEventStats(event.id, profile.id),
+    getViewsByDay(event.id, 14, profile.id),
     getGuests(event.id),
-    getRsvps(event.id),
+    getRsvps(event.id, profile.id),
     getSubEvents(event.id),
-    getAssets(event.id),
+    getAssets(event.id, profile.id),
     supabase
       .from("blessings")
       .select("*")

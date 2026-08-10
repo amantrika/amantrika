@@ -4,6 +4,7 @@ import { revalidatePath, revalidateTag } from "next/cache";
 import { z } from "zod";
 import { inviteTag } from "@/lib/cache";
 import { createClient } from "@/lib/supabase/server";
+import { authProviderName } from "@/lib/auth/provider";
 import { entitlementsFor } from "@/lib/invites/entitlements";
 import { captureAnonymousServer } from "@/lib/posthog/server";
 import { log } from "@/lib/posthog/logger";
@@ -39,6 +40,27 @@ export async function submitRsvp(input: RsvpInput): Promise<SubmitResult> {
     return { ok: false, error: parsed.error.issues[0]?.message ?? "Please check the form." };
   }
   const data = parsed.data;
+
+  if (authProviderName() === "cognito") {
+    const { getPublishedInviteBySlug } = await import("@/lib/aws/repo/invites");
+    const found = await getPublishedInviteBySlug(data.slug);
+    // Silent success for an unknown or unpublished slug — the same shape the
+    // Supabase branch uses. A guest who mistypes should not be told which
+    // invitations exist.
+    if (!found) return { ok: true };
+
+    const { submitRsvp: write } = await import("@/lib/aws/repo/guest");
+    const result = await write({
+      eventId: found.invite.id,
+      guestName: data.guestName,
+      attending: data.attending,
+      headcount: data.headcount,
+      message: data.message,
+      meal: data.meal,
+      subEventKeys: data.subEventKeys,
+    });
+    return result.ok ? { ok: true } : { ok: false, error: result.error };
+  }
 
   const supabase = await createClient();
   const { data: event } = await supabase
@@ -117,6 +139,16 @@ export async function submitBlessing(input: BlessingInput): Promise<SubmitResult
     return { ok: false, error: parsed.error.issues[0]?.message ?? "Please check the form." };
   }
   const { slug, name, message } = parsed.data;
+
+  if (authProviderName() === "cognito") {
+    const { getPublishedInviteBySlug } = await import("@/lib/aws/repo/invites");
+    const found = await getPublishedInviteBySlug(slug);
+    if (!found) return { ok: true };
+
+    const { submitWish } = await import("@/lib/aws/repo/guest");
+    const result = await submitWish({ eventId: found.invite.id, name: name ?? "", message });
+    return result.ok ? { ok: true } : { ok: false, error: result.error };
+  }
 
   const supabase = await createClient();
   const { data: event } = await supabase
