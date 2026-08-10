@@ -353,3 +353,37 @@ export async function getAgentStats(agentId: string): Promise<AgentStats> {
   const { data } = await supabase.rpc("agent_stats", { p_agent_id: agentId });
   return (data as AgentStats) ?? emptyAgentStats;
 }
+
+
+/**
+ * Every message for the moderation queue, approved or not.
+ *
+ * Distinct from `getBlessings`, which is the guest-facing read and returns only
+ * approved ones. Conflating them is how an unapproved message ends up on a
+ * wedding page, so they stay two functions with two audiences.
+ */
+export async function getModeratableBlessings(
+  eventId: string,
+  userId: string
+): Promise<BlessingRow[]> {
+  if (authProviderName() === "cognito") {
+    const { listAllWishes } = await import("@aws/repo/guest");
+    const wishes = await listAllWishes(userId, eventId);
+    return wishes.map((w) => ({
+      id: w.id,
+      event_id: w.eventId,
+      name: w.name,
+      message: w.message,
+      is_approved: w.isApproved,
+      created_at: w.createdAt,
+    })) as BlessingRow[];
+  }
+
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("blessings")
+    .select("*")
+    .eq("event_id", eventId)
+    .order("created_at", { ascending: false });
+  return (data ?? []) as BlessingRow[];
+}

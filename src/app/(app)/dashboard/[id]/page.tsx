@@ -13,6 +13,7 @@ import {
   getRsvps,
   getSubEvents,
   getViewsByDay,
+  getModeratableBlessings,
 } from "@/lib/invites/queries";
 import { createClient } from "@/lib/supabase/server";
 import { eventTypeLabels } from "@/lib/invites/invite";
@@ -45,11 +46,7 @@ export default async function EventDashboardPage({
     getRsvps(event.id, profile.id),
     getSubEvents(event.id),
     getAssets(event.id, profile.id),
-    supabase
-      .from("blessings")
-      .select("*")
-      .eq("event_id", event.id)
-      .order("created_at", { ascending: false }),
+    getModeratableBlessings(event.id, profile.id),
   ]);
 
   return (
@@ -75,7 +72,7 @@ export default async function EventDashboardPage({
         rsvps={rsvps}
         subEvents={subEvents}
         assets={assets}
-        blessings={(blessingsResult.data ?? []) as BlessingRow[]}
+        blessings={(blessingsResult) as BlessingRow[]}
         origin={siteUrl}
       />
     </DashboardShell>

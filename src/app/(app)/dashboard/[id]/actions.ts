@@ -5,6 +5,7 @@ import { z } from "zod";
 import { inviteTag } from "@/lib/cache";
 import { createClient } from "@/lib/supabase/server";
 import { requireProfile } from "@/lib/auth";
+import { authProviderName } from "@/lib/auth/provider";
 import { captureServer } from "@/lib/posthog/server";
 import { log } from "@/lib/posthog/logger";
 import { EVENTS } from "@/lib/posthog/events";
@@ -201,6 +202,20 @@ export async function setBlessingApproval(
   blessingId: string,
   approved: boolean
 ): Promise<Result> {
+  if (authProviderName() === "cognito") {
+    const profile = await requireProfile();
+    const { listAllWishes, setWishApproval } = await import("@aws/repo/guest");
+    // The repository needs the whole item: a wish's sort key embeds its creation
+    // time, which the id alone does not give us.
+    const wishes = await listAllWishes(profile.id, eventId);
+    const wish = wishes.find((w) => w.id === blessingId);
+    if (!wish) return { ok: false, error: "Couldn't find that blessing." };
+    const done = await setWishApproval(profile.id, eventId, wish, approved);
+    if (!done) return { ok: false, error: "Couldn't update that blessing." };
+    revalidatePath(`/dashboard/${eventId}`);
+    return { ok: true };
+  }
+
   if (!uuid.safeParse(blessingId).success) return { ok: false, error: "Unknown blessing." };
 
   const supabase = await createClient();

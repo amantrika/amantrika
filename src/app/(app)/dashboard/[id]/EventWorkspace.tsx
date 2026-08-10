@@ -2,6 +2,8 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { Copy, Search, Trash2, UserPlus } from "lucide-react";
+import { ShareRow } from "@/design-system/components/ShareRow";
+import { buildShare } from "@/lib/invites/share";
 import {
   Badge, Button, Card, Divider, Input, Modal, Select, Sparkline, Stat, Switch, Table, Tabs,
   Textarea, PhotoUploader, type UploadedAsset,
@@ -121,6 +123,37 @@ function Overview({
         <Stat label="Blessings" value={stats.blessings} />
         <Stat label="Badge clicks" value={stats.badge_clicks ?? 0} />
       </div>
+
+      {/* Sharing sits on the overview because it is what a host wants the
+          moment an invitation is live, and hunting for it through tabs is how
+          people end up pasting the URL by hand into WhatsApp. Only shown once
+          published — sharing a draft link would 404 for every guest. */}
+      {event.status === "published" && (
+        <Card className="p-5">
+          <h2 className="mb-1 type-h3 text-primary">Share your invitation</h2>
+          <p className="mb-4 type-caption">
+            One link for everyone. The QR code is for printed cards and venue signs.
+          </p>
+          <ShareRow
+            whatsappUrl={
+              buildShare({
+                hostLine: event.title,
+                dateLabel: event.main_datetime
+                  ? new Date(event.main_datetime).toLocaleDateString("en-IN", {
+                      day: "numeric",
+                      month: "long",
+                      year: "numeric",
+                    })
+                  : undefined,
+                city: event.city ?? undefined,
+                url: inviteUrl,
+              }).whatsappUrl
+            }
+            url={inviteUrl}
+            qrUrl={`/invite/${event.slug}/qr.svg`}
+          />
+        </Card>
+      )}
 
       <Card className="p-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
