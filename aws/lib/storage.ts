@@ -1,5 +1,10 @@
 import "server-only";
-import { PutObjectCommand, DeleteObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import {
+  DeleteObjectCommand,
+  GetObjectCommand,
+  PutObjectCommand,
+  S3Client,
+} from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { awsRegion } from "@aws/env";
 
@@ -167,4 +172,17 @@ export async function createUploadTicket(input: {
 
 export async function deleteMedia(key: string): Promise<void> {
   await client.send(new DeleteObjectCommand({ Bucket: MEDIA_BUCKET, Key: key }));
+}
+
+/**
+ * A short-lived signed URL for reading one object.
+ *
+ * One hour: long enough that a guest scrolling an invitation never sees a link
+ * expire mid-page, short enough that a URL copied out of the network tab is not
+ * a permanent handle on someone's wedding photographs.
+ */
+export async function presignedMediaUrl(key: string): Promise<string> {
+  return getSignedUrl(client, new GetObjectCommand({ Bucket: MEDIA_BUCKET, Key: key }), {
+    expiresIn: 3600,
+  });
 }

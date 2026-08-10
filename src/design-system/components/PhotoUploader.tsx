@@ -180,7 +180,7 @@ export function PhotoUploader({
 
   function remove(asset: UploadedAsset) {
     startTransition(async () => {
-      const result = await deleteAsset(asset.id);
+      const result = await deleteAsset(asset.id, eventId);
       if (result.ok) onChange(assets.filter((a) => a.id !== asset.id));
       else setError(result.error ?? "Couldn't remove that photo.");
     });

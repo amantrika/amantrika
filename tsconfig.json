@@ -39,6 +39,7 @@
     ".next-claude/types/**/*.ts",
     ".next-cog/types/**/*.ts",
     ".next-e2e/types/**/*.ts",
+    ".next-f/types/**/*.ts",
     ".next-mv/types/**/*.ts",
     ".next-review/types/**/*.ts",
     ".next-sa/types/**/*.ts",
@@ -48,7 +49,7 @@
     ".next/types/**/*.ts",
     "aws/**/*.ts",
     "next-env.d.ts",
-    ".next-f/types/**/*.ts"
+    ".next-m/types/**/*.ts"
   ],
   "exclude": [
     "node_modules",

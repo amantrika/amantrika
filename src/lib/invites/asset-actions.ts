@@ -112,7 +112,19 @@ export async function registerAsset(input: z.input<typeof registerSchema>): Prom
   return { ok: true, assetId: data.id };
 }
 
-export async function deleteAsset(assetId: string): Promise<AssetResult> {
+export async function deleteAsset(assetId: string, eventId?: string): Promise<AssetResult> {
+  if (authProviderName() === "cognito") {
+    // The AWS row lives under the invitation's partition, so deleting needs the
+    // event id as well as the asset id — an id alone does not locate an item.
+    if (!eventId) return { ok: false, error: "Couldn't remove that photo." };
+    const profile = await requireProfile();
+    const { deleteAsset: remove } = await import("@aws/repo/assets");
+    const done = await remove(profile.id, eventId, assetId);
+    if (!done) return { ok: false, error: "Couldn't remove that photo." };
+    revalidatePath("/dashboard");
+    return { ok: true };
+  }
+
   if (!z.string().uuid().safeParse(assetId).success) {
     return { ok: false, error: "Unknown photo." };
   }
@@ -138,6 +150,15 @@ export async function deleteAsset(assetId: string): Promise<AssetResult> {
 
 /** Persists drag-to-reorder. Accepts the full ordered list of asset ids. */
 export async function reorderAssets(eventId: string, assetIds: string[]): Promise<AssetResult> {
+  if (authProviderName() === "cognito") {
+    const profile = await requireProfile();
+    const { reorderAssets: reorder } = await import("@aws/repo/assets");
+    const done = await reorder(profile.id, eventId, assetIds);
+    if (!done) return { ok: false, error: "Couldn't save that order." };
+    revalidatePath("/dashboard");
+    return { ok: true };
+  }
+
   if (!z.string().uuid().safeParse(eventId).success) return { ok: false, error: "Unknown event." };
 
   const supabase = await createClient();

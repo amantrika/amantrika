@@ -57,8 +57,24 @@ export interface InviteSubEvent {
 
 export const ASSET_BUCKET = "event-assets";
 
-/** Public CDN URL for a stored object. The bucket is public-read by design. */
+/**
+ * Public URL for a stored object.
+ *
+ * Two storage backends, two shapes, and the stored value is a *path* in both —
+ * which is what makes one function enough.
+ *
+ * On AWS the bucket is private, so this points at `/media/<key>`, a route that
+ * presigns a read and redirects (see that file for why it is not a CDN URL
+ * yet). On Supabase the bucket is public-read and the URL is direct.
+ *
+ * `NEXT_PUBLIC_STACK` rather than the server-only `STACK`, because this is
+ * called from Client Components too — the gallery, the uploader's thumbnails.
+ * If it is unset where STACK is `aws`, every photograph silently 404s.
+ */
 export function assetUrl(storagePath: string): string {
+  if (process.env.NEXT_PUBLIC_STACK === "aws") {
+    return `/media/${storagePath}`;
+  }
   return `${env.supabaseUrl}/storage/v1/object/public/${ASSET_BUCKET}/${storagePath}`;
 }
 
