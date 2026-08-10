@@ -4,9 +4,7 @@
 the rule in `CLAUDE.md`. Anything not written down here is lost the moment a
 session ends, and more than one agent works in this repo.
 
-Last updated: **8 Aug 2026**
-
----
+Last updated: **10 Aug 2026**
 
 ---
 
@@ -65,47 +63,40 @@ Accounts for Supabase, Vercel and GitHub are **dedicated to Amantrika**, separat
 from any personal ones. Git commits are authored as `Amantrika` — a commit from
 another identity is rejected by Vercel on Hobby, which fails the deploy.
 
-### An AWS migration has started. The app has NOT moved.
+### Amantrika runs on AWS, on its own domain, alongside Vercel
 
-Decided 9 Aug 2026: leave Supabase, Vercel, Resend and Cloudinary entirely for
-AWS. `aws/` holds the plan; **`aws/STATUS.md` is the authoritative record of
-what actually exists** — read it before assuming anything is there.
+Two live deployments of this one repository:
 
-Built so far, and verified: account `477977196441` (`ap-southeast-1`), a $5
-budget, account-wide S3 Block Public Access, the DynamoDB table `amantrika`, a
-Cognito user pool and app client, and the repository foundation in
-`src/lib/aws/`. `scripts/aws-smoke.ts` passes 11 checks against the real table.
+| | URL | Stack |
+| --- | --- | --- |
+| Vercel | <https://amantrika.imswarnil.com> | Supabase + Resend (`STACK` unset) |
+| AWS | <https://amantrika-aws.imswarnil.com> | DynamoDB + Cognito + S3 + SES (`STACK=aws`) |
 
-**There is now a switch.** `DATA_PROVIDER=supabase|aws` (default `supabase`)
-decides where a published invitation is read from — the same shape as
-`PAYMENT_PROVIDER`. It is verified: `scripts/aws-parity.ts` reports all five
-published invitations identical across both backends, and with `hosts` changed
-in DynamoDB alone the page renders "DYNAMO & PROOF" on `aws` and "a & c" on
-`supabase`. **`aws/TESTING.md` is the guide — read it before testing**, because
-`unstable_cache` persists to disk and will happily serve you the other
-backend's cached result.
+Amplify app `d13njc1yveny1`, branch `aws-migration`, GitHub-connected — every
+push builds and deploys. **`aws/STATUS.md` is the authoritative record of what
+exists**; `aws/MODULES.md` maps the two stacks file by file.
 
-**The switch covers exactly one thing: the guest invitation read.** Sign-in,
-dashboards, RSVPs, wishes, orders, view tracking, photographs and the entire
-marketing site are still Supabase in both modes. 16 of 17 entities have no
-repository, no Cognito auth code exists, and the app still deploys to Vercel.
-`sst.config.ts` and `.github/workflows/deploy-aws.yml` exist but **have never
-been run**.
+**Verified working on AWS in a browser:** sign-up, sign-in, sessions, password
+reset, dashboard, the builder, publishing, the guest invitation, S3 uploads,
+RSVPs, wishes with moderation, stats, paid checkout and the payment webhook.
 
-Two decisions worth not relitigating: **DNS stays on Vercel** and the domain
-stays `amantrika.imswarnil.com`, so Route 53 is unused and the AWS side has no
-fixed monthly cost. And the database is **DynamoDB, not Aurora** — the AWS Free
-plan forbids Aurora's Data API, which was the only way to use Aurora without a
-~$32/month NAT gateway. That forced a relational-to-single-table redesign;
-`aws/DATA-MODEL.md` is mandatory reading before writing any query, because
-there are no joins, no `group by`, and no RLS — **authorization now lives
-entirely in `src/lib/aws/repo/`**.
+**Not working on AWS**, and the list that decides whether it can take a real
+customer: SES is still sandboxed so mail only reaches `@amantrika.com`; named
+guest lists, showcase, feature requests, partner flows and admin analytics have
+no repositories; Google sign-in is hidden; point-in-time recovery is off; and
+the shared demo account (`demo@gmail.com`) must be deleted before real data.
 
-Two conclusions in it are worth knowing without reading it: there is no blogging
-engine to migrate (posts are MDX compiled at build), and the database/auth move
-off Supabase is deliberately parked — it is an auth rewrite plus every data call
-in `src/`, and no AWS Postgres is both compatible with this schema and free when
-idle. See `aws/DECISIONS.md` for the open questions.
+Two decisions not to relitigate: **DynamoDB, not Aurora** — the AWS Free plan
+forbids Aurora's Data API, the only way to use Aurora without a ~$32/month NAT
+gateway. And **one repo with a switch, not two repos** — two would be edited
+twice and drift within a week.
+
+**The single most important thing to carry forward:** there is no RLS. Every
+query that looks unfiltered needs the question asked of it — *what was doing the
+filtering, and does it still exist?* That has already produced three real bugs
+(a dashboard showing every host's invitations, invitation creation failing
+silently, and stats leaking), and the remaining unported surfaces are where the
+next one will be.
 
 ---
 
