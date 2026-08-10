@@ -1,5 +1,31 @@
 # The two stacks, side by side
 
+## They are two live deployments of one repository
+
+| | Vercel stack | AWS stack |
+| --- | --- | --- |
+| **URL** | <https://amantrika.imswarnil.com> | <https://amantrika-aws.imswarnil.com> |
+| Hosting | Vercel | Amplify (`d13njc1yveny1`) |
+| Branch | `main` | `aws-migration` |
+| `STACK` | unset → `vercel` | `aws` |
+| Data | Supabase Postgres | DynamoDB `amantrika` |
+| Auth | Supabase Auth | Cognito `ap-southeast-1_lkjHBiWu1` |
+| Files | Supabase Storage | S3 `amantrika-media` |
+| Email | Resend | SES |
+
+**The separation is already real.** It is not a plan — two domains, two
+deployments, two sets of backing services, running at the same time from the
+same source. What decides which is a single environment variable per
+deployment, and neither can accidentally become the other: `STACK` is read
+once, in `src/lib/stack.ts`, and everything else follows it.
+
+That is deliberately *not* two repositories. Two repos means every product
+change is made twice and they drift within a week. One repo with a switch means
+a bug fixed in the builder is fixed on both, and the only difference between the
+deployments is where the bytes are stored.
+
+
+
 `STACK=vercel` and `STACK=aws` are two complete implementations behind the same
 seams. **Neither is being deleted.** The Supabase code stays — it is what runs
 in production today, it is the cheaper stack on a free tier, and it is the one
@@ -13,9 +39,11 @@ worth learning the concepts of.
 | Database access | `src/lib/supabase/{client,server}.ts` | `src/lib/aws/{dynamo,keys}.ts`, `src/lib/aws/repo/` | `src/lib/data/provider.ts` |
 | Sign-in, sessions | `@supabase/ssr` + `src/middleware.ts` | `src/lib/aws/auth/{cognito,session}.ts` | `src/lib/auth.ts` → `getProfile()` |
 | Email | `src/lib/email/client.ts` (Resend) | `src/lib/email/ses.ts` + `templates.ts` | `src/lib/email/send.ts` → `sendEmail()` |
-| Media | Supabase Storage | S3 + CloudFront *(not built)* | `assetUrl()` in `src/lib/invites/invite.ts` |
+| Media | Supabase Storage | S3 `amantrika-media` + presigned PUT | `registerAsset()` / `createUploadTicket()` |
+| RSVPs, wishes, stats | direct tables + RPCs | `src/lib/aws/repo/guest.ts` | `src/lib/invites/queries.ts` |
+| Orders, payments | `orders`, `payment_events` | `src/lib/aws/repo/orders.ts` | the webhook route |
 | Schema | `supabase/migrations/*.sql` | `aws/DATA-MODEL.md` | — |
-| Deploy | Vercel from `main` | `sst.config.ts` / `amplify.yml` | — |
+| Deploy | Vercel from `main` | `amplify.yml` (Amplify) | — |
 
 **The rule:** nothing outside a seam names a concrete backend. A page never
 imports `supabase-provider` or `aws-provider`; it calls `getPublishedInvite()`.
@@ -50,6 +78,20 @@ standard. That is worth knowing before concluding one is simply better.
 So while nothing is being sold, **the Vercel stack is free and the AWS stack is
 near-free.** The reason to move is not this month's bill; it is that Hobby stops
 being allowed the day money changes hands.
+
+## What the AWS stack still cannot do
+
+Kept here rather than in a commit message, because it is the list that decides
+whether the AWS domain can take a real customer:
+
+| Missing | Behaviour today |
+| --- | --- |
+| SES production access | Sandboxed — mail reaches `@amantrika.com` only. **The blocker for any customer email.** |
+| Named guest lists (per-guest links) | Returns empty, not an error |
+| Showcase, feature requests, partner/agent flows, admin analytics | Supabase-only; those pages are empty or fail |
+| Google sign-in | Federation not configured; the button is hidden |
+| Point-in-time recovery on the table | Off. Turn on before real data. |
+| The demo account | `demo@gmail.com` exists with a weak shared password — delete before launch |
 
 ## Deleting one, later
 
