@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/server";
+import { authProviderName } from "@/lib/auth/provider";
 import { getPaymentProvider } from "@/lib/payments";
 import { sendEmail } from "@/lib/email/send";
 import { formatInr } from "@/lib/pricing";
@@ -35,6 +36,10 @@ export async function POST(request: Request) {
       reason: result.reason,
     });
     return NextResponse.json({ error: "invalid signature" }, { status: 400 });
+  }
+
+  if (authProviderName() === "cognito") {
+    return handleOnAws(provider.name, rawBody, result);
   }
 
   const supabase = createAdminClient();
@@ -253,4 +258,93 @@ async function sendConfirmation(
       `<p>— Amantrika</p>`,
     ].join(""),
   });
+}
+
+
+/* ------------------------------------------------------------------ on AWS */
+
+/**
+ * The DynamoDB path. Same contract as the Supabase one above, same order of
+ * operations, different storage.
+ *
+ * 1. Claim the delivery. A conditional write, so a provider retry loses the
+ *    race and stops rather than paying out twice.
+ * 2. Find the order through the session pointer.
+ * 3. Settle — and only then grant the entitlement.
+ *
+ * Status codes are chosen for what the *provider* will do with them: 200 means
+ * "stop sending this", 500 means "try again". A genuine delivery we cannot
+ * match is 200, because retrying will not make the order appear; a storage
+ * failure is 500, because a retry might well succeed and losing a payment is
+ * the worse outcome.
+ */
+async function handleOnAws(
+  providerName: string,
+  rawBody: string,
+  result: {
+    valid: true;
+    event: string;
+    eventId: string;
+    providerOrderId: string;
+    providerPaymentId: string;
+    amountInr?: number;
+  }
+): Promise<NextResponse> {
+  const {
+    claimPaymentEvent,
+    findOrderBySession,
+    markOrderPaid,
+    markOrderFailed,
+    grantPaidPlan,
+  } = await import("@/lib/aws/repo/orders");
+
+  const claimed = await claimPaymentEvent({
+    providerPaymentId: result.providerPaymentId,
+    providerEventId: result.eventId,
+    provider: providerName,
+    eventType: result.event,
+    payload: JSON.parse(rawBody),
+  });
+
+  if (!claimed) return NextResponse.json({ ok: true, duplicate: true });
+
+  const order = await findOrderBySession(result.providerOrderId);
+  if (!order) {
+    log.error("payment webhook matched no order", {
+      provider: providerName,
+      event_id: result.eventId,
+    });
+    return NextResponse.json({ ok: true, matched: false });
+  }
+
+  switch (result.event) {
+    case "payment.succeeded": {
+      // The amount is checked against what we recorded, not trusted from the
+      // payload. A mismatch means the request was tampered with or the order
+      // was edited underneath us, and either way it must not grant anything.
+      if (typeof result.amountInr === "number" && result.amountInr !== order.amountInr) {
+        await markOrderFailed(order.eventId, order.id, "amount mismatch");
+        log.error("payment amount mismatch", { order_id: order.id });
+        return NextResponse.json({ error: "amount mismatch" }, { status: 400 });
+      }
+
+      const settled = await markOrderPaid(order.eventId, order.id, {
+        providerPaymentId: result.providerPaymentId,
+      });
+
+      // Already paid: a duplicate that slipped past the claim. Grant nothing
+      // again, report success — the provider is right that it succeeded.
+      if (!settled) return NextResponse.json({ ok: true, duplicate: true });
+
+      await grantPaidPlan(order.eventId, order.planCode);
+      return NextResponse.json({ ok: true });
+    }
+    case "payment.failed":
+      await markOrderFailed(order.eventId, order.id, "provider reported failure");
+      return NextResponse.json({ ok: true });
+    default:
+      // Refunds and anything else: ledgered above, acted on by a human.
+      log.warn("unhandled payment event", { event: result.event, order_id: order.id });
+      return NextResponse.json({ ok: true });
+  }
 }

@@ -235,3 +235,60 @@ export async function grantPaidPlan(eventId: string, planCode: string): Promise<
     })
   );
 }
+
+/**
+ * Record the provider's session id, and a pointer back to the order.
+ *
+ * The webhook arrives knowing only the provider's own identifier, and an order
+ * lives under `EVENT#<eventId>` — which the webhook does not know. A GSI would
+ * solve it and cost a full second copy of the table; a pointer item costs one
+ * small write and one extra read on a path that runs a few times a day.
+ *
+ * Cheaper is not the only reason. An index is eventually consistent, and a
+ * webhook can arrive before the index catches up — meaning a real payment
+ * matches no order. A pointer written before the browser ever reaches the
+ * processor cannot lose that race.
+ */
+export async function attachProviderSession(
+  eventId: string,
+  orderId: string,
+  providerSessionId: string
+): Promise<void> {
+  const now = new Date().toISOString();
+
+  await ddb.send(
+    new PutCommand({
+      TableName: tableName,
+      Item: {
+        PK: `SESSION#${providerSessionId}`,
+        SK: "ORDER",
+        _type: "orderPointer",
+        eventId,
+        orderId,
+        createdAt: now,
+      },
+    })
+  );
+
+  await ddb.send(
+    new UpdateCommand({
+      TableName: tableName,
+      Key: { PK: eventPk(eventId), SK: orderSk(orderId) },
+      UpdateExpression: "SET providerSessionId = :sid, updatedAt = :now",
+      ExpressionAttributeValues: { ":sid": providerSessionId, ":now": now },
+    })
+  );
+}
+
+/** Resolve a provider session id back to its order. Used only by the webhook. */
+export async function findOrderBySession(providerSessionId: string): Promise<OrderItem | null> {
+  const pointer = await ddb.send(
+    new GetCommand({
+      TableName: tableName,
+      Key: { PK: `SESSION#${providerSessionId}`, SK: "ORDER" },
+    })
+  );
+  const p = pointer.Item as { eventId: string; orderId: string } | undefined;
+  if (!p) return null;
+  return getOrder(p.eventId, p.orderId);
+}

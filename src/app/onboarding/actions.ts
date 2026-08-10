@@ -545,11 +545,7 @@ async function startCheckoutOnAws(
   });
 
   if (price.final_price_inr !== 0) {
-    return {
-      ok: false,
-      error:
-        "Paid plans aren't available on this backend yet. Publish free for now, or switch STACK back to vercel.",
-    };
+    return startPaidCheckoutOnAws({ userId, invite, plan, amountInr: price.final_price_inr });
   }
 
   const published = await publishInvite(userId, invite.id);
@@ -563,4 +559,69 @@ async function startCheckoutOnAws(
 async function publishInvite(userId: string, eventId: string): Promise<boolean> {
   const { publishInvite: publish } = await import("@/lib/aws/repo/invites");
   return publish(userId, eventId);
+}
+
+
+/**
+ * Paid checkout on the AWS stack.
+ *
+ * The order is written *before* the provider is called, and the provider's
+ * session id is written back after. That order matters: if we called the
+ * provider first and then failed to record the order, a customer could pay for
+ * something we have no record of. The reverse — an order with no session —
+ * is a row that simply never settles, which is recoverable.
+ *
+ * Nothing here grants anything. `CLAUDE.md` §2.3: only the webhook may mark an
+ * order paid, because only the webhook has seen the provider say so.
+ */
+async function startPaidCheckoutOnAws(input: {
+  userId: string;
+  invite: { id: string; slug: string; agentId?: string };
+  plan: { code: string; name: string; dodoProductId?: string };
+  amountInr: number;
+}): Promise<ActionResult<CheckoutStart>> {
+  const { getProfile: currentProfile } = await import("@/lib/auth");
+  const profile = await currentProfile();
+  if (!profile?.email) {
+    return { ok: false, error: "Add an email address to your account before paying." };
+  }
+
+  const { createOrder, markOrderFailed } = await import("@/lib/aws/repo/orders");
+  const provider = getPaymentProvider();
+
+  const order = await createOrder({
+    eventId: input.invite.id,
+    buyerId: input.userId,
+    agentId: input.invite.agentId,
+    planCode: input.plan.code,
+    amountInr: input.amountInr,
+    provider: provider.name,
+  });
+
+  let checkout;
+  try {
+    checkout = await provider.createCheckout({
+      order: {
+        id: order.id,
+        amount_inr: input.amountInr,
+        currency: "INR",
+        plan_code: input.plan.code,
+        plan_name: input.plan.name,
+        provider_product_id: input.plan.dodoProductId ?? null,
+      },
+      customer: { email: profile.email, name: profile.full_name ?? "Amantrika host" },
+      successUrl: `${siteUrl}/checkout/success/${input.invite.id}`,
+      cancelUrl: `${siteUrl}/dashboard/${input.invite.id}`,
+    });
+  } catch (cause) {
+    const reason = cause instanceof Error ? cause.message : String(cause);
+    log.error("provider refused to open checkout", { order_id: order.id, reason });
+    await markOrderFailed(input.invite.id, order.id, reason);
+    return { ok: false, error: "Couldn't reach the payment provider. Please try again." };
+  }
+
+  const { attachProviderSession } = await import("@/lib/aws/repo/orders");
+  await attachProviderSession(input.invite.id, order.id, checkout.providerOrderId);
+
+  return { ok: true, data: { kind: "checkout", checkoutUrl: checkout.checkoutUrl } };
 }
