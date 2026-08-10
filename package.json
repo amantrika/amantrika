@@ -14,8 +14,11 @@
     "test:e2e:ui": "playwright test --ui",
     "test:live": "./scripts/test.sh live",
     "test:report": "playwright show-report",
-    "aws:status": "./scripts/aws-status.sh",
-    "aws:smoke": "tsx --conditions=react-server scripts/aws-smoke.ts"
+    "aws:status": "./aws/scripts/status.sh",
+    "aws:smoke": "tsx --conditions=react-server aws/scripts/aws-smoke.ts",
+    "aws:seed": "tsx --conditions=react-server aws/scripts/aws-seed.ts",
+    "aws:parity": "tsx --conditions=react-server aws/scripts/aws-parity.ts",
+    "aws:demo": "tsx --conditions=react-server aws/scripts/aws-demo-data.ts"
   },
   "dependencies": {
     "@aws-sdk/client-cognito-identity-provider": "^3.1106.0",

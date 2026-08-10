@@ -12,9 +12,9 @@
  * interesting outcome is *which* field drifted.
  */
 import { createClient } from "@supabase/supabase-js";
-import { SupabaseDataProvider } from "../src/lib/data/supabase-provider";
-import { AwsDataProvider } from "../src/lib/data/aws-provider";
-import type { InviteView } from "../src/lib/invites/invite";
+import { SupabaseDataProvider } from "../../src/lib/data/supabase-provider";
+import { AwsDataProvider } from "../../src/lib/data/aws-provider";
+import type { InviteView } from "../../src/lib/invites/invite";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,

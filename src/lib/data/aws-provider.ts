@@ -1,6 +1,6 @@
 import "server-only";
 import type { DataProvider } from "@/lib/data/provider";
-import { getPublishedInviteBySlug } from "@/lib/aws/repo/invites";
+import { getPublishedInviteBySlug } from "@aws/repo/invites";
 import { assetUrl, defaultSettings, formatTime, type InviteView } from "@/lib/invites/invite";
 import type {
   EventHost,

@@ -66,7 +66,7 @@ field by field.
 
 ```bash
 set -a; source .env.local; set +a
-npx tsx --conditions=react-server scripts/aws-parity.ts
+npx tsx --conditions=react-server aws/scripts/aws-parity.ts
 ```
 
 Expected:
@@ -145,7 +145,7 @@ Put it back afterwards — the seed script is idempotent and restores from
 Supabase:
 
 ```bash
-npx tsx --conditions=react-server scripts/aws-seed.ts --write
+npx tsx --conditions=react-server aws/scripts/aws-seed.ts --write
 ```
 
 **Note the field.** The page title is built from `hosts`, not `title` — changing
@@ -155,8 +155,8 @@ looks like a passing one is worse than no test.
 ## 5. Re-seed after Supabase changes
 
 ```bash
-npx tsx --conditions=react-server scripts/aws-seed.ts           # dry run
-npx tsx --conditions=react-server scripts/aws-seed.ts --write   # commit
+npx tsx --conditions=react-server aws/scripts/aws-seed.ts           # dry run
+npx tsx --conditions=react-server aws/scripts/aws-seed.ts --write   # commit
 ```
 
 Idempotent — every item is keyed deterministically, so running it twice
@@ -178,7 +178,7 @@ the real pool with a real email:
 
 ```bash
 set -a; source .env.local; set +a
-npx tsx --conditions=react-server scripts/aws-auth-test.ts you@example.com 'YourPassw0rd'
+npx tsx --conditions=react-server aws/scripts/aws-auth-test.ts you@example.com 'YourPassw0rd'
 ```
 
 It signs up, waits for you to paste the 6-digit code Cognito emails you,

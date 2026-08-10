@@ -178,7 +178,7 @@ export async function signInWithGoogle(next?: string): Promise<AuthState> {
 
 export async function signOut(): Promise<void> {
   if (authProviderName() === "cognito") {
-    const { clearSession } = await import("@/lib/aws/auth/session");
+    const { clearSession } = await import("@aws/auth/session");
     await clearSession();
     revalidatePath("/", "layout");
     redirect("/");
@@ -225,7 +225,7 @@ async function cognitoSignUpAction(input: {
     };
   }
 
-  const { cognitoSignUp } = await import("@/lib/aws/auth/cognito");
+  const { cognitoSignUp } = await import("@aws/auth/cognito");
   const result = await cognitoSignUp(input);
 
   if (!result.ok) {
@@ -240,7 +240,7 @@ async function cognitoSignInAction(
   creds: { email: string; password: string },
   formData: FormData
 ): Promise<AuthState> {
-  const { cognitoSignIn } = await import("@/lib/aws/auth/cognito");
+  const { cognitoSignIn } = await import("@aws/auth/cognito");
   const result = await cognitoSignIn(creds.email, creds.password);
 
   if (!result.ok) {
@@ -253,10 +253,10 @@ async function cognitoSignInAction(
     return { error: result.error };
   }
 
-  const { setSession } = await import("@/lib/aws/auth/session");
+  const { setSession } = await import("@aws/auth/session");
   await setSession(result.data, creds.email);
 
-  const { ensureProfile } = await import("@/lib/aws/repo/profiles");
+  const { ensureProfile } = await import("@aws/repo/profiles");
   const profile = await ensureProfile({ userId: subFrom(result.data.IdToken), email: creds.email });
 
   revalidatePath("/", "layout");
@@ -286,7 +286,7 @@ export async function confirmSignUp(_prev: AuthState, formData: FormData): Promi
     return { error: "Enter the six-digit code from your email." };
   }
 
-  const { cognitoConfirmSignUp } = await import("@/lib/aws/auth/cognito");
+  const { cognitoConfirmSignUp } = await import("@aws/auth/cognito");
   const result = await cognitoConfirmSignUp(email, code);
   if (!result.ok) return { error: result.error };
 
@@ -298,7 +298,7 @@ export async function resendCode(_prev: AuthState, formData: FormData): Promise<
   const email = String(formData.get("email") ?? "");
   if (!email) return { error: "Enter your email address." };
 
-  const { cognitoResendCode } = await import("@/lib/aws/auth/cognito");
+  const { cognitoResendCode } = await import("@aws/auth/cognito");
   const result = await cognitoResendCode(email);
   return result.ok ? { notice: `A new code is on its way to ${email}.` } : { error: result.error };
 }
@@ -323,7 +323,7 @@ export async function requestPasswordReset(
   const email = parsed.data;
 
   if (authProviderName() === "cognito") {
-    const { cognitoForgotPassword } = await import("@/lib/aws/auth/cognito");
+    const { cognitoForgotPassword } = await import("@aws/auth/cognito");
     const result = await cognitoForgotPassword(email);
     if (!result.ok) return { error: result.error };
     redirect(`/reset?email=${encodeURIComponent(email)}`);
@@ -349,7 +349,7 @@ export async function resetPassword(_prev: AuthState, formData: FormData): Promi
   const pw = passwordSchema.safeParse(password);
   if (!pw.success) return { error: firstError(pw.error) };
 
-  const { cognitoConfirmForgotPassword } = await import("@/lib/aws/auth/cognito");
+  const { cognitoConfirmForgotPassword } = await import("@aws/auth/cognito");
   const result = await cognitoConfirmForgotPassword(email, code, pw.data);
   if (!result.ok) return { error: result.error };
 

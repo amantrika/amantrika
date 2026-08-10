@@ -1,8 +1,8 @@
 import "server-only";
 import { GetCommand, QueryCommand } from "@aws-sdk/lib-dynamodb";
-import { ddb } from "@/lib/aws/dynamo";
-import { tableName } from "@/lib/aws/env";
-import { META_SK, themePk } from "@/lib/aws/keys";
+import { ddb } from "@aws/dynamo";
+import { tableName } from "@aws/env";
+import { META_SK, themePk } from "@aws/keys";
 
 /**
  * Plans and themes — catalogue data.

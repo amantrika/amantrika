@@ -296,7 +296,7 @@ async function handleOnAws(
     markOrderPaid,
     markOrderFailed,
     grantPaidPlan,
-  } = await import("@/lib/aws/repo/orders");
+  } = await import("@aws/repo/orders");
 
   const claimed = await claimPaymentEvent({
     providerPaymentId: result.providerPaymentId,

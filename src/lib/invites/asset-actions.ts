@@ -41,7 +41,7 @@ export async function registerAsset(input: z.input<typeof registerSchema>): Prom
 
   if (authProviderName() === "cognito") {
     const profile = await requireProfile();
-    const { registerAsset: register } = await import("@/lib/aws/repo/assets");
+    const { registerAsset: register } = await import("@aws/repo/assets");
     // On S3 the key is `invites/<eventId>/<kind>/<assetId>.<ext>`, so the asset
     // id is the filename — the uploader already knows it from the ticket.
     const assetId = a.storagePath.split("/").pop()?.split(".")[0] ?? crypto.randomUUID();

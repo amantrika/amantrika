@@ -28,8 +28,8 @@ import {
   CognitoIdentityProviderClient,
 } from "@aws-sdk/client-cognito-identity-provider";
 import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
-import { awsRegion, cognitoUserPoolId } from "../src/lib/aws/env";
-import { ensureProfile, getProfile } from "../src/lib/aws/repo/profiles";
+import { awsRegion, cognitoUserPoolId } from "../lib/env";
+import { ensureProfile, getProfile } from "../lib/repo/profiles";
 import {
   createInvite,
   getInviteForOwner,
@@ -37,9 +37,9 @@ import {
   publishInvite,
   replaceSubEvents,
   updateInvite,
-} from "../src/lib/aws/repo/invites";
-import { registerAsset, listAssets } from "../src/lib/aws/repo/assets";
-import { MEDIA_BUCKET, mediaKey, mediaUrl } from "../src/lib/aws/storage";
+} from "../lib/repo/invites";
+import { registerAsset, listAssets } from "../lib/repo/assets";
+import { MEDIA_BUCKET, mediaKey, mediaUrl } from "../lib/storage";
 
 const EMAIL = "demo@gmail.com";
 const PASSWORD = "Demo@123";
@@ -165,7 +165,7 @@ async function main() {
     console.log(`3. invitation created     /invite/${SLUG}`);
   } else {
     // Re-run: find it through the owner index rather than guessing.
-    const { listInvitesForOwner } = await import("../src/lib/aws/repo/invites");
+    const { listInvitesForOwner } = await import("../lib/repo/invites");
     const mine = await listInvitesForOwner(sub);
     eventId = mine.find((i) => i.slug === SLUG)?.id ?? "";
     if (!eventId) throw new Error(`${SLUG} exists but is not owned by the demo user`);

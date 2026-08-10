@@ -44,7 +44,7 @@ export async function checkSlug(
   if (RESERVED.has(parsed.data)) return { ok: true, data: { available: false } };
 
   if (authProviderName() === "cognito") {
-    const { isSlugAvailable } = await import("@/lib/aws/repo/invites");
+    const { isSlugAvailable } = await import("@aws/repo/invites");
     return { ok: true, data: { available: await isSlugAvailable(parsed.data, excludeEventId) } };
   }
 
@@ -141,7 +141,7 @@ export async function saveDraft(input: DraftInput): Promise<ActionResult<{ event
   // why — the same failure shape as the dashboard leak, from the same cause.
   if (authProviderName() === "cognito") {
     const { saveDraft: saveDraftOnDynamo, replaceSubEvents: replaceSubEventsOnDynamo } =
-      await import("@/lib/aws/repo/invites");
+      await import("@aws/repo/invites");
 
     const saved = await saveDraftOnDynamo(profile.id, {
       eventId,
@@ -519,8 +519,8 @@ async function startCheckoutOnAws(
   userId: string,
   input: { eventId: string; planCode: string }
 ): Promise<ActionResult<CheckoutStart>> {
-  const { getInviteForOwner, updateInvite } = await import("@/lib/aws/repo/invites");
-  const { getPlan, getTheme } = await import("@/lib/aws/repo/catalogue");
+  const { getInviteForOwner, updateInvite } = await import("@aws/repo/invites");
+  const { getPlan, getTheme } = await import("@aws/repo/catalogue");
 
   const invite = await getInviteForOwner(userId, input.eventId);
   if (!invite) return { ok: false, error: "We couldn't find that invitation." };
@@ -557,7 +557,7 @@ async function startCheckoutOnAws(
 
 /** Status is not on `InvitePatch` — publishing is a state change, not an edit. */
 async function publishInvite(userId: string, eventId: string): Promise<boolean> {
-  const { publishInvite: publish } = await import("@/lib/aws/repo/invites");
+  const { publishInvite: publish } = await import("@aws/repo/invites");
   return publish(userId, eventId);
 }
 
@@ -586,7 +586,7 @@ async function startPaidCheckoutOnAws(input: {
     return { ok: false, error: "Add an email address to your account before paying." };
   }
 
-  const { createOrder, markOrderFailed } = await import("@/lib/aws/repo/orders");
+  const { createOrder, markOrderFailed } = await import("@aws/repo/orders");
   const provider = getPaymentProvider();
 
   const order = await createOrder({
@@ -620,7 +620,7 @@ async function startPaidCheckoutOnAws(input: {
     return { ok: false, error: "Couldn't reach the payment provider. Please try again." };
   }
 
-  const { attachProviderSession } = await import("@/lib/aws/repo/orders");
+  const { attachProviderSession } = await import("@aws/repo/orders");
   await attachProviderSession(input.invite.id, order.id, checkout.providerOrderId);
 
   return { ok: true, data: { kind: "checkout", checkoutUrl: checkout.checkoutUrl } };

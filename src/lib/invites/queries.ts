@@ -36,7 +36,7 @@ export async function getPublishedInvite(slug: string): Promise<InviteView | nul
 
 export async function getBlessings(eventId: string): Promise<BlessingRow[]> {
   if (authProviderName() === "cognito") {
-    const { listApprovedWishes } = await import("@/lib/aws/repo/guest");
+    const { listApprovedWishes } = await import("@aws/repo/guest");
     const wishes = await listApprovedWishes(eventId);
     return wishes.map((w) => ({
       id: w.id,
@@ -84,7 +84,7 @@ export async function listManagedEvents(userId?: string): Promise<EventRow[]> {
     // No user means no rows. Failing closed matters more here than convenience:
     // the alternative was returning everyone's invitations.
     if (!userId) return [];
-    const { listInvitesForOwner } = await import("@/lib/aws/repo/invites");
+    const { listInvitesForOwner } = await import("@aws/repo/invites");
     const items = await listInvitesForOwner(userId);
     return items.map(inviteItemToEventRow);
   }
@@ -166,7 +166,7 @@ function inviteItemToEventRow(item: {
 export async function getManagedEvent(id: string, userId?: string): Promise<EventRow | null> {
   if (authProviderName() === "cognito") {
     if (!userId) return null;
-    const { getInviteForOwner } = await import("@/lib/aws/repo/invites");
+    const { getInviteForOwner } = await import("@aws/repo/invites");
     const item = await getInviteForOwner(userId, id);
     return item ? inviteItemToEventRow(item) : null;
   }
@@ -178,7 +178,7 @@ export async function getManagedEvent(id: string, userId?: string): Promise<Even
 
 export async function getSubEvents(eventId: string): Promise<SubEventRow[]> {
   if (authProviderName() === "cognito") {
-    const { getSubEventsForEvent } = await import("@/lib/aws/repo/invites");
+    const { getSubEventsForEvent } = await import("@aws/repo/invites");
     const subs = await getSubEventsForEvent(eventId);
     return subs.map((s) => ({
       id: s.id,
@@ -208,7 +208,7 @@ export async function getSubEvents(eventId: string): Promise<SubEventRow[]> {
 export async function getAssets(eventId: string, userId?: string): Promise<AssetRow[]> {
   if (authProviderName() === "cognito") {
     if (!userId) return [];
-    const { listAssets } = await import("@/lib/aws/repo/assets");
+    const { listAssets } = await import("@aws/repo/assets");
     const assets = await listAssets(userId, eventId);
     return assets.map((a) => ({
       id: a.id,
@@ -258,7 +258,7 @@ export async function getGuests(eventId: string): Promise<GuestRow[]> {
 export async function getRsvps(eventId: string, userId?: string): Promise<RsvpRow[]> {
   if (authProviderName() === "cognito") {
     if (!userId) return [];
-    const { listRsvps } = await import("@/lib/aws/repo/guest");
+    const { listRsvps } = await import("@aws/repo/guest");
     const rsvps = await listRsvps(userId, eventId);
     return rsvps.map((r) => ({
       id: r.id,
@@ -298,7 +298,7 @@ const emptyStats: EventStats = {
 export async function getEventStats(eventId: string, userId?: string): Promise<EventStats> {
   if (authProviderName() === "cognito") {
     if (!userId) return emptyStats;
-    const { eventTotals } = await import("@/lib/aws/repo/guest");
+    const { eventTotals } = await import("@aws/repo/guest");
     const t = await eventTotals(userId, eventId);
     if (!t) return emptyStats;
     return {
@@ -326,7 +326,7 @@ export async function getViewsByDay(
 ): Promise<ViewsByDay[]> {
   if (authProviderName() === "cognito") {
     if (!userId) return [];
-    const { viewsByDay } = await import("@/lib/aws/repo/guest");
+    const { viewsByDay } = await import("@aws/repo/guest");
     const rows = await viewsByDay(userId, eventId);
     return rows.slice(-days).map((r) => ({ day: r.day, views: r.views })) as ViewsByDay[];
   }

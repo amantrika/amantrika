@@ -34,10 +34,10 @@ done here, it does not exist in AWS. Keep it that way.
 | **Custom domain** | `amantrika-aws.imswarnil.com`, `AVAILABLE` | — |
 | **Amplify service role** | `amantrika-amplify-service` — trusts `amplify.amazonaws.com` with SourceAccount/SourceArn conditions, carries the scoped `amantrika-runtime` policy | $0 |
 | **Password reset** | `/forgot` + `/reset`, Cognito code on AWS, Supabase link on Vercel | — |
-| **Demo account** | `demo@gmail.com` / `Demo@123` — published invitation, 3 ceremonies, 3 photos in S3. `scripts/aws-demo-data.ts --clean` removes it. **Delete before real customer data exists.** | — |
+| **Demo account** | `demo@gmail.com` / `Demo@123` — published invitation, 3 ceremonies, 3 photos in S3. `aws/scripts/aws-demo-data.ts --clean` removes it. **Delete before real customer data exists.** | — |
 
 Everything above was verified by reading it back from the API, and the
-repository layer by `scripts/aws-smoke.ts` against the real table: 11 checks,
+repository layer by `aws/scripts/aws-smoke.ts` against the real table: 11 checks,
 all passing, including that a non-owner is refused both a read and a write.
 
 ### The database is chosen and built: DynamoDB

@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import { CognitoJwtVerifier } from "aws-jwt-verify";
 import type { AuthenticationResultType } from "@aws-sdk/client-cognito-identity-provider";
-import { awsRegion, cognitoClientId, cognitoClientSecret, cognitoUserPoolId } from "@/lib/aws/env";
+import { awsRegion, cognitoClientId, cognitoClientSecret, cognitoUserPoolId } from "@aws/env";
 
 /**
  * The Cognito session: what `@supabase/ssr` was doing, done by hand.
@@ -22,7 +22,7 @@ import { awsRegion, cognitoClientId, cognitoClientSecret, cognitoUserPoolId } fr
  * Note the absence of `server-only`: that package throws when imported into the
  * Edge bundle. The protection here is structural instead — nothing in this file
  * is reachable from a Client Component, and the secrets it reads come from
- * `@/lib/aws/env`, which *is* server-only.
+ * `@aws/env`, which *is* server-only.
  *
  * ## Why tokens live in httpOnly cookies
  *

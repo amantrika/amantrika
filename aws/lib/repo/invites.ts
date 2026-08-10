@@ -6,8 +6,8 @@ import {
   QueryCommand,
   UpdateCommand,
 } from "@aws-sdk/lib-dynamodb";
-import { ddb } from "@/lib/aws/dynamo";
-import { tableName } from "@/lib/aws/env";
+import { ddb } from "@aws/dynamo";
+import { tableName } from "@aws/env";
 import {
   META_SK,
   SK_PREFIX,
@@ -21,8 +21,8 @@ import {
   daySk,
   todayIso,
   GLOBAL_STATS_PK,
-} from "@/lib/aws/keys";
-import type { AssetItem, InviteItem, InviteStatus, SubEventItem } from "@/lib/aws/repo/types";
+} from "@aws/keys";
+import type { AssetItem, InviteItem, InviteStatus, SubEventItem } from "@aws/repo/types";
 
 /**
  * Invitations — reads and writes.
@@ -89,8 +89,16 @@ export async function getPublishedInviteBySlug(slug: string): Promise<{
   const partition = await ddb.send(
     new QueryCommand({
       TableName: tableName,
-      KeyConditionExpression: "PK = :pk AND SK > :meta",
-      ExpressionAttributeValues: { ":pk": eventPk(meta.id), ":meta": META_SK },
+      // The whole partition, filtered below by sort-key prefix.
+      //
+      // This previously said `SK > :meta` to skip the META item, and silently
+      // dropped every photograph: sort keys are compared as text, and
+      // "ASSET#…" sorts BEFORE "META" while "SUBEVENT#…" sorts after. So
+      // ceremonies appeared and pictures never did — on every invitation, in
+      // production, with no error anywhere. Caught by the parity script
+      // comparing against Supabase, not by any test.
+      KeyConditionExpression: "PK = :pk",
+      ExpressionAttributeValues: { ":pk": eventPk(meta.id) },
     })
   );
 

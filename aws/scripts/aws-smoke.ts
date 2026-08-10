@@ -11,16 +11,16 @@
  * Cleans up after itself. Safe to re-run.
  */
 import { DeleteCommand } from "@aws-sdk/lib-dynamodb";
-import { ddb } from "../src/lib/aws/dynamo";
-import { tableName } from "../src/lib/aws/env";
-import { META_SK, eventPk } from "../src/lib/aws/keys";
+import { ddb } from "../lib/dynamo";
+import { tableName } from "../lib/env";
+import { META_SK, eventPk } from "../lib/keys";
 import {
   createInvite,
   getInviteForOwner,
   getPublishedInviteBySlug,
   listInvitesForOwner,
   updateInvite,
-} from "../src/lib/aws/repo/invites";
+} from "../lib/repo/invites";
 
 const OWNER = `smoke-owner-${process.pid}-${process.hrtime()[1]}`;
 const INTRUDER = "smoke-intruder";

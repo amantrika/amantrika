@@ -18,8 +18,8 @@ import {
   cognitoConfirmSignUp,
   cognitoSignIn,
   cognitoSignUp,
-} from "../src/lib/aws/auth/cognito";
-import { ensureProfile, getProfile } from "../src/lib/aws/repo/profiles";
+} from "../lib/auth/cognito";
+import { ensureProfile, getProfile } from "../lib/repo/profiles";
 
 const [email, password] = process.argv.slice(2);
 

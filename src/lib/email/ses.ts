@@ -1,6 +1,6 @@
 import "server-only";
 import { SESv2Client, SendEmailCommand } from "@aws-sdk/client-sesv2";
-import { awsRegion } from "@/lib/aws/env";
+import { awsRegion } from "@aws/env";
 import { emailFrom } from "@/lib/env";
 import type { SendEmailInput, SendEmailResult } from "@/lib/email/send";
 import type { TemplateData } from "@/lib/email/templates";

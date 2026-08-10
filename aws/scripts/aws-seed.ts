@@ -18,8 +18,8 @@
  */
 import { createClient } from "@supabase/supabase-js";
 import { BatchWriteCommand } from "@aws-sdk/lib-dynamodb";
-import { ddb } from "../src/lib/aws/dynamo";
-import { tableName } from "../src/lib/aws/env";
+import { ddb } from "../lib/dynamo";
+import { tableName } from "../lib/env";
 import {
   META_SK,
   assetSk,
@@ -30,7 +30,7 @@ import {
   SLUG_GSI1_SK,
   subEventSk,
   themePk,
-} from "../src/lib/aws/keys";
+} from "../lib/keys";
 
 const WRITE = process.argv.includes("--write");
 

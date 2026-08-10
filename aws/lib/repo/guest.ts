@@ -1,7 +1,7 @@
 import "server-only";
 import { PutCommand, QueryCommand, UpdateCommand } from "@aws-sdk/lib-dynamodb";
-import { ddb } from "@/lib/aws/dynamo";
-import { tableName } from "@/lib/aws/env";
+import { ddb } from "@aws/dynamo";
+import { tableName } from "@aws/env";
 import {
   GLOBAL_STATS_PK,
   SK_PREFIX,
@@ -11,8 +11,8 @@ import {
   statsPk,
   todayIso,
   wishSk,
-} from "@/lib/aws/keys";
-import { getInviteForOwner } from "@/lib/aws/repo/invites";
+} from "@aws/keys";
+import { getInviteForOwner } from "@aws/repo/invites";
 
 /**
  * What guests write: RSVPs and wishes.

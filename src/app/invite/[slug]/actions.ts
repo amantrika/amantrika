@@ -42,14 +42,14 @@ export async function submitRsvp(input: RsvpInput): Promise<SubmitResult> {
   const data = parsed.data;
 
   if (authProviderName() === "cognito") {
-    const { getPublishedInviteBySlug } = await import("@/lib/aws/repo/invites");
+    const { getPublishedInviteBySlug } = await import("@aws/repo/invites");
     const found = await getPublishedInviteBySlug(data.slug);
     // Silent success for an unknown or unpublished slug — the same shape the
     // Supabase branch uses. A guest who mistypes should not be told which
     // invitations exist.
     if (!found) return { ok: true };
 
-    const { submitRsvp: write } = await import("@/lib/aws/repo/guest");
+    const { submitRsvp: write } = await import("@aws/repo/guest");
     const result = await write({
       eventId: found.invite.id,
       guestName: data.guestName,
@@ -141,11 +141,11 @@ export async function submitBlessing(input: BlessingInput): Promise<SubmitResult
   const { slug, name, message } = parsed.data;
 
   if (authProviderName() === "cognito") {
-    const { getPublishedInviteBySlug } = await import("@/lib/aws/repo/invites");
+    const { getPublishedInviteBySlug } = await import("@aws/repo/invites");
     const found = await getPublishedInviteBySlug(slug);
     if (!found) return { ok: true };
 
-    const { submitWish } = await import("@/lib/aws/repo/guest");
+    const { submitWish } = await import("@aws/repo/guest");
     const result = await submitWish({ eventId: found.invite.id, name: name ?? "", message });
     return result.ok ? { ok: true } : { ok: false, error: result.error };
   }

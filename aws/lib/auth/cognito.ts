@@ -10,7 +10,7 @@ import {
   SignUpCommand,
   type AuthenticationResultType,
 } from "@aws-sdk/client-cognito-identity-provider";
-import { awsRegion, cognitoClientId, cognitoClientSecret } from "@/lib/aws/env";
+import { awsRegion, cognitoClientId, cognitoClientSecret } from "@aws/env";
 
 /**
  * Cognito, wrapped so the rest of the app never sees its API.

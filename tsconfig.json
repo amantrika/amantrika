@@ -25,6 +25,9 @@
     "paths": {
       "@/*": [
         "./src/*"
+      ],
+      "@aws/*": [
+        "./aws/lib/*"
       ]
     }
   },
@@ -32,6 +35,7 @@
     "**/*.mts",
     "**/*.ts",
     "**/*.tsx",
+    ".next-build/types/**/*.ts",
     ".next-claude/types/**/*.ts",
     ".next-cog/types/**/*.ts",
     ".next-e2e/types/**/*.ts",
@@ -41,8 +45,9 @@
     ".next-verify/types/**/*.ts",
     ".next/dev/types/**/*.ts",
     ".next/types/**/*.ts",
+    "aws/**/*.ts",
     "next-env.d.ts",
-    ".next-build/types/**/*.ts"
+    ".next-mv/types/**/*.ts"
   ],
   "exclude": [
     "node_modules",

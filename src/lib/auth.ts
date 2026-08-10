@@ -37,11 +37,11 @@ export const getProfile = cache(async (): Promise<Profile | null> => {
  * bouncing off a broken dashboard forever.
  */
 async function getCognitoProfile(): Promise<Profile | null> {
-  const { getSessionUser } = await import("@/lib/aws/auth/session");
+  const { getSessionUser } = await import("@aws/auth/session");
   const session = await getSessionUser();
   if (!session) return null;
 
-  const { ensureProfile } = await import("@/lib/aws/repo/profiles");
+  const { ensureProfile } = await import("@aws/repo/profiles");
   const item = await ensureProfile({ userId: session.userId, email: session.username });
 
   // Columns the Postgres row had and DynamoDB does not carry yet are null, not

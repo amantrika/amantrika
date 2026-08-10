@@ -82,7 +82,7 @@ async function cognitoMiddleware(request: NextRequest, protectedRoute: boolean) 
     cookieOptions,
     refreshTokens,
     verifyAccessToken,
-  } = await import("@/lib/aws/auth/session");
+  } = await import("@aws/auth/session");
 
   const access = request.cookies.get(SESSION_COOKIES.ACCESS)?.value;
   let user = access ? await verifyAccessToken(access) : null;

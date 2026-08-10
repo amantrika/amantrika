@@ -1,10 +1,10 @@
 import "server-only";
 import { DeleteCommand, PutCommand, QueryCommand } from "@aws-sdk/lib-dynamodb";
-import { ddb } from "@/lib/aws/dynamo";
-import { tableName } from "@/lib/aws/env";
-import { SK_PREFIX, assetSk, eventPk } from "@/lib/aws/keys";
-import { getInviteForOwner } from "@/lib/aws/repo/invites";
-import type { AssetItem } from "@/lib/aws/repo/types";
+import { ddb } from "@aws/dynamo";
+import { tableName } from "@aws/env";
+import { SK_PREFIX, assetSk, eventPk } from "@aws/keys";
+import { getInviteForOwner } from "@aws/repo/invites";
+import type { AssetItem } from "@aws/repo/types";
 
 /**
  * Media attached to an invitation.
@@ -106,7 +106,7 @@ export async function deleteAsset(
     })
   );
 
-  const { deleteMedia } = await import("@/lib/aws/storage");
+  const { deleteMedia } = await import("@aws/storage");
   try {
     await deleteMedia(asset.storagePath);
   } catch {

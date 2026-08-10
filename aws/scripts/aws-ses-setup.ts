@@ -28,8 +28,8 @@ import {
   CreateConfigurationSetEventDestinationCommand,
 } from "@aws-sdk/client-sesv2";
 import { SNSClient, CreateTopicCommand } from "@aws-sdk/client-sns";
-import { templates } from "../src/lib/email/templates";
-import { awsRegion } from "../src/lib/aws/env";
+import { templates } from "../../src/lib/email/templates";
+import { awsRegion } from "../lib/env";
 
 const WRITE = process.argv.includes("--write");
 const ses = new SESv2Client({ region: awsRegion });

@@ -38,12 +38,12 @@ export async function createUploadTicket(
 
   const profile = await requireProfile();
 
-  const { getInviteForOwner } = await import("@/lib/aws/repo/invites");
+  const { getInviteForOwner } = await import("@aws/repo/invites");
   if (!(await getInviteForOwner(profile.id, parsed.data.eventId))) {
     return { ok: false, error: "That invitation isn't yours." };
   }
 
-  const { createUploadTicket: mint } = await import("@/lib/aws/storage");
+  const { createUploadTicket: mint } = await import("@aws/storage");
   const result = await mint(parsed.data);
   if (!result.ok) return { ok: false, error: result.error };
 

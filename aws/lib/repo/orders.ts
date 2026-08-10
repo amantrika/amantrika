@@ -1,8 +1,8 @@
 import "server-only";
 import { GetCommand, PutCommand, QueryCommand, UpdateCommand } from "@aws-sdk/lib-dynamodb";
-import { ddb } from "@/lib/aws/dynamo";
-import { tableName } from "@/lib/aws/env";
-import { META_SK, SK_PREFIX, eventPk, orderSk, paymentPk } from "@/lib/aws/keys";
+import { ddb } from "@aws/dynamo";
+import { tableName } from "@aws/env";
+import { META_SK, SK_PREFIX, eventPk, orderSk, paymentPk } from "@aws/keys";
 
 /**
  * Orders and the payment ledger.

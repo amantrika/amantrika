@@ -1,7 +1,7 @@
 import "server-only";
 import { GetCommand, PutCommand, QueryCommand } from "@aws-sdk/lib-dynamodb";
-import { ddb } from "@/lib/aws/dynamo";
-import { tableName } from "@/lib/aws/env";
+import { ddb } from "@aws/dynamo";
+import { tableName } from "@aws/env";
 import {
   EMAIL_GSI1_SK,
   PROFILE_SK,
@@ -9,8 +9,8 @@ import {
   userPk,
   ADMIN_PK,
   adminEmailSk,
-} from "@/lib/aws/keys";
-import type { ProfileItem } from "@/lib/aws/repo/types";
+} from "@aws/keys";
+import type { ProfileItem } from "@aws/repo/types";
 
 /**
  * Profiles — what `handle_new_user()` used to do.
